@@ -46,7 +46,7 @@ def check_expression(
     """
     if isinstance(expected, str):
         expected = expand_variables(expected)
-    expr = get_expression(ast.parse(code_string.strip()), line, write_tree, depth)
+    expr = get_expression(ast.parse(code_string.strip()), line, depth)
     print("expected", expected)
     print("expr", expr)
     if simplify:
@@ -212,7 +212,6 @@ def things(a, b):
         """
 Not(4 < 3) and ret == pyname_b
 """,
-        write_tree="_test_basic_if_expression.dot",
     )
 
 
@@ -271,7 +270,6 @@ def things(a, b, c):
         """
 And(Not(pyname_a < pyname_b), Not(pyname_c < pyname_b), ret == pyname_b)
             """,
-        write_tree="nested_if_expr.dot",
     )
 
 
@@ -330,7 +328,6 @@ def things(a, b):
   and Not(pyname_a_1 > 1))) and \
 ret == pyname_a_1
     """,
-        write_tree="while_with_if.dot",
     )
 
 

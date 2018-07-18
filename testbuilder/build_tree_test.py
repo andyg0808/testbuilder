@@ -264,7 +264,6 @@ def empty_block(tree):
 def test_check_empty_tree():
     # Check with chained empty basic blocks:
     tree = BasicBlock(1).start_parent().start_parent()
-    write_dot(tree.dot(), "test_check_empty_tree.dot")
     expected = [None]
     with pytest.raises(AssertionError):
         check_tree(expected, tree)
@@ -373,7 +372,7 @@ def example(a, b):
     return r
     """
     expected = [None, ("a < b", ["r = a"], ["r = b"]), "return r"]
-    check_tree_builder(expected, code, write_tree="test_if_else_linearization.dot")
+    check_tree_builder(expected, code)
 
 
 def test_nested_ifs():
@@ -395,7 +394,7 @@ def min(a, b, c):
         ("a < b", None, [None, ("b < c", None, ["return c"]), None]),
         None,
     ]
-    check_tree_builder(expected, code, write_tree="test_nested_ifs.dot")
+    check_tree_builder(expected, code)
 
 
 def test_forked_mutation(request):
@@ -409,9 +408,7 @@ def forked(a):
     return c
     """
     expected = ["c = 0", ("a < 3", ["c = c + 3"], ["c = c + 2"]), "return c"]
-    check_tree_builder(
-        expected, code, write_tree="{}.dot".format(request.function.__name__)
-    )
+    check_tree_builder(expected, code)
 
 
 def test_while_loop():
@@ -422,7 +419,7 @@ def while_away(i):
     return i
     """
     expected = [None, ("i > 0", ["i -= 1"]), "return i"]
-    check_tree_builder(expected, code, write_tree="while_loop.dot")
+    check_tree_builder(expected, code)
 
 
 def test_while_construction():

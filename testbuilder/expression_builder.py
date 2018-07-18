@@ -27,7 +27,6 @@ from .basic_block import BasicBlock
 from .build_tree import build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Dependency, Variable, take_slice
-from .test_utils import write_dot
 
 NULL = z3.DeclareSort("None")
 
@@ -39,17 +38,13 @@ Expression = z3.ExprRef
 ExprList = List[Expression]
 
 
-def get_expression(
-    code: ast.AST, line: int, write_tree: str = "", depth: int = 1
-) -> Optional[Expression]:
+def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
     dep_tree = take_slice(code, line)
     print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
     flowgraph = block_tree.inflate(dep_tree)
-    if write_tree != "":
-        write_dot(flowgraph.dot(), write_tree)
     eb = ExpressionBuilder(depth)
     return eb.get_expression(dep_tree, flowgraph)
 
@@ -124,7 +119,6 @@ class ExpressionBuilder:
 
         body, bypass = root.children
 
-        write_dot(root.dot(), "loopy.dot")
         if _is_required(body, root):
             # We can't bypass the loop: the body is required
             paths: List[Tuple[ExprList, VarMapping]] = []
