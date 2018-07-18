@@ -1,0 +1,11 @@
+source "./testing.tcl"
+file delete complex_test.py
+spawn python3 ./run.py complex.py
+expect model
+send "0\n"
+expect model
+send "None\n"
+expect model
+send "None\n"
+expect "Couldn't generate a test for line 10"
+system pytest complex_test.py

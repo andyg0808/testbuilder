@@ -1,0 +1,23 @@
+<html>
+   <head>
+      <title></title>
+   </head>
+   <body>
+      <p>
+      You clicked in {{func_name}}. We called it with {{args}}.
+      </p>
+      <p>
+      It said
+      <pre>
+      {{output}}
+      </pre>
+      </p>
+      It ran:
+      {% for line in lines %}
+      <p>
+      line {{line[0][1]}} in
+      {{line[0][0]}} {{line[1]}} times
+      </p>
+      {% endfor %}
+   </body>
+</html>

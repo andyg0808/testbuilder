@@ -1,0 +1,13 @@
+#!/usr/bin/tclsh
+
+foreach test [glob "cli_tests/*/*.exp"] {
+  set result {}
+  try {
+    exec expect $test
+    puts "ok([file tail $test])"
+  } trap {} {output state} {
+    puts "Caught error:"
+    puts $output
+  }
+  #>@ stdout 2>@ stderr
+}

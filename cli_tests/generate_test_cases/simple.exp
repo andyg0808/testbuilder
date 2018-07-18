@@ -1,0 +1,8 @@
+source "./testing.tcl"
+file delete simple_test.py
+spawn python3 ./run.py simple.py
+expect model
+send "0\n"
+expect model
+send "0\n"
+system pytest simple_test.py
