@@ -46,28 +46,28 @@ def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Express
         return None
     flowgraph = block_tree.inflate(dep_tree)
     eb = ExpressionBuilder(depth)
-    return eb.get_expression(dep_tree, flowgraph)
+    variables = get_slice_variables(dep_tree)
+    return eb.get_expression(variables, flowgraph)
+
+
+def get_slice_variables(dep_tree: Dependency) -> Iterator[Variable]:
+    """
+    Find all Variable instances in a dependency tree.
+    """
+    slice_tree = dep_tree.format_slice()
+    variables = filter(lambda x: isinstance(x, Variable), slice_tree)
+    return cast(Iterator[Variable], variables)
 
 
 class ExpressionBuilder:
     def __init__(self, depth: int) -> None:
         self.depth = depth
 
-    def get_expression(self, dep_tree: Dependency, flowgraph: BasicBlock) -> Expression:
-        # Find all the Variables in the dependency tree
-        # These will include any which were inferred by the slicer because it
-        # couldn't find a definition for a variable
-        variables = self._get_slice_variables(dep_tree)
+    def get_expression(
+        self, variables: Iterable[Variable], flowgraph: BasicBlock
+    ) -> Expression:
         expr_list: ExprList = self.convert_tree(flowgraph, variables)
         return _combine_conditions(expr_list)
-
-    def _get_slice_variables(self, dep_tree: Dependency) -> Iterator[Variable]:
-        """
-        Find all Variable instances in a dependency tree.
-        """
-        slice_tree = dep_tree.format_slice()
-        variables = filter(lambda x: isinstance(x, Variable), slice_tree)
-        return cast(Iterator[Variable], variables)
 
     def convert_tree(self, root: BasicBlock, variables: Iterable[Variable]) -> ExprList:
         # Sets variables to the default value, to treat them as having been defined
