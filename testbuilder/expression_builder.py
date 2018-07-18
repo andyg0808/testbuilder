@@ -38,6 +38,18 @@ Expression = z3.ExprRef
 ExprList = List[Expression]
 
 
+def bool_not(expr: Expression) -> Expression:
+    return z3.Not(expr)
+
+
+def bool_or(*exprs: Expression) -> Expression:
+    return z3.Or(*exprs)
+
+
+def bool_and(*exprs: Expression) -> Expression:
+    return z3.And(*exprs)
+
+
 def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
     dep_tree = take_slice(code, line)
@@ -111,7 +123,7 @@ class ExpressionBuilder:
             assert root.conditional
             if not returns:
                 path.append(
-                    z3.Not(to_boolean(convert(root.conditional.code, path_vars)))
+                    bool_not(to_boolean(convert(root.conditional.code, path_vars)))
                 )
             return (path, path_vars)
 
@@ -125,7 +137,7 @@ class ExpressionBuilder:
         elif root.conditional is None:
             return self._convert_block_tree(bypass, variables, stop)
         elif body.returns:
-            code = [z3.Not(to_boolean(convert(root.conditional.code, variables)))]
+            code = [bool_not(to_boolean(convert(root.conditional.code, variables)))]
             code += self._convert_block_tree(bypass, variables, stop)
             return code
         else:
@@ -154,7 +166,7 @@ class ExpressionBuilder:
 
         conditions = [_combine_conditions(code) for code in updated_conditions]
         if len(conditions) > 1:
-            code = [z3.Or(*conditions)]
+            code = [bool_or(*conditions)]
         elif len(conditions) == 1:
             code = [conditions[0]]
         else:
@@ -175,7 +187,7 @@ class ExpressionBuilder:
             assert root.conditional
             conditional = to_boolean(convert(root.conditional.code, branch_variables))
             if invert_conditional:
-                conditional = z3.Not(conditional)
+                conditional = bool_not(conditional)
             branch.append(conditional)
             branch += self._convert_block_tree(child, branch_variables, join)
             return (branch, branch_variables)
@@ -233,7 +245,7 @@ class ExpressionBuilder:
         variables.clear()
         variables.update(updated_variables)
         combined = map(_combine_conditions, branch_exprs)
-        code.append(z3.Or(*combined))
+        code.append(bool_or(*combined))
         code += self._convert_block_tree(join, variables, stop)
         return code
 
@@ -303,7 +315,7 @@ def _update_paths(
 
 def _combine_conditions(conds: Sequence[Expression]) -> Expression:
     if len(conds) > 1:
-        return z3.And(*conds)
+        return bool_and(*conds)
     else:
         return conds[0]
 
