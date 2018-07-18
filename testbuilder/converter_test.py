@@ -15,9 +15,10 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
             code_string = expected
         expected = expand_variables(expected)
     code = ast.parse(code_string)
-    print(ast.dump(code))
+    print("ast", ast.dump(code))
     result = convert(code, variables)
-    print(expected, "\n", result)
+    print("expected", expected)
+    print("actual", result)
     assert z3.eq(expected, result)
 
 
