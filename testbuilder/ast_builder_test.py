@@ -32,6 +32,10 @@ def test_build_int_assign():
     check_stmt("a = 1", n.Set(n.Name("a", 0), n.Int(1)))
 
 
+def test_build_call():
+    check_expr("f(1, 2)", n.Call(n.Name("f", 0), [n.Int(1), n.Int(2)], []))
+
+
 @pytest.mark.skip
 def test_build_array_assign():
     check_stmt("a[0] = 1", n.Set(n.Name("a", 1), n.Store(n.Name("a", 0), 0, n.Int(1))))

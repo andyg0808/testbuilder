@@ -3,7 +3,7 @@ Most of the names in this class are based on the names used in the Python AST.
 The visit and generic_visit methods are probably related to their equivalnets
 for the Python AST.
 """
-from typing import Any, Generic, List, Optional, Sequence, TypeVar, cast
+from typing import Any, Generic, List, Mapping, Optional, Sequence, Tuple, TypeVar, cast
 
 import dataclasses
 from dataclasses import dataclass
@@ -68,24 +68,23 @@ class Div(Operator):
     pass
 
 
-@dataclass
-class CompareOperator(Node):
+class Lt(Operator):
     pass
 
 
-class Lt(CompareOperator):
+class LtE(Operator):
     pass
 
 
-class LtE(CompareOperator):
+class Gt(Operator):
     pass
 
 
-class Gt(CompareOperator):
+class GtE(Operator):
     pass
 
 
-class GtE(CompareOperator):
+class Eq(Operator):
     pass
 
 
@@ -94,7 +93,7 @@ class UnaryOperator(Node):
     pass
 
 
-class USub(UnaryOperator):
+class USub(Operator):
     pass
 
 
@@ -112,15 +111,8 @@ class UnaryOp(expr):
 
 
 @dataclass
-class Compare(expr):
-    left: expr
-    op: CompareOperator
-    right: expr
-
-
-@dataclass
 class Set(stmt):
-    var: "Name"
+    target: "Name"
     e: expr
 
 
@@ -131,24 +123,12 @@ class Store(expr):
     value: expr
 
 
-@dataclass
-class BoolOperator(Node):
+class And(Operator):
     pass
 
 
-class And(BoolOperator):
+class Or(Operator):
     pass
-
-
-class Or(BoolOperator):
-    pass
-
-
-@dataclass
-class BoolOp(expr):
-    left: expr
-    op: BoolOperator
-    right: expr
 
 
 @dataclass
@@ -165,6 +145,13 @@ class NameConstant(expr):
 class Name(expr):
     id: str
     set_count: int
+
+
+@dataclass
+class Call(expr):
+    func: expr
+    args: Sequence[expr]
+    keywords: Sequence[Tuple[str, expr]]
 
 
 T = TypeVar("T")

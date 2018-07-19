@@ -1,6 +1,14 @@
 import ast
 from functools import reduce
-from typing import Any, Callable, MutableMapping as MMapping, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    MutableMapping as MMapping,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 import dataclasses
 
@@ -34,10 +42,15 @@ class AstBuilder(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> n.Set:
         expr = self.visit(node.value)
-        var = self.get_target_variable(node.targets[0])
-        return n.Set(var, expr)
+        target = self.get_target_variable(node.targets[0])
+        return n.Set(target, expr)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> n.Set:
+        value = self.visit(node.value)
+        var = self.visit(node.target)
+        op = self.visit(node.op)
+        target = self.get_target_variable(node.target)
+        return n.Set(target, n.BinOp(var, op, value))
 
     # def visit_AugAssign(self, node: ast.AugAssign) -> None:
     #     print("Aug assign")
@@ -49,25 +62,25 @@ class AstBuilder(ast.NodeVisitor):
     #     self.assigning = False
     #     self.expression = target == op(old_target, value)
 
-    def visit_Compare(self, node: ast.Compare) -> n.Compare:
+    def visit_Compare(self, node: ast.Compare) -> n.BinOp:
         left = self.visit(node.left)
         ops = map(self.visit, node.ops)
         comparators = map(self.visit, node.comparators)
 
         def combine(left: n.expr, zipped: Tuple[n.expr, n.expr]) -> n.expr:
             op, right = zipped
-            return n.Compare(left, cast(n.CompareOperator, op), right)
+            return n.BinOp(left, cast(n.Operator, op), right)
 
-        return cast(n.Compare, reduce(combine, zip(ops, comparators), left))
+        return cast(n.BinOp, reduce(combine, zip(ops, comparators), left))
 
-    def visit_BoolOp(self, node: ast.BoolOp) -> n.BoolOp:
+    def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
         op = self.visit(node.op)
         value_list = [self.visit(v) for v in node.values]
 
         def combine(left: n.expr, right: n.expr) -> n.expr:
-            return n.BoolOp(left, op, right)
+            return n.BinOp(left, op, right)
 
-        return cast(n.BoolOp, reduce(combine, value_list))
+        return cast(n.BinOp, reduce(combine, value_list))
 
     def visit_Module(self, node: ast.Module) -> n.Module:
         return n.Module([self.visit(s) for s in node.body])
@@ -75,6 +88,9 @@ class AstBuilder(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name) -> n.Name:
         idx = self.variables.get(node.id, VAR_START_VALUE)
         return n.Name(node.id, idx)
+
+    # def visit_Call(self, node: ast.Call) -> n.Call:
+    #     func = self.visit(node.func)
 
     def generic_visit(self, node: ast.AST) -> Any:
         print(f"visiting generically to {node}")
@@ -90,5 +106,8 @@ class AstBuilder(ast.NodeVisitor):
         fields = []
         for field in dataclasses.fields(equivalent):
             value = getattr(node, field.name)
-            fields.append(self.visit(value))
+            if isinstance(value, list):
+                fields.append([self.visit(v) for v in value])
+            else:
+                fields.append(self.visit(value))
         return equivalent(*fields)

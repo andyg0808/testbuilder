@@ -74,6 +74,10 @@ def test_gte():
     conversion_assert("4 >= 3")
 
 
+def test_eq():
+    conversion_assert("4 == 4")
+
+
 def test_bounding():
     expected = (z3.IntVal(1) < z3.IntVal(2)) < z3.IntVal(3)
     conversion_assert(expected, "1 < 2 < 3")
@@ -129,3 +133,7 @@ def test_mutation():
 def test_augmutation():
     conversion_assert("pyname_a_1 == pyname_a + 1", "a += 1", {"a": 0})
     conversion_assert("pyname_a_2 == pyname_a_1 + 1", "a += 1", {"a": 1})
+
+def test_booleans():
+    conversion_assert("true", "True")
+    conversion_assert("false", "False")

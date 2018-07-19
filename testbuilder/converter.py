@@ -185,12 +185,6 @@ class Z3Converter(n.Visitor[Expression]):
         op = cast(OpFunc, self.visit(node.op))
         return op(self.visit(node.left), self.visit(node.right))
 
-    def visit_Compare(self, node: n.Compare) -> Expression:
-        left = self.visit(node.left)
-        op = self.visit(node.op)
-        right = self.visit(node.right)
-        return cast(OpFunc, op)(left, right)
-
     def visit_Mult(self, node: n.Mult) -> OpFunc:
         return operator.mul
 
@@ -211,12 +205,6 @@ class Z3Converter(n.Visitor[Expression]):
         operand = self.visit(node.operand)
         return cast(OpFunc, op)(operand)
 
-    def visit_BoolOp(self, node: n.BoolOp) -> Expression:
-        left = self.visit(node.left)
-        op = self.visit(node.op)
-        right = self.visit(node.right)
-        return cast(OpFunc, op)(left, right)
-
     def visit_Return(self, node: n.Return) -> Expression:
         if node.value:
             expr = self.visit(node.value)
@@ -235,9 +223,18 @@ class Z3Converter(n.Visitor[Expression]):
             return z3.Int(variable)
 
     def visit_Set(self, node: n.Set) -> Expression:
-        var = cast(Expression, self.visit(node.var))
+        var = cast(Expression, self.visit(node.target))
         value = cast(Expression, self.visit(node.e))
         return var == value
+
+    def visit_Expr(self, node: n.Expr) -> Expression:
+        v = self.visit(node.value)
+        assert v is not None
+        return v
+
+    def visit_Call(self, node: n.Call) -> Expression:
+        # Temporarily treat functions as true
+        return z3.BoolVal(True)
 
     def generic_visit(self, node: n.Node) -> Any:
         name = type(node).__name__
