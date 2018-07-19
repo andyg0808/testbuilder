@@ -15,6 +15,12 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
             code_string = expected
         expected = expand_variables(expected)
     code = ast.parse(code_string)
+    if isinstance(code, ast.Module):
+        assert len(code.body) == 1
+        code = code.body[0]
+    if isinstance(code, ast.Expr):
+        # Code that's just an expression should be something we are really wanting to test
+        code = code.value
     print("ast", ast.dump(code))
     result = convert(code, variables)
     print("expected", expected)

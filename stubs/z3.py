@@ -59,7 +59,14 @@ class Solver:
         ...
 
 
-BoolVal = ...  # type: Any
+class Bool(ExprRef):
+    def __init__(self, name: str) -> None:
+        ...
+
+
+class BoolVal(Bool):
+    def __init__(self, value: bool) -> None:
+        ...
 
 
 class Int(ExprRef):
