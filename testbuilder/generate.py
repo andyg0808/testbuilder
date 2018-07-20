@@ -24,10 +24,10 @@ class TestConstructor:
         self.slicer = Slicer(self.function)
         self.block_tree = build_tree(self.function)
 
-    def get_expression(self, dep_tree: Dependency) -> Expression:
+    def get_expression(self, dep_tree: Dependency, depth: int = 1) -> Expression:
         flowgraph = self.block_tree.inflate(dep_tree)
         variables = dep_tree.get_slice_variables()
-        builder = ExpressionBuilder(1)
+        builder = ExpressionBuilder(depth)
         return builder.get_expression(variables, flowgraph)
 
     def solve_expression(self, expression: Expression) -> Optional[Solution]:
