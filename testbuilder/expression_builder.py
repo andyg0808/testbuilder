@@ -25,7 +25,7 @@ import z3
 from . import basic_block
 from .ast_builder import make_ast
 from .basic_block import BasicBlock, BlockTree
-from .build_tree import build_tree
+from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Dependency, Variable, take_slice
 

@@ -8,7 +8,7 @@ from logbook import StreamHandler, debug, warn
 
 from . import basic_block
 from .basic_block import BasicBlock
-from .build_tree import TreeBuilder, build_tree
+from .build_tree import RETURNBLOCK, TreeBuilder, build_tree
 from .slicing import Conditional, take_slice
 from .test_utils import write_dot
 
@@ -120,6 +120,7 @@ def check_loop(expectations, tree, stop):
     # Check basic properties we expect of loop blocks
     assert tree.type == basic_block.Loop
     assert len(tree.children) == 2
+    assert len(tree.parents) == 2
     assert tree.conditional
 
     # Check that we have the right conditional
@@ -142,9 +143,13 @@ def check_conditional(expectations, tree, stop):
     assert tree.type == basic_block.StartConditional
     # The third child is the join block
     assert len(tree.children) == 3
+    assert len(tree.parents) == 1
     true_branch, false_branch, join = tree.children
     assert tree.conditional
     assert join.type == basic_block.Conditional
+    if join.number != RETURNBLOCK:
+        assert len(join.children) == 1
+        assert len(join.parents) == 3
 
     debug("Checking conditional block {}", tree.number)
     check_code(expected_cond, tree.conditional.code)
@@ -180,13 +185,23 @@ def check_empty_tree(tree, stop):
     # Search using standard pattern; run check_empty_tree on each block found
     if tree.type == basic_block.Loop:
         assert len(tree.children) == 2
+        assert len(tree.parents) == 2
         check_empty_tree(tree.children[0], tree.children[2])
         check_empty_tree(tree.children[1], tree.children[2])
     elif tree.type == basic_block.StartConditional:
         assert len(tree.children) == 3
+        assert len(tree.parents) == 1
         check_empty_tree(tree.children[0], tree)
         check_empty_tree(tree.children[1], stop)
-    elif tree.type == basic_block.Code or tree.type == basic_block.Conditional:
+    elif tree.type == basic_block.Code:
+        if tree.number != RETURNBLOCK:
+            assert len(tree.parents) == 1
+        if tree.children:
+            assert len(tree.children) == 1
+            check_empty_tree(tree.children[0], stop)
+    elif tree.type == basic_block.Conditional:
+        if tree.number != RETURNBLOCK:
+            assert len(tree.parents) == 3
         if tree.children:
             assert len(tree.children) == 1
             check_empty_tree(tree.children[0], stop)
@@ -206,6 +221,8 @@ def check_code_block(expectations, tree, stop):
         check_done(tree, stop)
     else:
         assert len(tree.children) == 1
+        if tree.type == basic_block.Conditional:
+            assert len(tree.parents) == 3
         check_block_tree(expectations[len(tree.code) :], tree.children[0], stop)
 
 
