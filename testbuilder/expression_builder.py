@@ -58,18 +58,9 @@ def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Express
     if not dep_tree:
         return None
     flowgraph = block_tree.inflate(dep_tree)
-    variables = get_slice_variables(dep_tree)
+    variables = dep_tree.get_slice_variables()
     eb = ExpressionBuilder(depth)
     return eb.get_expression(variables, flowgraph)
-
-
-def get_slice_variables(dep_tree: Dependency) -> Iterator[Variable]:
-    """
-    Find all Variable instances in a dependency tree.
-    """
-    slice_tree = dep_tree.format_slice()
-    variables = filter(lambda x: isinstance(x, Variable), slice_tree)
-    return cast(Iterator[Variable], variables)
 
 
 class ExpressionBuilder:

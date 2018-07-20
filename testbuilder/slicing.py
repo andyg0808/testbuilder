@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import ast
-from copy import copy
 from abc import abstractmethod
+from copy import copy
 from functools import reduce
 from typing import (
     Any,
     Generic,
+    Iterator,
     List,
     MutableMapping as MMapping,
     Optional,
@@ -76,6 +77,14 @@ class Dependency(Generic[T]):
                     descr.append(i)
                     added.add(i)
         return descr
+
+    def get_slice_variables(self) -> Iterator["Variable"]:
+        """
+        Find all Variable instances in a dependency tree.
+        """
+        slice_tree = self.format_slice()
+        variables = filter(lambda x: isinstance(x, Variable), slice_tree)
+        return cast(Iterator[Variable], variables)
 
     def linearize(self) -> List["Dependency"]:
         deps = self.format_slice()
@@ -188,7 +197,9 @@ class SliceVisitor(ast.NodeVisitor):
             if self.last_var is not None:
                 self.variables[var] = {self.last_var}
 
-    def visit_single_assignment(self, node: Union[ast.AugAssign, ast.AnnAssign]) -> None:
+    def visit_single_assignment(
+        self, node: Union[ast.AugAssign, ast.AnnAssign]
+    ) -> None:
         self.generic_visit(node)
         var = find_targets(node.target)[0]
         if self.last_var is not None:

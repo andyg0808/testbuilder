@@ -7,7 +7,7 @@ from unicodedata import normalize
 from logbook import Logger, StreamHandler  # type: ignore
 
 from .build_tree import build_tree
-from .expression_builder import Expression, ExpressionBuilder, get_slice_variables
+from .expression_builder import Expression, ExpressionBuilder
 from .function_walker import FunctionWalker
 from .slicing import Dependency, Slicer
 from .solver import Solution, solve
@@ -26,7 +26,7 @@ class TestConstructor:
 
     def get_expression(self, dep_tree: Dependency) -> Expression:
         flowgraph = self.block_tree.inflate(dep_tree)
-        variables = get_slice_variables(dep_tree)
+        variables = dep_tree.get_slice_variables()
         builder = ExpressionBuilder(1)
         return builder.get_expression(variables, flowgraph)
 
