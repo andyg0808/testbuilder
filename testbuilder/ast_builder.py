@@ -52,16 +52,6 @@ class AstBuilder(ast.NodeVisitor):
         target = self.get_target_variable(node.target)
         return n.Set(target, n.BinOp(var, op, value))
 
-    # def visit_AugAssign(self, node: ast.AugAssign) -> None:
-    #     print("Aug assign")
-    #     value = self.get_expr(node.value)
-    #     old_target = self.get_expr(node.target)
-    #     op = self.get_expr(node.op)
-    #     self.assigning = True
-    #     target = self.get_expr(node.target)
-    #     self.assigning = False
-    #     self.expression = target == op(old_target, value)
-
     def visit_Compare(self, node: ast.Compare) -> n.BinOp:
         left = self.visit(node.left)
         ops = map(self.visit, node.ops)
@@ -89,9 +79,6 @@ class AstBuilder(ast.NodeVisitor):
         idx = self.variables.get(node.id, VAR_START_VALUE)
         return n.Name(node.id, idx)
 
-    # def visit_Call(self, node: ast.Call) -> n.Call:
-    #     func = self.visit(node.func)
-
     def generic_visit(self, node: ast.AST) -> Any:
         print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
@@ -111,3 +98,8 @@ class AstBuilder(ast.NodeVisitor):
             else:
                 fields.append(self.visit(value))
         return equivalent(*fields)
+
+
+def make_ast(code: ast.AST, variables: MMapping[str, int]) -> n.Node:
+    a = AstBuilder(variables)
+    return cast(n.Node, a.visit(code))

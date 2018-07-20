@@ -249,15 +249,8 @@ class Z3Converter(n.Visitor[Expression]):
                 raise RuntimeError(f"Unknown node type {type(node)}")
 
 
-def convert(code: ast.AST, variables: MMapping[str, int]) -> Expression:
-    # v = ConversionVisitor(variables)
-    # return cast(Expression, v.get_expr(code))
-    print("code type", type(code))
-    ab = AstBuilder(variables)
+def convert(tree: n.Node) -> Expression:
     z3c = Z3Converter()
-    tree = ab.visit(code)
-    print("ast type", type(tree))
     expr = z3c.visit(tree)
-    print("z3 type", type(expr))
     assert expr is not None
     return expr

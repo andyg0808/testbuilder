@@ -3,6 +3,7 @@ from typing import Optional
 
 import z3  # type: ignore
 
+from .ast_builder import make_ast
 from .converter import convert
 from .variable_expander import expand_variables
 
@@ -22,7 +23,8 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
         # Code that's just an expression should be something we are really wanting to test
         code = code.value
     print("ast", ast.dump(code))
-    result = convert(code, variables)
+    tree = make_ast(code, variables)
+    result = convert(tree)
     print("expected", expected)
     print("actual", result)
     assert z3.eq(expected, result)
@@ -133,6 +135,7 @@ def test_mutation():
 def test_augmutation():
     conversion_assert("pyname_a_1 == pyname_a + 1", "a += 1", {"a": 0})
     conversion_assert("pyname_a_2 == pyname_a_1 + 1", "a += 1", {"a": 1})
+
 
 def test_booleans():
     conversion_assert("true", "True")

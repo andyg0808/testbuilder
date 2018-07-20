@@ -23,6 +23,7 @@ from typing import (
 import z3
 
 from . import basic_block
+from .ast_builder import make_ast
 from .basic_block import BasicBlock
 from .build_tree import build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
@@ -57,8 +58,8 @@ def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Express
     if not dep_tree:
         return None
     flowgraph = block_tree.inflate(dep_tree)
-    eb = ExpressionBuilder(depth)
     variables = get_slice_variables(dep_tree)
+    eb = ExpressionBuilder(depth)
     return eb.get_expression(variables, flowgraph)
 
 
@@ -87,6 +88,11 @@ class ExpressionBuilder:
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
         return self._convert_block_tree(root, mutation_counts, None)
+
+    def convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
+        tree = make_ast(code, variables)
+        result = convert(tree)
+        return result
 
     def _convert_block_tree(
         self, root: BasicBlock, variables: VarMapping, stop: StopBlock = None
@@ -123,7 +129,7 @@ class ExpressionBuilder:
             assert root.conditional
             if not returns:
                 path.append(
-                    bool_not(to_boolean(convert(root.conditional.code, path_vars)))
+                    bool_not(to_boolean(self.convert(root.conditional.code, path_vars)))
                 )
             return (path, path_vars)
 
@@ -137,7 +143,9 @@ class ExpressionBuilder:
         elif root.conditional is None:
             return self._convert_block_tree(bypass, variables, stop)
         elif body.returns:
-            code = [bool_not(to_boolean(convert(root.conditional.code, variables)))]
+            code = [
+                bool_not(to_boolean(self.convert(root.conditional.code, variables)))
+            ]
             code += self._convert_block_tree(bypass, variables, stop)
             return code
         else:
@@ -155,7 +163,7 @@ class ExpressionBuilder:
         loops: ExprList = []
         for _i in range(depth):
             print("start variables", variables, "for loop", _i)
-            loops += [to_boolean(convert(root.conditional.code, variables))]
+            loops += [to_boolean(self.convert(root.conditional.code, variables))]
             loops += self._convert_block_tree(body, variables, root)
             print("variables", variables, "for loop", _i)
             paths.append(construct_path(loops, variables, body.returns))
@@ -185,7 +193,9 @@ class ExpressionBuilder:
             branch_variables = copy(variables)
             # Make typechecker happy. Conditionals had better have a condition
             assert root.conditional
-            conditional = to_boolean(convert(root.conditional.code, branch_variables))
+            conditional = to_boolean(
+                self.convert(root.conditional.code, branch_variables)
+            )
             if invert_conditional:
                 conditional = bool_not(conditional)
             branch.append(conditional)
@@ -254,7 +264,7 @@ class ExpressionBuilder:
     ) -> ExprList:
         assert root.type == basic_block.Code
         print("block, code length", root.number, len(root.code))
-        code = [convert(c.code, variables) for c in root.code]
+        code = [self.convert(c.code, variables) for c in root.code]
         if root.children:
             assert len(root.children) == 1
             code += self._convert_block_tree(root.children[0], variables, stop)
