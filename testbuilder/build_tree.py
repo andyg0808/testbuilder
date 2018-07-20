@@ -12,12 +12,16 @@ def make_display(k: int) -> str:
     return str(k % 10000)
 
 
+RETURNBLOCK = 0
+STARTBLOCK = 1
+
+
 class TreeWalker(ast.NodeVisitor):
     def __init__(self) -> None:
         super().__init__()
-        self.tree: MMapping[int, List[int]] = {0: []}
+        self.tree: MMapping[int, List[int]] = {STARTBLOCK: [], RETURNBLOCK: []}
         self.mapping: MMapping[int, int] = {}
-        self.current_block: int = 0
+        self.current_block: int = STARTBLOCK
         self.last_block = self.current_block
         self.types: MMapping[int, BlockType] = {}
         self.returns: MMapping[int, bool] = {}
@@ -53,7 +57,7 @@ class TreeWalker(ast.NodeVisitor):
             start = self.current_block
         self.tree[start].append(end)
 
-    def visit_If(self, node: ast.If) -> None:
+    def visit_If(self, node: ast.If) -> bool:
         start_block = self.create_block()
         self.types[start_block] = basic_block.Conditional
         self.visit(node.test)
@@ -61,18 +65,28 @@ class TreeWalker(ast.NodeVisitor):
         # True branch
         self.create_block()
         self.control.append(self.current_block)
-        for n in node.body:
-            self.visit(n)
+        join: Optional[int] = None
+        if not self.visit_body(node.body):
+            join = self.create_block()
         self.control.pop()
-        join = self.create_block()
 
         # False branch
         self.create_block(start_block)
         self.control.append(self.current_block)
-        for n in node.orelse:
-            self.visit(n)
+        if not self.visit_body(node.orelse):
+            if join:
+                self.attach(join)
+            else:
+                join = self.create_block()
+        elif not join:
+            # Both branches of the if had returns. That makes it a return
+            # statement, in effect. Treat it as such.
+
+            # We have to have a junction node for the if statement. This
+            # is technically it.
+            self.attach(start_block, RETURNBLOCK)
+            return True
         self.control.pop()
-        self.attach(join)
 
         # Add join as a third child to start_block. This eliminates the need to
         # figure out which block is the join point to determine when the
@@ -80,6 +94,17 @@ class TreeWalker(ast.NodeVisitor):
         self.attach(start_block, join)
 
         self.current_block = join
+        return False
+
+    def visit_body(self, body: Sequence[ast.AST]) -> bool:
+        """
+        Stops processing if `body` contains a return.
+        Returns true when this occurs.
+        """
+        for n in body:
+            if self.visit(n):
+                return True
+        return False
 
     def visit_While(self, node: ast.While) -> None:
         start_block = self.create_block()
@@ -88,23 +113,22 @@ class TreeWalker(ast.NodeVisitor):
         # Create body block
         self.create_block()
         self.control.append(self.current_block)
-        for n in node.body:
-            self.visit(n)
+        if not self.visit_body(node.body):
+            self.attach(self.current_block, start_block)
         self.control.pop()
-        self.attach(self.current_block, start_block)
         # Create next block
         self.current_block = start_block
         self.create_block()
-        # self.attach(start_block, self.current_block)
 
-    def visit_Return(self, node: ast.Return) -> None:
+    def visit_Return(self, node: ast.Return) -> bool:
+        self.attach(RETURNBLOCK)
         if self.control:
             control = self.control[-1]
             self.returns[control] = True
         self.generic_visit(node)
+        return True
 
     def generic_visit(self, node: ast.AST) -> None:
-        # print("node:", make_display(id(node)), node)
         self.mapping[id(node)] = self.current_block
         super().generic_visit(node)
 
@@ -231,8 +255,7 @@ class BlockTree:
         self._inflate(s, blocks)
         for block in blocks.values():
             block.code.sort(key=lambda x: x.lineno)
-        # Block 0 is always the first.
-        return blocks[0]
+        return blocks[STARTBLOCK]
 
 
 def build_tree(syntax_tree: ast.AST) -> BlockTree:

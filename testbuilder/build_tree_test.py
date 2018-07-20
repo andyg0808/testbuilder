@@ -147,9 +147,6 @@ def check_conditional(expectations, tree, stop):
     debug("Checking conditional block {}", tree.number)
     check_code(expected_cond, tree.conditional.code)
 
-    # Rather than finding the junction point, just check all the remaining
-    # expectations against the children of each branch. It's a bit inefficient,
-    # but this is test code.
     check_conditional_fork(expected_true, tree.children[0], tree.children[2])
     check_conditional_fork(expected_false, tree.children[1], tree.children[2])
 
@@ -313,7 +310,7 @@ def test_block_creation():
 def example(a):
     return a
     """
-    expected = [Required("return a")]
+    expected = [Required("return a"), None]
     check_tree_builder(expected, code)
 
 
@@ -324,7 +321,7 @@ def example(a, b):
     b = a
     return b
     """
-    expected = ["a = 3", "b = a", Required("return b")]
+    expected = ["a = 3", "b = a", Required("return b"), None]
     check_tree_builder(expected, code)
 
 
@@ -335,7 +332,7 @@ def example(a, b):
     b = 3
     return a + b
     """
-    expected = ["a = b", "b = 3", Required("return a + b")]
+    expected = ["a = b", "b = 3", Required("return a + b"), None]
     check_tree_builder(expected, code)
 
 
@@ -346,7 +343,12 @@ def example(a, b):
         r = a
     return r
     """
-    expected = [None, ("a < b", [NotRequired("r = a")], None), Required("return r")]
+    expected = [
+        None,
+        ("a < b", [NotRequired("r = a")], None),
+        Required("return r"),
+        None,
+    ]
     check_tree_builder(expected, code)
 
 
@@ -371,7 +373,7 @@ def example(a, b):
         r = b
     return r
     """
-    expected = [None, ("a < b", ["r = a"], ["r = b"]), "return r"]
+    expected = [None, ("a < b", ["r = a"], ["r = b"]), "return r", None]
     check_tree_builder(expected, code)
 
 
@@ -389,11 +391,7 @@ def min(a, b, c):
         else:
             return c
     """
-    expected = [
-        None,
-        ("a < b", None, [None, ("b < c", None, ["return c"]), None]),
-        None,
-    ]
+    expected = [None, ("a < b", None, [None, ("b < c", None, ["return c"])]), None]
     check_tree_builder(expected, code)
 
 
@@ -407,7 +405,7 @@ def forked(a):
         c = c + 2
     return c
     """
-    expected = ["c = 0", ("a < 3", ["c = c + 3"], ["c = c + 2"]), "return c"]
+    expected = ["c = 0", ("a < 3", ["c = c + 3"], ["c = c + 2"]), "return c", None]
     check_tree_builder(expected, code)
 
 
@@ -418,7 +416,7 @@ def while_away(i):
         i -= 1
     return i
     """
-    expected = [None, ("i > 0", ["i -= 1"]), "return i"]
+    expected = [None, ("i > 0", ["i -= 1"]), "return i", None]
     check_tree_builder(expected, code)
 
 
@@ -455,6 +453,7 @@ def maybe_while(a, b):
         None,
         ("a < 4", [None, ("b > 0", ["b -= 1"]), None], ["b = a"]),
         "return b",
+        None,
     ]
     check_tree_builder(expected, code)
 
@@ -472,6 +471,7 @@ return a
         None,
         ("a > 1", [None, ("b > 1", ["a -= b"], ["a += b"]), None]),
         "return a",
+        None,
     ]
     check_tree_builder(expected, code)
 
