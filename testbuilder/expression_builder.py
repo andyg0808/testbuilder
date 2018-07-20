@@ -80,11 +80,6 @@ class ExpressionBuilder:
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
         return self._convert_block_tree(tree.entrance, mutation_counts, None)
 
-    def convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
-        tree = make_ast(code, variables)
-        result = convert(tree)
-        return result
-
     def _convert_block_tree(
         self, root: BasicBlock, variables: VarMapping, stop: StopBlock = None
     ) -> ExprList:
@@ -120,7 +115,9 @@ class ExpressionBuilder:
             assert root.conditional
             if not returns:
                 path.append(
-                    bool_not(to_boolean(self.convert(root.conditional.code, path_vars)))
+                    bool_not(
+                        to_boolean(self._convert(root.conditional.code, path_vars))
+                    )
                 )
             return (path, path_vars)
 
@@ -135,7 +132,7 @@ class ExpressionBuilder:
             return self._convert_block_tree(bypass, variables, stop)
         elif body.returns:
             code = [
-                bool_not(to_boolean(self.convert(root.conditional.code, variables)))
+                bool_not(to_boolean(self._convert(root.conditional.code, variables)))
             ]
             code += self._convert_block_tree(bypass, variables, stop)
             return code
@@ -154,7 +151,7 @@ class ExpressionBuilder:
         loops: ExprList = []
         for _i in range(depth):
             print("start variables", variables, "for loop", _i)
-            loops += [to_boolean(self.convert(root.conditional.code, variables))]
+            loops += [to_boolean(self._convert(root.conditional.code, variables))]
             loops += self._convert_block_tree(body, variables, root)
             print("variables", variables, "for loop", _i)
             paths.append(construct_path(loops, variables, body.returns))
@@ -185,7 +182,7 @@ class ExpressionBuilder:
             # Make typechecker happy. Conditionals had better have a condition
             assert root.conditional
             conditional = to_boolean(
-                self.convert(root.conditional.code, branch_variables)
+                self._convert(root.conditional.code, branch_variables)
             )
             if invert_conditional:
                 conditional = bool_not(conditional)
@@ -255,11 +252,16 @@ class ExpressionBuilder:
     ) -> ExprList:
         assert root.type == basic_block.Code
         print("block, code length", root.number, len(root.code))
-        code = [self.convert(c.code, variables) for c in root.code]
+        code = [self._convert(c.code, variables) for c in root.code]
         if root.children:
             assert len(root.children) == 1
             code += self._convert_block_tree(root.children[0], variables, stop)
         return code
+
+    def _convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
+        tree = make_ast(code, variables)
+        result = convert(tree)
+        return result
 
 
 def to_boolean(expr: Expression) -> Expression:
