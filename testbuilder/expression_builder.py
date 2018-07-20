@@ -24,7 +24,7 @@ import z3
 
 from . import basic_block
 from .ast_builder import make_ast
-from .basic_block import BasicBlock
+from .basic_block import BasicBlock, BlockTree
 from .build_tree import build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Dependency, Variable, take_slice
@@ -57,10 +57,10 @@ def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Express
     print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
-    flowgraph = block_tree.inflate(dep_tree)
+    tree = block_tree.inflate(dep_tree)
     variables = dep_tree.get_slice_variables()
     eb = ExpressionBuilder(depth)
-    return eb.get_expression(variables, flowgraph)
+    return eb.get_expression(variables, tree)
 
 
 class ExpressionBuilder:
@@ -68,17 +68,17 @@ class ExpressionBuilder:
         self.depth = depth
 
     def get_expression(
-        self, variables: Iterable[Variable], flowgraph: BasicBlock
+        self, variables: Iterable[Variable], flowgraph: BlockTree
     ) -> Expression:
         expr_list: ExprList = self.convert_tree(flowgraph, variables)
         return _combine_conditions(expr_list)
 
-    def convert_tree(self, root: BasicBlock, variables: Iterable[Variable]) -> ExprList:
+    def convert_tree(self, tree: BlockTree, variables: Iterable[Variable]) -> ExprList:
         # Sets variables to the default value, to treat them as having been defined
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        return self._convert_block_tree(root, mutation_counts, None)
+        return self._convert_block_tree(tree.entrance, mutation_counts, None)
 
     def convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
         tree = make_ast(code, variables)

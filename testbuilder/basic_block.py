@@ -1,5 +1,7 @@
 import ast
-from typing import Any, List, Optional, Set, Union
+from typing import Any, List, Optional, Set
+
+from dataclasses import dataclass
 
 from .ast_formatter import format_tree
 from .slicing import Dependency, NegConditional
@@ -166,3 +168,10 @@ class BasicBlock:
                 done.add(link)
 
         return output
+
+
+@dataclass
+class BlockTree:
+    entrance: BasicBlock
+    target: Optional[BasicBlock]
+    exit: BasicBlock

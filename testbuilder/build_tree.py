@@ -4,7 +4,7 @@ from pprint import pprint
 from typing import List, Mapping, MutableMapping as MMapping, Optional, Sequence, Set
 
 from . import basic_block
-from .basic_block import BasicBlock, BlockType
+from .basic_block import BasicBlock, BlockTree, BlockType
 from .slicing import Conditional, Dependency, Statement
 
 
@@ -27,8 +27,8 @@ class TreeWalker(ast.NodeVisitor):
         self.returns: MMapping[int, bool] = {}
         self.control: List[int] = []
 
-    def get_block_tree(self) -> "BlockTree":
-        return BlockTree(
+    def get_builder(self) -> "TreeBuilder":
+        return TreeBuilder(
             mapping=self.mapping, tree=self.tree, types=self.types, returns=self.returns
         )
 
@@ -133,7 +133,7 @@ class TreeWalker(ast.NodeVisitor):
         super().generic_visit(node)
 
 
-class BlockTree:
+class TreeBuilder:
     def __init__(
         self,
         mapping: Mapping[int, int],
@@ -250,15 +250,15 @@ class BlockTree:
         else:
             self._set_conditionals(block, s.neg())
 
-    def inflate(self, s: Dependency) -> BasicBlock:
+    def inflate(self, s: Dependency) -> BlockTree:
         blocks = self.build_tree()
-        self._inflate(s, blocks)
+        target = self._inflate(s, blocks)
         for block in blocks.values():
             block.code.sort(key=lambda x: x.lineno)
-        return blocks[STARTBLOCK]
+        return BlockTree(blocks[STARTBLOCK], target, blocks[RETURNBLOCK])
 
 
-def build_tree(syntax_tree: ast.AST) -> BlockTree:
+def build_tree(syntax_tree: ast.AST) -> TreeBuilder:
     walker = TreeWalker()
     walker.visit(syntax_tree)
-    return walker.get_block_tree()
+    return walker.get_builder()

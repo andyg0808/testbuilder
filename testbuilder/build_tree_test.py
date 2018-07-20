@@ -8,7 +8,7 @@ from logbook import StreamHandler, debug, warn
 
 from . import basic_block
 from .basic_block import BasicBlock
-from .build_tree import BlockTree, build_tree
+from .build_tree import TreeBuilder, build_tree
 from .slicing import Conditional, take_slice
 from .test_utils import write_dot
 
@@ -291,12 +291,12 @@ def check_tree_builder(expected: str, code: str, write_tree: str = "", line=-1):
     tree = create_tree(code, write_tree, line=line)
     if write_tree != "":
         write_dot(tree.dot(), write_tree)
-    check_tree(expected, tree)
+    check_tree(expected, tree.entrance)
 
 
 def test_tree_building():
     tree = {1: [3], 2: [3], 3: [4, 5]}
-    bt = BlockTree(mapping={}, tree=tree, types={}, returns={})
+    bt = TreeBuilder(mapping={}, tree=tree, types={}, returns={})
     block_tree = bt.build_tree()
     assert block_tree[1].children == [block_tree[3]]
     assert block_tree[2].children == [block_tree[3]]
@@ -427,7 +427,7 @@ def while_away(i):
         i -= 1
     return i
     """
-    tree = create_tree(code)
+    tree = create_tree(code).entrance
     assert len(tree.children) == 1
     tree = tree.children[0]
 
@@ -486,7 +486,7 @@ return 2
 
 
 def test_is_parent():
-    b = BlockTree({}, {}, {}, {})
+    b = TreeBuilder({}, {}, {}, {})
     start = BasicBlock()
     end = start.start_block().start_block()
     end.children.append(start)
