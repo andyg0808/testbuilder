@@ -20,6 +20,10 @@ class _Conditional(_BlockType):
     pass
 
 
+class _StartConditional(_BlockType):
+    pass
+
+
 class _Code(_BlockType):
     pass
 
@@ -27,6 +31,7 @@ class _Code(_BlockType):
 Loop = _Loop()
 Conditional = _Conditional()
 Code = _Code()
+StartConditional = _StartConditional()
 
 
 BlockType = _BlockType

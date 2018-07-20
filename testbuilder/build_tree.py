@@ -59,7 +59,7 @@ class TreeWalker(ast.NodeVisitor):
 
     def visit_If(self, node: ast.If) -> bool:
         start_block = self.create_block()
-        self.types[start_block] = basic_block.Conditional
+        self.types[start_block] = basic_block.StartConditional
         self.visit(node.test)
 
         # True branch
@@ -85,6 +85,7 @@ class TreeWalker(ast.NodeVisitor):
             # We have to have a junction node for the if statement. This
             # is technically it.
             self.attach(start_block, RETURNBLOCK)
+            self.types[RETURNBLOCK] = basic_block.Conditional
             return True
         self.control.pop()
 
@@ -94,6 +95,7 @@ class TreeWalker(ast.NodeVisitor):
         self.attach(start_block, join)
 
         self.current_block = join
+        self.types[join] = basic_block.Conditional
         return False
 
     def visit_body(self, body: Sequence[ast.AST]) -> bool:

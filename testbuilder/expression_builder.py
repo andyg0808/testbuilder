@@ -97,9 +97,11 @@ class ExpressionBuilder:
 
         if root.type == basic_block.Loop:
             return self._convert_loop(root, variables, stop)
-        elif root.type == basic_block.Conditional:
+        elif root.type == basic_block.StartConditional:
             return self._convert_conditional(root, variables, stop)
         elif root.type == basic_block.Code:
+            return self._convert_code_block(root, variables, stop)
+        elif root.type == basic_block.Conditional:
             return self._convert_code_block(root, variables, stop)
         raise RuntimeError(f"Unknown block type: {root.type}")
 
@@ -190,7 +192,7 @@ class ExpressionBuilder:
             branch += self._convert_block_tree(child, branch_variables, join)
             return (branch, branch_variables)
 
-        assert root.type == basic_block.Conditional
+        assert root.type == basic_block.StartConditional
 
         true_child, false_child, join = root.children
         code: ExprList = []
@@ -250,7 +252,7 @@ class ExpressionBuilder:
     def _convert_code_block(
         self, root: BasicBlock, variables: VarMapping, stop: StopBlock
     ) -> ExprList:
-        assert root.type == basic_block.Code
+        assert root.type == basic_block.Code or root.type == basic_block.Conditional
         print("block, code length", root.number, len(root.code))
         code = [self._convert(c.code, variables) for c in root.code]
         if root.children:

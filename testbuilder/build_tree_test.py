@@ -139,18 +139,20 @@ def check_conditional(expectations, tree, stop):
     assert isinstance(expected_false, list) or expected_false is None
 
     # Check basic properties of conditional blocks
-    assert tree.type == basic_block.Conditional
+    assert tree.type == basic_block.StartConditional
     # The third child is the join block
     assert len(tree.children) == 3
+    true_branch, false_branch, join = tree.children
     assert tree.conditional
+    assert join.type == basic_block.Conditional
 
     debug("Checking conditional block {}", tree.number)
     check_code(expected_cond, tree.conditional.code)
 
-    check_conditional_fork(expected_true, tree.children[0], tree.children[2])
-    check_conditional_fork(expected_false, tree.children[1], tree.children[2])
+    check_conditional_fork(expected_true, true_branch, join)
+    check_conditional_fork(expected_false, false_branch, join)
 
-    check_block_tree(expectations[1:], tree.children[2], stop)
+    check_block_tree(expectations[1:], join, stop)
 
 
 def check_conditional_fork(expectations, tree, stop):
@@ -180,11 +182,11 @@ def check_empty_tree(tree, stop):
         assert len(tree.children) == 2
         check_empty_tree(tree.children[0], tree.children[2])
         check_empty_tree(tree.children[1], tree.children[2])
-    elif tree.type == basic_block.Conditional:
+    elif tree.type == basic_block.StartConditional:
         assert len(tree.children) == 3
         check_empty_tree(tree.children[0], tree)
         check_empty_tree(tree.children[1], stop)
-    elif tree.type == basic_block.Code:
+    elif tree.type == basic_block.Code or tree.type == basic_block.Conditional:
         if tree.children:
             assert len(tree.children) == 1
             check_empty_tree(tree.children[0], stop)
