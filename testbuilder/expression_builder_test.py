@@ -4,7 +4,6 @@ import pytest
 
 import z3
 
-from .build_tree import build_tree
 from .expression_builder import ExpressionBuilder, get_expression
 from .slicing import take_slice
 from .test_utils import write_dot
@@ -282,8 +281,8 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_1 == pyname_a) or \
- (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and Not(pyname_a_1 > 1))) and \
+(pyname_a_1 == pyname_a or \
+ pyname_a > 1 and pyname_a_1 == pyname_a - 1) and Not(pyname_a_1 > 1) and \
 ret == pyname_a_1
     """,
     )
@@ -298,12 +297,12 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_2 == pyname_a) or \
- (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and Not(pyname_a_1 > 1) \
+((pyname_a_2 == pyname_a) or \
+ (pyname_a > 1 and pyname_a_1 == pyname_a - 1 \
   and pyname_a_2 == pyname_a_1) or \
  (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and \
-  pyname_a_1 > 1 and pyname_a_2 == pyname_a_1 - 1 and Not(pyname_a_2 > 1))) and \
-ret == pyname_a_2
+  pyname_a_1 > 1 and pyname_a_2 == pyname_a_1 - 1)) and Not(pyname_a_2 > 1) \
+  and ret == pyname_a_2
     """,
         depth=2,
     )
@@ -321,11 +320,11 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_1 == pyname_a) or \
+((pyname_a_1 == pyname_a) or \
  (pyname_a > 1 and \
   (pyname_b > 1 and pyname_a_1 == pyname_a - pyname_b or \
    Not(pyname_b > 1) and pyname_a_1 == pyname_a + pyname_b) \
-  and Not(pyname_a_1 > 1))) and \
+  )) and Not(pyname_a_1 > 1) and \
 ret == pyname_a_1
     """,
     )
@@ -342,11 +341,11 @@ def tester(a, b):
     return a
     """,
         """
-    (Not(pyname_a > 1) and pyname_a_1 == pyname_a and pyname_b_1 == pyname_b or \
+    (pyname_a_1 == pyname_a and pyname_b_1 == pyname_b or \
      (pyname_a > 1 and \
-      (Not(pyname_b > 1) and pyname_b_1 == pyname_b or \
-       pyname_b > 1 and pyname_b_1 == pyname_b - 1 and Not(pyname_b_1 > 1)) and \
-      pyname_a_1 == pyname_b_1 and Not(pyname_a_1 > 1))) and \
+      (pyname_b_1 == pyname_b or \
+       pyname_b > 1 and pyname_b_1 == pyname_b - 1) and Not(pyname_b_1 > 1) and \
+      pyname_a_1 == pyname_b_1)) and Not(pyname_a_1 > 1) and \
     ret == pyname_a_1
     """,
     )
@@ -376,8 +375,8 @@ def test(i):
     return i
     """,
         """
-    (Not(pyname_i == 0) and pyname_i_1 == pyname_i or \
-     pyname_i == 0 and pyname_i_1 == pyname_i - 1 and Not(pyname_i_1 == 0)) and \
+    (pyname_i_1 == pyname_i or \
+     pyname_i == 0 and pyname_i_1 == pyname_i - 1) and Not(pyname_i_1 == 0) and \
     ret == pyname_i_1
     """,
     )
@@ -393,7 +392,8 @@ def test(i):
     """,
         "pyname_i > 0 and ret == 2",
         line=3,
-        depth=22,
+        # depth=22,
+        depth=2,
     )
 
 

@@ -105,6 +105,7 @@ class TreeWalker(ast.NodeVisitor):
         self.current_block = join
         self.types[join] = basic_block.Conditional
         self.node_order[join] = [true_branch, false_branch, start_block]
+        self.create_block()
         return False
 
     def visit_body(self, body: Sequence[ast.AST]) -> bool:

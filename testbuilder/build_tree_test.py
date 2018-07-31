@@ -8,7 +8,7 @@ from logbook import StreamHandler, debug, warn
 
 from . import basic_block
 from .basic_block import BasicBlock
-from .build_tree import RETURNBLOCK, TreeBuilder, build_tree
+from .build_tree import RETURNBLOCK, TreeBuilder, TreeWalker, build_tree
 from .slicing import Conditional, take_slice
 from .test_utils import write_dot
 
@@ -122,6 +122,7 @@ def check_loop(expectations, tree, stop):
     assert len(tree.children) == 2
     assert len(tree.parents) == 2
     assert tree.conditional
+    assert is_descendent(tree.children[0], tree.parents[0])
 
     # Check that we have the right conditional
     check_code(expected_cond, tree.conditional.code)
@@ -150,6 +151,9 @@ def check_conditional(expectations, tree, stop):
     if join.number != RETURNBLOCK:
         assert len(join.children) == 1
         assert len(join.parents) == 3
+        assert is_descendent(true_branch, join.parents[0])
+        assert is_descendent(false_branch, join.parents[1])
+        assert tree is join.parents[2]
 
     debug("Checking conditional block {}", tree.number)
     check_code(expected_cond, tree.conditional.code)
@@ -273,6 +277,23 @@ def check_done(tree, stop):
         assert len(tree.children) == 0
 
 
+def is_descendent(node, maybeDescendent, seen=None) -> bool:
+    if not seen:
+        seen = set()
+
+    if node in seen:
+        return False
+    else:
+        seen.add(node)
+
+    if node is maybeDescendent:
+        return True
+    for child in node.children:
+        if is_descendent(child, maybeDescendent, seen):
+            return True
+    return False
+
+
 def empty_block(tree):
     return not tree.conditional and not tree.code
 
@@ -315,13 +336,113 @@ def check_tree_builder(expected: str, code: str, write_tree: str = "", line=-1):
 
 def test_tree_building():
     tree = {1: [3], 2: [3], 3: [4, 5]}
-    bt = TreeBuilder(mapping={}, tree=tree, types={}, returns={})
+    bt = TreeBuilder(mapping={}, tree=tree, types={}, returns={}, node_order={})
     block_tree = bt.build_tree()
     assert block_tree[1].children == [block_tree[3]]
     assert block_tree[2].children == [block_tree[3]]
     assert block_tree[3].children == [block_tree[4], block_tree[5]]
     for i in range(1, 6):
         assert isinstance(block_tree[i], BasicBlock)
+
+
+def test_tree_building2():
+    tree = {
+        0: [],
+        1: [2],
+        2: [3, 8],
+        3: [4],
+        4: [5, 7, 6],
+        5: [6],
+        6: [2],
+        7: [6],
+        8: [0],
+    }
+    types = {
+        2: basic_block.Loop,
+        4: basic_block.StartConditional,
+        6: basic_block.Conditional,
+    }
+    node_order = {2: [6, 1], 6: [5, 7, 4]}
+    bt = TreeBuilder(
+        mapping={}, tree=tree, types=types, returns={}, node_order=node_order
+    )
+    block_tree = bt.build_tree()
+    assert block_tree[0].children == []
+    assert block_tree[1].children == [block_tree[2]]
+    assert block_tree[2].children == [block_tree[3], block_tree[8]]
+    assert block_tree[3].children == [block_tree[4]]
+    assert block_tree[4].children == [block_tree[5], block_tree[7], block_tree[6]]
+    assert block_tree[5].children == [block_tree[6]]
+    assert block_tree[6].children == [block_tree[2]]
+    assert block_tree[7].children == [block_tree[6]]
+    assert block_tree[8].children == [block_tree[0]]
+
+    assert block_tree[0].parents == [block_tree[8]]
+    assert block_tree[1].parents == []
+    assert block_tree[2].parents == [block_tree[6], block_tree[1]]
+    assert block_tree[3].parents == [block_tree[2]]
+    assert block_tree[4].parents == [block_tree[3]]
+    assert block_tree[5].parents == [block_tree[4]]
+    assert block_tree[6].parents == [block_tree[5], block_tree[7], block_tree[4]]
+    assert block_tree[7].parents == [block_tree[4]]
+    assert block_tree[8].parents == [block_tree[2]]
+
+
+def test_tree_spec_creation():
+    code = """
+if ...:
+    while ...:
+        pass
+else:
+    while ...:
+        if ...:
+            pass
+        else:
+            pass
+    if ...:
+        pass
+"""
+
+    from .test_utils import show_dot
+
+    tw = TreeWalker()
+    tw.visit(ast.parse(code))
+    builder = tw.get_builder()
+    tree = builder.build_tree()
+    # show_dot(tree[1].dot())
+    assert tw.tree == {
+        0: [],
+        1: [2],
+        2: [3, 8, 7],
+        3: [4],
+        4: [5, 6],
+        5: [4],
+        6: [7],
+        7: [22],
+        8: [9],
+        9: [10, 16],
+        10: [11],
+        11: [12, 14, 13],
+        12: [13],
+        13: [15],
+        14: [13],
+        15: [9],
+        16: [17],
+        17: [18, 20, 19],
+        18: [19],
+        19: [21],
+        20: [19],
+        21: [7],
+        22: [],
+    }
+
+    assert tw.node_order == {
+        4: [5, 3],
+        7: [6, 21, 2],
+        9: [15, 8],
+        13: [12, 14, 11],
+        19: [18, 20, 17],
+    }
 
 
 def test_block_creation():
@@ -488,7 +609,7 @@ return a
     """
     expected = [
         None,
-        ("a > 1", [None, ("b > 1", ["a -= b"], ["a += b"]), None]),
+        ("a > 1", [None, ("b > 1", ["a -= b"], ["a += b"]), None, None]),
         "return a",
         None,
     ]
@@ -505,7 +626,7 @@ return 2
 
 
 def test_is_parent():
-    b = TreeBuilder({}, {}, {}, {})
+    b = TreeBuilder({}, {}, {}, {}, {})
     start = BasicBlock()
     end = start.start_block().start_block()
     end.children.append(start)
