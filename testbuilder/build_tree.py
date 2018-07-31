@@ -26,14 +26,20 @@ class TreeWalker(ast.NodeVisitor):
         self.types: MMapping[int, BlockType] = {}
         self.returns: MMapping[int, bool] = {}
         self.control: List[int] = []
+        self.node_order: MMapping[int, List[int]] = {}
 
     def get_builder(self) -> "TreeBuilder":
         return TreeBuilder(
-            mapping=self.mapping, tree=self.tree, types=self.types, returns=self.returns
+            mapping=self.mapping,
+            tree=self.tree,
+            types=self.types,
+            returns=self.returns,
+            node_order=self.node_order,
         )
 
     def create_block(self, parent: Optional[int] = None) -> int:
         """
+        Creates a new block and attaches it to a parent block.
         Args:
             parent: If present, sets the parent block for the new block. If not
                     present, the current block will be used.
@@ -67,6 +73,7 @@ class TreeWalker(ast.NodeVisitor):
         self.control.append(self.current_block)
         join: Optional[int] = None
         if not self.visit_body(node.body):
+            true_branch = self.current_block
             join = self.create_block()
         self.control.pop()
 
@@ -74,6 +81,7 @@ class TreeWalker(ast.NodeVisitor):
         self.create_block(start_block)
         self.control.append(self.current_block)
         if not self.visit_body(node.orelse):
+            false_branch = self.current_block
             if join:
                 self.attach(join)
             else:
@@ -96,6 +104,7 @@ class TreeWalker(ast.NodeVisitor):
 
         self.current_block = join
         self.types[join] = basic_block.Conditional
+        self.node_order[join] = [true_branch, false_branch, start_block]
         return False
 
     def visit_body(self, body: Sequence[ast.AST]) -> bool:
@@ -109,6 +118,7 @@ class TreeWalker(ast.NodeVisitor):
         return False
 
     def visit_While(self, node: ast.While) -> None:
+        parent = self.current_block
         start_block = self.create_block()
         self.visit(node.test)
         self.types[start_block] = basic_block.Loop
@@ -117,6 +127,8 @@ class TreeWalker(ast.NodeVisitor):
         self.control.append(self.current_block)
         if not self.visit_body(node.body):
             self.attach(self.current_block, start_block)
+            body = self.current_block
+            self.node_order[start_block] = [body, parent]
         self.control.pop()
         # Create next block
         self.current_block = start_block
@@ -142,15 +154,19 @@ class TreeBuilder:
         tree: Mapping[int, Sequence[int]],
         types: Mapping[int, BlockType],
         returns: Mapping[int, bool],
+        node_order: Mapping[int, Sequence[int]],
     ) -> None:
         self.mapping = mapping
         self.tree = tree
         self.types = types
         self.returns = returns
+        self.node_order = node_order
         print("Constructing tree from tree of")
         pprint(self.tree)
         print("and types")
         pprint(self.types)
+        print("and node_order")
+        pprint(self.node_order)
 
     def _is_ancestor(
         self, ancestor: BasicBlock, current: BasicBlock, seen: Set[BasicBlock]
@@ -196,6 +212,7 @@ class TreeBuilder:
                         parent.children.append(child)
                     print("parent vs child", parent, child, p, c)
 
+        self.order_blocks(blocks)
         return blocks
 
     def dot(self) -> List[str]:
@@ -251,6 +268,14 @@ class TreeBuilder:
             self._set_conditionals(block, s)
         else:
             self._set_conditionals(block, s.neg())
+
+    def order_blocks(self, blocks: Mapping[int, BasicBlock]) -> None:
+        print("node order", self.node_order)
+        for k, vs in self.node_order.items():
+            parents = [blocks[i] for i in vs]
+            blocks[k].parents = parents
+            print("set block", k, "parents to", parents)
+        pass
 
     def inflate(self, s: Dependency) -> BlockTree:
         blocks = self.build_tree()
