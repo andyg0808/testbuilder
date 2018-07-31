@@ -125,13 +125,14 @@ class BasicBlock:
 
     def __repr__(self) -> str:
         if self.conditional:
-            return "BasicBlock({} <> {})".format(
+            return "BasicBlock_cond_{}({})".format(
+                self.number,
                 format_tree(self.conditional.code),
                 "\uf063".join(format_tree(c.code) for c in self.code),
             )
         else:
-            return "BasicBlock({})".format(
-                ";".join(format_tree(c.code) for c in self.code)
+            return "BasicBlock_{}({})".format(
+                self.number, ";".join(format_tree(c.code) for c in self.code)
             )
 
     def _get_label(self) -> str:
