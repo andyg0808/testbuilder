@@ -565,6 +565,20 @@ def test(i):
 
 
 @pytest.mark.skip
+def test_avoid_simple_infinite_loop():
+    code = """
+def test(i):
+    while i > 1:
+        pass
+    return i
+    """
+    check_expression(
+        code,
+        "Or(true, pyname_i > 1, pyname_i > 1 and pyname_i > 1) and Not(pyname_i > 1) and ret == pyname_i",
+    )
+
+
+@pytest.mark.skip
 def test_conditional_break_in_loop():
     code = """
 def test(u):
