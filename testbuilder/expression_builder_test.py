@@ -483,6 +483,19 @@ def test(i):
     )
 
 
+def test_desired_conditional_return():
+    check_expression(
+        """
+def test(i):
+    if i > 8:
+        return i
+    return i
+    """,
+        "pyname_i > 8 and ret == pyname_i",
+        line=3,
+    )
+
+
 @pytest.mark.skip()
 def test_avoid_infinite_loop():
     # We can't actually check for termination in all cases (thanks halting
@@ -528,7 +541,6 @@ def test(i):
     )
 
 
-@pytest.mark.skip
 def test_conditional_return_in_loop():
     code = """
 def test(i):
@@ -540,6 +552,16 @@ def test(i):
     return i
     """
     check_expression(code, "pyname_i > 0 and pyname_i == 2 and ret == 2", line=4)
+
+
+def test_desired_loop():
+    code = """
+def test(i):
+    while i > 0:
+        i -= 1
+    return i
+    """
+    check_expression(code, "pyname_i > 0 and pyname_i_1 == pyname_i - 1", line=3)
 
 
 @pytest.mark.skip

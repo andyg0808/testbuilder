@@ -92,13 +92,16 @@ class ExpressionBuilder:
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        # return self._convert_block_tree(tree.entrance, mutation_counts, None)
         assert tree.target
         print("target", tree.target, tree.target.number)
-        return self._convert_target_tree(tree.target, mutation_counts, None)
+        return self._convert_target_tree(tree.target, None, mutation_counts, None)
 
     def _convert_target_tree(
-        self, root: BasicBlock, variables: VarMapping, stop: StopBlock = None
+        self,
+        root: BasicBlock,
+        coming_from: Optional[BasicBlock],
+        variables: VarMapping,
+        stop: StopBlock = None,
     ) -> ExprList:
         """
         Args:
@@ -118,7 +121,7 @@ class ExpressionBuilder:
             return []
 
         if root.type == basic_block.Loop:
-            return self._convert_target_loop(root, variables, stop)
+            return self._convert_target_loop(root, coming_from, variables, stop)
             assert root.type != basic_block.Loop
         elif root.type == basic_block.Conditional:
             return self._convert_target_conditional(root, variables, stop)
@@ -126,14 +129,14 @@ class ExpressionBuilder:
             return self._convert_target_code_block(root, variables, stop)
         raise RuntimeError(f"Unknown block type: {root.type}")
 
-    def _handle_conditional(
+    def _handle_parents(
         self,
         parent: BasicBlock,
         root: BasicBlock,
         variables: VarMapping,
         stop: StopBlock,
     ) -> ExprList:
-        code = self._convert_target_tree(parent, variables, stop)
+        code = self._convert_target_tree(parent, root, variables, stop)
         if (
             parent.type == basic_block.StartConditional
             or parent.type == basic_block.Loop
@@ -144,6 +147,7 @@ class ExpressionBuilder:
                     self._convert(parent.conditional.code, variables)
                 )
                 if invert_conditional:
+                    print("Inverting conditional on", root)
                     conditional = bool_not(conditional)
                 code.append(conditional)
         print("parent code", code)
@@ -155,16 +159,13 @@ class ExpressionBuilder:
         assert (
             root.type == basic_block.Code or root.type == basic_block.StartConditional
         )
-        print("block, code length", root.number, len(root.code))
         code: ExprList
         if root.parents:
             print("parents exist")
             assert len(root.parents) == 1
             parent = root.parents[0]
-            if parent is not None:
-                code = self._handle_conditional(parent, root, variables, stop)
-            else:
-                code = []
+            assert parent
+            code = self._handle_parents(parent, root, variables, stop)
         else:
             code = []
 
@@ -173,31 +174,33 @@ class ExpressionBuilder:
         return code
 
     def _convert_target_loop(
-        self, root: BasicBlock, variables: VarMapping, stop: StopBlock
+        self,
+        root: BasicBlock,
+        coming_from: Optional[BasicBlock],
+        variables: VarMapping,
+        stop: StopBlock,
     ) -> ExprList:
         def construct_path(
             path: ExprList, path_vars: VarMapping
         ) -> Tuple[ExprList, VarMapping]:
             path = copy(path)
             path_vars = copy(path_vars)
-            # Make typechecker happy. This should always be true of loops.
-            # assert root.conditional
-            # path.append(
-            #     bool_not(to_boolean(self._convert(root.conditional.code, path_vars)))
-            # )
             return (path, path_vars)
 
         assert root.type == basic_block.Loop
 
         body, bypass = root.parents
+        assert len(root.children) > 0
+        body_end = root.children[0]
+        assert body_end is not None
         assert bypass is not None
-        if body is None:
+        if body is None or body_end == coming_from:
+            # If we want to get into the body, there is no need to run it again
             depth = 0
         else:
             depth = self.depth
 
-        code = self._handle_conditional(bypass, root, variables, stop)
-        # code = self._convert_target_tree(bypass, variables, stop)
+        code = self._handle_parents(bypass, root, variables, stop)
 
         if root.conditional is None:
             print("No conditional on root")
@@ -208,16 +211,10 @@ class ExpressionBuilder:
 
         paths = [construct_path([], variables)]
 
-        # Make typechecker happy. This should always be true of loops.
-        # assert root.conditional
-
         loops: ExprList = []
         for _i in range(depth):
-            print("start variables", variables, "for loop", _i)
-            # loops += [to_boolean(self._convert(root.conditional.code, variables))]
             assert body is not None
-            loops += self._convert_target_tree(body, variables, root)
-            print("variables", variables, "for loop", _i)
+            loops += self._convert_target_tree(body, root, variables, root)
             paths.append(construct_path(loops, variables))
 
         print("Paths through loop:", paths)
@@ -234,8 +231,6 @@ class ExpressionBuilder:
             code += [bool_or(*conditions)]
         elif len(conditions) == 1:
             code += [conditions[0]]
-        # else:
-        #     raise RuntimeError("No conditions!")
 
         return code
 
@@ -247,7 +242,7 @@ class ExpressionBuilder:
         ) -> Tuple[ExprList, VarMapping]:
             branch_variables = copy(variables)
             branch: ExprList = []
-            branch += self._convert_target_tree(parent, branch_variables, join)
+            branch += self._convert_target_tree(parent, root, branch_variables, join)
             print("branch code", branch)
             return (branch, branch_variables)
 
@@ -259,10 +254,9 @@ class ExpressionBuilder:
         assert join is not None
         assert len(join.parents) == 1
         if join.parents[0] is not None:
-            code = self._handle_conditional(join.parents[0], join, variables, stop)
+            code = self._handle_parents(join.parents[0], join, variables, stop)
         else:
             code = []
-        # code = self._convert_target_tree(join, variables, stop)
 
         if join.conditional is None:
             print("No conditional on join")
