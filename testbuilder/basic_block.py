@@ -54,7 +54,7 @@ class BasicBlock:
     def __init__(self, number: int = -1) -> None:
         self.conditional: Optional[Dependency] = None
         self.children: List[BasicBlock] = []
-        self.parents: List[BasicBlock] = []
+        self.parents: List[Optional[BasicBlock]] = []
         self.code: List[Dependency] = []
         self.join: Optional[BasicBlock] = None
         self.type: BlockType = Code
@@ -104,7 +104,11 @@ class BasicBlock:
     def trace_blocks(self) -> Any:
         seen = set([self])
         return (
-            [p.trace_parents(seen) for p in self.parents if p is not self]
+            [
+                p.trace_parents(seen)
+                for p in self.parents
+                if p is not self and p is not None
+            ]
             + [self]
             + [p.trace_children(seen) for p in self.children if p is not self]
         )
@@ -114,7 +118,11 @@ class BasicBlock:
             return []
         else:
             seen.add(self)
-        return [self] + [p.trace_parents(seen) for p in self.parents if p is not self]
+        return [self] + [
+            p.trace_parents(seen)
+            for p in self.parents
+            if p is not self and p is not None
+        ]
 
     def trace_children(self, seen: Set[Any]) -> Any:
         if self in seen:
@@ -167,8 +175,11 @@ class BasicBlock:
                 output.append(link)
                 done.add(link)
         for parent in self.parents:
-            output += parent.dot(done)
-            link = "{} -> {};".format(id(parent), id(self))
+            if parent is not None:
+                output += parent.dot(done)
+                link = "{} -> {};".format(id(parent), id(self))
+            else:
+                link = "None -> {};".format(id(self))
             if link not in done:
                 output.append(link)
                 done.add(link)

@@ -6,6 +6,8 @@ from typing import Mapping, Optional, Sequence, Set, Union
 import pytest
 from logbook import StreamHandler, debug, warn
 
+from dataclasses import dataclass
+
 from . import basic_block
 from .basic_block import BasicBlock
 from .build_tree import RETURNBLOCK, TreeBuilder, TreeWalker, build_tree
@@ -27,6 +29,13 @@ class Required:
 class NotRequired:
     def __init__(self, value):
         self.value = value
+
+
+@dataclass
+class AllExit:
+    cond: str
+    true: Optional[Sequence[str]]
+    false: Optional[Sequence[str]]
 
 
 def check_type(l, t):
@@ -95,6 +104,8 @@ def check_required_block(expectations, tree, stop):
         or isinstance(expected, NotRequired)
     ):
         check_code_block(expectations, tree, stop)
+    elif isinstance(expected, AllExit):
+        check_exit_conditional(expectations, tree, stop)
     elif isinstance(expected, tuple):
         if len(expected) == 2:
             check_loop(expectations, tree, stop)
@@ -164,6 +175,30 @@ def check_conditional(expectations, tree, stop):
     check_block_tree(expectations[1:], join, stop)
 
 
+def check_exit_conditional(expectations, tree, stop):
+    expected = expectations[0]
+    # Check basic properties of conditional expectations
+
+    assert isinstance(expected.cond, str)
+    assert isinstance(expected.true, list) or expected.true is None
+    assert isinstance(expected.false, list) or expected.false is None
+
+    # Check basic properties of conditional blocks
+    assert tree.type == basic_block.StartConditional
+    # No join block exists for conditionals which return from all branches.
+    # They never join!
+    assert len(tree.children) == 2
+    assert len(tree.parents) == 1
+    true_branch, false_branch = tree.children
+    assert tree.conditional
+
+    debug("Checking conditional block {}", tree.number)
+    check_code(expected.cond, tree.conditional.code)
+
+    check_conditional_fork(expected.true, true_branch, None)
+    check_conditional_fork(expected.false, false_branch, None)
+
+
 def check_conditional_fork(expectations, tree, stop):
     """
     Check that a branch of a conditional matches the expectation provided.
@@ -193,7 +228,7 @@ def check_empty_tree(tree, stop):
         check_empty_tree(tree.children[0], tree.children[2])
         check_empty_tree(tree.children[1], tree.children[2])
     elif tree.type == basic_block.StartConditional:
-        assert len(tree.children) == 3
+        assert len(tree.children) in (2, 3)
         assert len(tree.parents) == 1
         check_empty_tree(tree.children[0], tree)
         check_empty_tree(tree.children[1], stop)
@@ -407,8 +442,8 @@ else:
 
     tw = TreeWalker()
     tw.visit(ast.parse(code))
-    builder = tw.get_builder()
-    tree = builder.build_tree()
+    # builder = tw.get_builder()
+    # tree = builder.build_tree()
     # show_dot(tree[1].dot())
     assert tw.tree == {
         0: [],
@@ -500,7 +535,7 @@ def things(a, b):
     else:
         return b
     """
-    expected = [None, ("4 < 3", None, ["return b"]), None]
+    expected = [None, AllExit("4 < 3", None, ["return b", None]), None]
     check_tree_builder(expected, code)
 
 
@@ -531,7 +566,11 @@ def min(a, b, c):
         else:
             return c
     """
-    expected = [None, ("a < b", None, [None, ("b < c", None, ["return c"])]), None]
+    expected = [
+        None,
+        AllExit("a < b", None, [None, AllExit("b < c", None, ["return c", None])]),
+        None,
+    ]
     check_tree_builder(expected, code)
 
 

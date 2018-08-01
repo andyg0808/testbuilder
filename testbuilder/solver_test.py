@@ -96,6 +96,7 @@ def print_all(count):
     while count > 0:
         count -= 1
         print(count)
+    return count
     """,
         "pyname_count == 20",
         None,

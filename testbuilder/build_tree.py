@@ -15,6 +15,8 @@ def make_display(k: int) -> str:
 RETURNBLOCK = 0
 STARTBLOCK = 1
 
+NodeOrdering = MMapping[int, List[Optional[int]]]
+
 
 class TreeWalker(ast.NodeVisitor):
     def __init__(self) -> None:
@@ -26,7 +28,7 @@ class TreeWalker(ast.NodeVisitor):
         self.types: MMapping[int, BlockType] = {}
         self.returns: MMapping[int, bool] = {}
         self.control: List[int] = []
-        self.node_order: MMapping[int, List[int]] = {}
+        self.node_order: NodeOrdering = {}
 
     def get_builder(self) -> "TreeBuilder":
         return TreeBuilder(
@@ -72,14 +74,18 @@ class TreeWalker(ast.NodeVisitor):
         self.create_block()
         self.control.append(self.current_block)
         join: Optional[int] = None
+        true_branch: Optional[int]
         if not self.visit_body(node.body):
             true_branch = self.current_block
             join = self.create_block()
+        else:
+            true_branch = None
         self.control.pop()
 
         # False branch
         self.create_block(start_block)
         self.control.append(self.current_block)
+        false_branch: Optional[int]
         if not self.visit_body(node.orelse):
             false_branch = self.current_block
             if join:
@@ -92,9 +98,11 @@ class TreeWalker(ast.NodeVisitor):
 
             # We have to have a junction node for the if statement. This
             # is technically it.
-            self.attach(start_block, RETURNBLOCK)
-            self.types[RETURNBLOCK] = basic_block.Conditional
+            # self.attach(start_block, RETURNBLOCK)
+            # self.types[RETURNBLOCK] = basic_block.Conditional
             return True
+        else:
+            false_branch = None
         self.control.pop()
 
         # Add join as a third child to start_block. This eliminates the need to
@@ -126,14 +134,15 @@ class TreeWalker(ast.NodeVisitor):
         # Create body block
         self.create_block()
         self.control.append(self.current_block)
+        body = None
         if not self.visit_body(node.body):
             self.attach(self.current_block, start_block)
             body = self.current_block
-            self.node_order[start_block] = [body, parent]
         self.control.pop()
         # Create next block
         self.current_block = start_block
         self.create_block()
+        self.node_order[start_block] = [body, parent]
 
     def visit_Return(self, node: ast.Return) -> bool:
         self.attach(RETURNBLOCK)
@@ -155,7 +164,7 @@ class TreeBuilder:
         tree: Mapping[int, Sequence[int]],
         types: Mapping[int, BlockType],
         returns: Mapping[int, bool],
-        node_order: Mapping[int, Sequence[int]],
+        node_order: NodeOrdering,
     ) -> None:
         self.mapping = mapping
         self.tree = tree
@@ -180,7 +189,11 @@ class TreeBuilder:
 
         seen.add(current)
 
-        return any(self._is_ancestor(ancestor, c, seen) for c in current.parents)
+        return any(
+            self._is_ancestor(ancestor, c, seen)
+            for c in current.parents
+            if c is not None
+        )
 
     def get_block(
         self, block_num: int, parent: Optional[BasicBlock] = None
@@ -273,7 +286,7 @@ class TreeBuilder:
     def order_blocks(self, blocks: Mapping[int, BasicBlock]) -> None:
         print("node order", self.node_order)
         for k, vs in self.node_order.items():
-            parents = [blocks[i] for i in vs]
+            parents = [blocks[i] if i is not None else None for i in vs]
             blocks[k].parents = parents
             print("set block", k, "parents to", parents)
         pass

@@ -7,6 +7,7 @@ from copy import copy
 from functools import reduce
 from typing import (
     Any,
+    Callable,
     Iterable,
     Iterator,
     List,
@@ -39,16 +40,25 @@ Expression = z3.ExprRef
 ExprList = List[Expression]
 
 
+def _simplify_logical(
+    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
+) -> Expression:
+    if len(exprs) > 1:
+        return function(*exprs)
+    else:
+        return exprs[0]
+
+
 def bool_not(expr: Expression) -> Expression:
     return z3.Not(expr)
 
 
 def bool_or(*exprs: Expression) -> Expression:
-    return z3.Or(*exprs)
+    return _simplify_logical(exprs, z3.Or)
 
 
 def bool_and(*exprs: Expression) -> Expression:
-    return z3.And(*exprs)
+    return _simplify_logical(exprs, z3.And)
 
 
 def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
@@ -151,7 +161,10 @@ class ExpressionBuilder:
             print("parents exist")
             assert len(root.parents) == 1
             parent = root.parents[0]
-            code = self._handle_conditional(parent, root, variables, stop)
+            if parent is not None:
+                code = self._handle_conditional(parent, root, variables, stop)
+            else:
+                code = []
         else:
             code = []
 
@@ -176,12 +189,13 @@ class ExpressionBuilder:
 
         assert root.type == basic_block.Loop
 
-        depth = self.depth
-        if len(root.parents) == 1:
+        body, bypass = root.parents
+        assert bypass is not None
+        if body is None:
             depth = 0
-            bypass = root.parents[0]
         else:
-            body, bypass = root.parents
+            depth = self.depth
+
         code = self._handle_conditional(bypass, root, variables, stop)
         # code = self._convert_target_tree(bypass, variables, stop)
 
@@ -201,6 +215,7 @@ class ExpressionBuilder:
         for _i in range(depth):
             print("start variables", variables, "for loop", _i)
             # loops += [to_boolean(self._convert(root.conditional.code, variables))]
+            assert body is not None
             loops += self._convert_target_tree(body, variables, root)
             print("variables", variables, "for loop", _i)
             paths.append(construct_path(loops, variables))
@@ -241,8 +256,12 @@ class ExpressionBuilder:
         print("checking parent length")
         assert len(root.parents) == 3
         true_branch, false_branch, join = root.parents
+        assert join is not None
         assert len(join.parents) == 1
-        code = self._handle_conditional(join.parents[0], join, variables, stop)
+        if join.parents[0] is not None:
+            code = self._handle_conditional(join.parents[0], join, variables, stop)
+        else:
+            code = []
         # code = self._convert_target_tree(join, variables, stop)
 
         if join.conditional is None:
@@ -253,8 +272,14 @@ class ExpressionBuilder:
             return code
 
         branches = []
-        branches.append(construct_branch(true_branch, join, invert_conditional=False))
-        branches.append(construct_branch(false_branch, join, invert_conditional=True))
+        if true_branch:
+            branches.append(
+                construct_branch(true_branch, join, invert_conditional=False)
+            )
+        if false_branch:
+            branches.append(
+                construct_branch(false_branch, join, invert_conditional=True)
+            )
         print("branches", branches)
 
         branch_exprs, updated_variables = _update_paths(branches)
