@@ -471,6 +471,36 @@ def test(i):
     )
 
 
+def test_basic_conditional_return():
+    check_expression(
+        """
+def test(i):
+    if i > 8:
+        return i
+    return i
+    """,
+        "Not(pyname_i > 8) and ret == pyname_i",
+    )
+
+
+@pytest.mark.skip()
+def test_avoid_infinite_loop():
+    # We can't actually check for termination in all cases (thanks halting
+    # problem!), but it would be nice if we could at least avoid running loops
+    # which our checker can't confirm exit. To do this, we probably need to
+    # stop slicing code.
+    check_expression(
+        """
+def test(i):
+    j = i
+    while j > 1:
+        j += 1
+    return i
+    """,
+        "Not(i > 1) and ret == pyname_i",
+    )
+
+
 def test_conditional_else_return():
     check_expression(
         """
