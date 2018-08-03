@@ -1,4 +1,4 @@
-.PHONY: build docs
+.PHONY: build docs pytest mypy
 
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
@@ -16,6 +16,12 @@ export MYPYPATH=./stubs
 #   -x   Stop after first failed test. Speeds up testing runs with failures
 #   -v   Show full diffs.
 PYTEST = pytest -x -ra --ff testbuilder
+
+pytest:
+	pipenv run $(PYTEST)
+
+mypy:
+	pipenv run $(MYPY)
 
 build:
 	pipenv run $(MYPY)
