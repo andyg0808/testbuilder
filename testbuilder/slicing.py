@@ -17,6 +17,8 @@ from typing import (
     cast,
 )
 
+from dataclasses import dataclass
+
 from .linemapper import LineMapper
 from .var_collector import find_targets, find_vars
 
@@ -378,6 +380,18 @@ def take_slice(
         return s.take_slice(line, filename)
     else:
         return None
+
+
+@dataclass
+class FuncStmt:
+    statement: Statement
+    function: ast.FunctionDef
+
+
+def split_statements(func: ast.FunctionDef) -> Iterator[FuncStmt]:
+    assert isinstance(func, ast.FunctionDef)
+    s = Slicer(func)
+    return map(lambda stmt: FuncStmt(stmt, func), s.statements())
 
 
 class FoundReturn(Exception):

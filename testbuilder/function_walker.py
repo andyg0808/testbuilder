@@ -15,3 +15,9 @@ class FunctionWalker(ast.NodeVisitor):
 
     def __getitem__(self, idx: int) -> ast.FunctionDef:
         return self.functions[idx]
+
+
+def split_functions(tree: ast.AST) -> Iterator[ast.FunctionDef]:
+    walker = FunctionWalker()
+    walker.visit(tree)
+    return iter(walker)

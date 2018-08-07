@@ -13,7 +13,9 @@ from pathlib import Path
 
 from docopt import docopt
 
-from testbuilder.generate import generate_tests
+from testbuilder.generate_proto import generate_tests
+
+# from testbuilder.generate import generate_tests
 
 
 def main(filename: str) -> None:

@@ -3,7 +3,7 @@
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
 
-MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
+MYPY = mypy --strict --check-untyped-defs testbuilder/generate_proto.py
 export MYPYPATH=./stubs
 
 # Run pytest
