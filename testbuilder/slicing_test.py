@@ -13,7 +13,7 @@ def check_code(
     actual: str, expected: Sequence[str], expected_vars: Sequence[str] = None, line=-1
 ) -> None:
     code = ast.parse(actual.strip())
-    s = take_slice(code, line)
+    s = take_slice(line, code)
     s.walk_tree()
     check_slice(expected, s, expected_vars)
 
@@ -301,7 +301,7 @@ if x < 1:
 return a
     """.strip()
     )
-    s = take_slice(code, -1)
+    s = take_slice(-1, code)
     assert_bag([x.lineno for x in s.dependencies], [1, 3])
 
 
@@ -316,7 +316,7 @@ else:
 return a
     """.strip()
     )
-    s = take_slice(code, -1)
+    s = take_slice(-1, code)
     assert_bag([x.lineno for x in s.dependencies], [1])
 
 

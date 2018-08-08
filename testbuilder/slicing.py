@@ -373,7 +373,7 @@ class Slicer:
 
 
 def take_slice(
-    code: ast.AST, line: int, filename: Optional[str] = None
+    line: int, code: ast.AST, filename: Optional[str] = None
 ) -> Optional[Dependency]:
     s = Slicer(code)
     if line in s:

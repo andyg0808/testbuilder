@@ -354,7 +354,7 @@ def create_tree(code: str, write_tree: str = "", line=-1):
         write_dot(tree.dot(), write_tree)
         write_dot(tree.build_tree()[0].dot(), write_tree)
     print("done writing")
-    s = take_slice(parsed, line)
+    s = take_slice(line, parsed)
     if not s:
         warn("No such slice exists")
         return None

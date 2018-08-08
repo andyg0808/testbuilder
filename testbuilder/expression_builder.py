@@ -60,7 +60,7 @@ def bool_and(*exprs: Expression) -> Expression:
 
 def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
-    dep_tree = take_slice(code, line)
+    dep_tree = take_slice(line, code)
     print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
