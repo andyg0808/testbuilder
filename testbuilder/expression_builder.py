@@ -6,19 +6,15 @@ import ast
 from copy import copy
 from functools import reduce
 from typing import (
-    Any,
     Callable,
     Iterable,
-    Iterator,
     List,
     Mapping,
     MutableMapping as MMapping,
-    NewType,
     Optional,
     Sequence,
     Set,
     Tuple,
-    cast,
 )
 
 import z3
@@ -28,7 +24,7 @@ from .ast_builder import make_ast
 from .basic_block import BasicBlock, BlockTree
 from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
-from .slicing import Dependency, Variable, take_slice
+from .slicing import Variable, take_slice
 
 NULL = z3.DeclareSort("None")
 
@@ -68,7 +64,7 @@ def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Express
     if not dep_tree:
         return None
     tree = block_tree.inflate(dep_tree)
-    from .test_utils import show_dot
+    # from .test_utils import show_dot
 
     print("tree", tree)
     # show_dot(tree.entrance.dot())

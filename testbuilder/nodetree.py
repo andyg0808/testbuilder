@@ -1,9 +1,9 @@
 """
 Most of the names in this class are based on the names used in the Python AST.
-The visit and generic_visit methods are probably related to their equivalnets
-for the Python AST.
+The visit and generic_visit methods are potentially based on the equivalent
+functions for the Python AST.
 """
-from typing import Any, Generic, List, Mapping, Optional, Sequence, Tuple, TypeVar, cast
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 
 import dataclasses
 from dataclasses import dataclass
