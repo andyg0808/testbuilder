@@ -100,6 +100,6 @@ class AstBuilder(ast.NodeVisitor):
         return equivalent(*fields)
 
 
-def make_ast(code: ast.AST, variables: MMapping[str, int]) -> n.Node:
+def make_ast(variables: MMapping[str, int], code: ast.AST) -> n.Node:
     a = AstBuilder(variables)
     return cast(n.Node, a.visit(code))

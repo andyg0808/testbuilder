@@ -4,7 +4,7 @@ value at a given line.
 """
 import ast
 from copy import copy
-from functools import reduce
+from functools import reduce, partial
 from typing import (
     Callable,
     Iterable,
@@ -25,6 +25,7 @@ from .basic_block import BasicBlock, BlockTree
 from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Variable, take_slice
+from toolz import pipe
 
 NULL = z3.DeclareSort("None")
 
@@ -281,9 +282,8 @@ class ExpressionBuilder:
         return code
 
     def _convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
-        tree = make_ast(code, variables)
-        result = convert(tree)
-        return result
+        _make_ast = partial(make_ast, variables)
+        return pipe(code, _make_ast, convert)
 
 
 def to_boolean(expr: Expression) -> Expression:
