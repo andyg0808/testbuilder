@@ -19,7 +19,7 @@ NodeOrdering = MMapping[int, List[Optional[int]]]
 
 
 class TreeWalker(ast.NodeVisitor):
-    def __init__(self) -> None:
+    def __init__(self, code: ast.AST) -> None:
         super().__init__()
         self.tree: MMapping[int, List[int]] = {STARTBLOCK: [], RETURNBLOCK: []}
         self.mapping: MMapping[int, int] = {}
@@ -29,6 +29,7 @@ class TreeWalker(ast.NodeVisitor):
         self.returns: MMapping[int, bool] = {}
         self.control: List[int] = []
         self.node_order: NodeOrdering = {}
+        self.code = code
 
     def get_builder(self) -> "TreeBuilder":
         return TreeBuilder(
@@ -37,6 +38,7 @@ class TreeWalker(ast.NodeVisitor):
             types=self.types,
             returns=self.returns,
             node_order=self.node_order,
+            code=self.code,
         )
 
     def create_block(self, parent: Optional[int] = None) -> int:
@@ -165,12 +167,14 @@ class TreeBuilder:
         types: Mapping[int, BlockType],
         returns: Mapping[int, bool],
         node_order: NodeOrdering,
+        code: ast.AST,
     ) -> None:
         self.mapping = mapping
         self.tree = tree
         self.types = types
         self.returns = returns
         self.node_order = node_order
+        self.code = code
         print("Constructing tree from tree of")
         pprint(self.tree)
         print("and types")
@@ -300,6 +304,6 @@ class TreeBuilder:
 
 
 def build_tree(syntax_tree: ast.AST) -> TreeBuilder:
-    walker = TreeWalker()
+    walker = TreeWalker(syntax_tree)
     walker.visit(syntax_tree)
     return walker.get_builder()

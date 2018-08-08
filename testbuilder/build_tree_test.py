@@ -53,7 +53,7 @@ def check_block_tree(expectations, tree, stop=None):
     """
     Check that `tree` of basic blocks matches the description provided in
     `expectations`
-    
+
     Args:
         expectations: A list of expectations which should be fulfilled by the block tree in `tree`
         tree: The root of a basic block tree which will be compared to the expectations
@@ -371,7 +371,9 @@ def check_tree_builder(expected: str, code: str, write_tree: str = "", line=-1):
 
 def test_tree_building():
     tree = {1: [3], 2: [3], 3: [4, 5]}
-    bt = TreeBuilder(mapping={}, tree=tree, types={}, returns={}, node_order={})
+    bt = TreeBuilder(
+        mapping={}, tree=tree, types={}, returns={}, node_order={}, code=None
+    )
     block_tree = bt.build_tree()
     assert block_tree[1].children == [block_tree[3]]
     assert block_tree[2].children == [block_tree[3]]
@@ -399,7 +401,7 @@ def test_tree_building2():
     }
     node_order = {2: [6, 1], 6: [5, 7, 4]}
     bt = TreeBuilder(
-        mapping={}, tree=tree, types=types, returns={}, node_order=node_order
+        mapping={}, tree=tree, types=types, returns={}, node_order=node_order, code=None
     )
     block_tree = bt.build_tree()
     assert block_tree[0].children == []
@@ -440,8 +442,9 @@ else:
 
     from .test_utils import show_dot
 
-    tw = TreeWalker()
-    tw.visit(ast.parse(code))
+    parsed = ast.parse(code)
+    tw = TreeWalker(parsed)
+    tw.visit(parsed)
     # builder = tw.get_builder()
     # tree = builder.build_tree()
     # show_dot(tree[1].dot())
@@ -665,7 +668,7 @@ return 2
 
 
 def test_is_parent():
-    b = TreeBuilder({}, {}, {}, {}, {})
+    b = TreeBuilder({}, {}, {}, {}, {}, None)
     start = BasicBlock()
     end = start.start_block().start_block()
     end.children.append(start)
