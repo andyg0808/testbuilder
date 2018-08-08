@@ -58,7 +58,7 @@ def bool_and(*exprs: Expression) -> Expression:
     return _simplify_logical(exprs, z3.And)
 
 
-def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
+def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
     dep_tree = take_slice(line, code)
     print("dep_tree", dep_tree, "end")

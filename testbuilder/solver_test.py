@@ -25,7 +25,7 @@ def compare_dicts(actual, expected):
 
 def check_solve(code, conditions, expected, unroll=1):
     parse = ast.parse(code)
-    code_expression = get_expression(parse, -1, depth=unroll)
+    code_expression = get_expression(-1, parse, depth=unroll)
     if conditions:
         condition_expression = expand_variables(conditions)
         expression = z3.And(code_expression, condition_expression)

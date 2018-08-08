@@ -8,6 +8,8 @@ from .expression_builder import ExpressionBuilder, get_expression
 from .slicing import take_slice
 from .test_utils import write_dot
 from .variable_expander import expand_variables
+from toolz import pipe
+from functools import partial
 
 # def test_conditional_index():
 #    assert conditional_diff_index([1,2,3], [1,2,3,4]) == 3
@@ -45,7 +47,8 @@ def check_expression(
     """
     if isinstance(expected, str):
         expected = expand_variables(expected)
-    expr = get_expression(ast.parse(code_string.strip()), line, depth)
+    _get_expression = partial(get_expression, line, depth=depth)
+    expr = pipe(code_string.strip(), ast.parse, _get_expression)
     print("expected", expected)
     print("expr", expr)
     if simplify:
@@ -711,6 +714,7 @@ def tester(b):
     # This function will crash if passed False (because it tries to add a number to
     # a string). This needs to be discovered!
 
+
 @pytest.mark.skip
 def test_node_swap():
     # After an example in khurshid2003
@@ -730,8 +734,12 @@ def swapNode(node):
             return t
     return node
     """
-    check_expression(code, [
-        """
+    check_expression(
+        code,
+        [
+            """
         (ite (Node.is_new pyname_node)
              (let ((pyname_next
-    """])
+    """
+        ],
+    )
