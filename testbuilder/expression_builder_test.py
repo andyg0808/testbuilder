@@ -710,3 +710,28 @@ def tester(b):
     # After an example in canon2005
     # This function will crash if passed False (because it tries to add a number to
     # a string). This needs to be discovered!
+
+@pytest.mark.skip
+def test_node_swap():
+    # After an example in khurshid2003
+    code = """
+@dataclass
+class Node:
+    elem: int
+    next: "Node"
+
+def swapNode(node):
+    if node.next is not None:
+        next = node.next
+        if node.elem - next.elem > 0:
+            t = next
+            node.next = t.next
+            t.next = node
+            return t
+    return node
+    """
+    check_expression(code, [
+        """
+        (ite (Node.is_new pyname_node)
+             (let ((pyname_next
+    """])
