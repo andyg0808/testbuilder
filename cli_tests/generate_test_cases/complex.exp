@@ -9,3 +9,4 @@ expect expected
 send "None\n"
 expect "Couldn't generate a test for line 10"
 system pytest complex_test.py
+file delete complex_test.py
