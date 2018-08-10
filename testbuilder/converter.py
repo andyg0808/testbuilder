@@ -10,6 +10,7 @@ from typing import Any, Callable, Mapping, MutableMapping as MMapping, Tuple, ca
 import z3
 
 from . import nodetree as n
+from .visitor import Visitor
 
 Expression = z3.ExprRef
 
@@ -39,7 +40,7 @@ def get_variable_name(node: n.Name) -> str:
 OpFunc = Callable[..., Expression]
 
 
-class Z3Converter(n.Visitor[Expression]):
+class Z3Converter(Visitor[n.Node, Expression]):
     def visit_Int(self, node: n.Int) -> z3.Int:
         return z3.IntVal(node.v)
 
@@ -88,8 +89,8 @@ class Z3Converter(n.Visitor[Expression]):
             return z3.Int(variable)
 
     def visit_Set(self, node: n.Set) -> Expression:
-        var = cast(Expression, self.visit(node.target))
-        value = cast(Expression, self.visit(node.e))
+        var = self.visit(node.target)
+        value = self.visit(node.e)
         return var == value
 
     def visit_Expr(self, node: n.Expr) -> Expression:

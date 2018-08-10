@@ -8,9 +8,11 @@ from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 import dataclasses
 from dataclasses import dataclass
 
+from .visitor import Visitable
+
 
 @dataclass
-class Node:
+class Node(Visitable):
     pass
 
 
@@ -154,22 +156,22 @@ class Call(expr):
     keywords: Sequence[Tuple[str, expr]]
 
 
-T = TypeVar("T")
+# T = TypeVar("T")
 
 
-class Visitor(Generic[T]):
-    def generic_visit(self, node: Node) -> Optional[T]:
-        for field in dataclasses.fields(node):
-            print(field.type)
-            data = getattr(node, field.name)
-            if isinstance(data, Sequence):
-                map(self.visit, data)
-            elif isinstance(data, Node):
-                self.visit(data)
+# class Visitor:
+#     def generic_visit(self, node: Node) -> Any:
+#         for field in dataclasses.fields(node):
+#             print(field.type)
+#             data = getattr(node, field.name)
+#             if isinstance(data, Sequence):
+#                 map(self.visit, data)
+#             elif isinstance(data, Node):
+#                 self.visit(data)
 
-        return None
+#         return None
 
-    def visit(self, node: Node) -> Optional[T]:
-        name = type(node).__name__
-        func = getattr(self, "visit_" + name, self.generic_visit)
-        return cast(Optional[T], func(node))
+#     def visit(self, node: Node) -> Any:
+#         name = type(node).__name__
+#         func = getattr(self, "visit_" + name, self.generic_visit)
+#         return cast(Optional[T], func(node))
