@@ -4,7 +4,7 @@ value at a given line.
 """
 import ast
 from copy import copy
-from functools import reduce, partial
+from functools import partial, reduce
 from typing import (
     Callable,
     Iterable,
@@ -17,6 +17,8 @@ from typing import (
     Tuple,
 )
 
+from toolz import pipe
+
 import z3
 
 from . import basic_block
@@ -25,7 +27,6 @@ from .basic_block import BasicBlock, BlockTree
 from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Variable, take_slice
-from toolz import pipe
 
 NULL = z3.DeclareSort("None")
 
@@ -70,28 +71,45 @@ def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Express
     print("tree", tree)
     # show_dot(tree.entrance.dot())
     variables = dep_tree.get_slice_variables()
-    eb = ExpressionBuilder(depth)
+    eb = ExpressionBuilder(depth, dep_tree.lines())
     return eb.get_expression(variables, tree)
 
 
 class ExpressionBuilder:
-    def __init__(self, depth: int) -> None:
+    def __init__(self, depth: int, lines: Set[int]) -> None:
         self.depth = depth
+        self.lines = lines
 
     def get_expression(
         self, variables: Iterable[Variable], flowgraph: BlockTree
     ) -> Expression:
-        expr_list: ExprList = self.convert_tree(flowgraph, variables)
-        return _combine_conditions(expr_list)
-
-    def convert_tree(self, tree: BlockTree, variables: Iterable[Variable]) -> ExprList:
         # Sets variables to the default value, to treat them as having been defined
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
+        expr_list: ExprList = self.convert_tree(flowgraph, mutation_counts)
+        return _combine_conditions(expr_list)
+
+    def convert_tree(self, tree: BlockTree, variables: VarMapping) -> ExprList:
         assert tree.target
         print("target", tree.target, tree.target.number)
-        return self._convert_target_tree(tree.target, None, mutation_counts, None)
+        expected = self._convert_target_tree(tree.target, None, copy(variables), None)
+        actual = self._modern_convert_tree(copy(variables), tree)
+        print("Actual expression:", actual)
+        print("Expected expression:", expected)
+        assert actual == expected
+        return expected
+
+    def _modern_convert_tree(self, variables: VarMapping, tree: BlockTree) -> ExprList:
+        from .ast_to_ssa import ast_to_ssa
+        from .ssa_to_expression import blocktree_and_ssa_to_expression
+        from toolz import pipe
+        from functools import partial
+
+        _ast_to_ssa = partial(ast_to_ssa, self.lines, variables)
+        _ssa_to_expression = partial(blocktree_and_ssa_to_expression, self.depth, tree)
+
+        return pipe(tree.code, _ast_to_ssa, _ssa_to_expression)
 
     def _convert_target_tree(
         self,
