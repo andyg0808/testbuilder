@@ -1,7 +1,7 @@
 import ast
 from typing import Optional
 
-import z3  # type: ignore
+import z3
 
 from .ast_builder import make_ast
 from .converter import convert
