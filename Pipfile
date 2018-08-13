@@ -12,6 +12,7 @@ Pygments = "==2.2.0"
 pygments-style-solarized = "==0.1.1"
 logbook = "*"
 toolz = "*"
+injectable = "*"
 
 [dev-packages]
 black = "==18.6b4"
