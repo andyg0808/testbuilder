@@ -300,7 +300,7 @@ class TreeBuilder:
         target = self._inflate(s, blocks)
         for block in blocks.values():
             block.code.sort(key=lambda x: x.lineno)
-        return BlockTree(blocks[STARTBLOCK], target, blocks[RETURNBLOCK])
+        return BlockTree(blocks[STARTBLOCK], target, blocks[RETURNBLOCK], self.code)
 
 
 def build_tree(syntax_tree: ast.AST) -> TreeBuilder:

@@ -192,3 +192,4 @@ class BlockTree:
     entrance: BasicBlock
     target: Optional[BasicBlock]
     exit: BasicBlock
+    code: ast.AST
