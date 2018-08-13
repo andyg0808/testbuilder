@@ -19,7 +19,6 @@ from typing import (
 
 from dataclasses import dataclass
 
-from .linemapper import LineMapper
 from .var_collector import find_targets, find_vars
 
 T = TypeVar("T")
@@ -95,6 +94,9 @@ class Dependency(Generic[T]):
 
     def walk_tree(self) -> DependencyTree:
         return [self] + [i.walk_tree() for i in self.dependencies]  # type: ignore
+
+    def lines(self) -> Set[int]:
+        return {stmt.lineno for stmt in self.format_slice()}
 
 
 class Variable(Dependency[str]):
