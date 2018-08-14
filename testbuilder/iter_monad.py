@@ -19,11 +19,8 @@ T = TypeVar("T")
 
 
 def liftIter(func: Callable[[A], B]) -> Callable[[Iterator[A]], Iterator[B]]:
-    print("running lift")
-
     def _lift(i: Iterator[A]) -> Iterator[B]:
-        for v in i:
-            yield func(v)
+        return map(func, i)
 
     return _lift
 
