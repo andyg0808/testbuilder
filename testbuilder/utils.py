@@ -1,5 +1,6 @@
 import ast
 import inspect
+import sys
 from pprint import pprint
 from typing import Any
 
@@ -20,8 +21,14 @@ def print_locations(node):
 
 def crash(reason: str = ""):
     if reason:
-        raise RuntimeError("Crashing because" + reason)
-    raise RuntimeError("Crashing!")
+        print("Crashing because" + reason, file=sys.stderr)
+    print("Crashing!", file=sys.stderr)
+    caller = inspect.stack()[1]
+    print(
+        f"at {caller.filename} line {caller.lineno}, in {caller.function}",
+        file=sys.stderr,
+    )
+    sys.exit(42)
 
 
 def pipe_print(value: Any, message: str = "") -> Any:
