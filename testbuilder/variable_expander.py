@@ -1,8 +1,9 @@
 import ast
-import z3  # type: ignore
-from typing import Any
-from inspect import getmembers
 import re
+from inspect import getmembers
+from typing import Any
+
+import z3  # type: ignore
 
 EVAL_GLOBALS = {"z3": z3, "true": z3.BoolVal(True), "false": z3.BoolVal(False)}
 EVAL_LOCALS = dict(getmembers(z3))
@@ -31,13 +32,13 @@ MagicOps = {
 
 NAME_PARSER = re.compile(r"(.)?(pyname_.*)")
 
+
 def split_varname(name):
     match = NAME_PARSER.fullmatch(name)
     if match:
         return match[1], match[2]
     else:
         return False, name
-
 
 
 class VariableExpansionVisitor(ast.NodeTransformer):
@@ -53,12 +54,12 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             return node
         zzz = ast.Name("z3", ast.Load())
         typekey, varname = split_varname(node.id)
-        print('name', typekey, varname)
+        # print('name', typekey, varname)
 
         if typekey:
-            if typekey == 's':
+            if typekey == "s":
                 sort_name = "String"
-            elif typekey == 'b':
+            elif typekey == "b":
                 sort_name = "Bool"
             else:
                 sort_name = "Int"

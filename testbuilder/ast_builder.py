@@ -80,11 +80,11 @@ class AstBuilder(ast.NodeVisitor):
         return n.Name(node.id, idx)
 
     def generic_visit(self, node: ast.AST) -> Any:
-        print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
             return node
+        # print(f"visiting generically to {node}")
         typename = type(node).__name__
-        print("typename", typename)
+        # print("typename", typename)
         equivalent = getattr(n, typename, None)
         if equivalent is None:
             raise RuntimeError(

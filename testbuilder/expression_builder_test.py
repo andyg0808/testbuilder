@@ -1,6 +1,8 @@
 import ast
+from functools import partial
 
 import pytest
+from toolz import pipe
 
 import z3
 
@@ -8,8 +10,6 @@ from .expression_builder import ExpressionBuilder, get_expression
 from .slicing import take_slice
 from .test_utils import write_dot
 from .variable_expander import expand_variables
-from toolz import pipe
-from functools import partial
 
 # def test_conditional_index():
 #    assert conditional_diff_index([1,2,3], [1,2,3,4]) == 3

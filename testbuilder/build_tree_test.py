@@ -120,7 +120,7 @@ def check_required_block(expectations, tree, stop):
 
 
 def check_loop(expectations, tree, stop):
-    print("checkloop expecting", expectations, "block", tree.number)
+    # print("checkloop expecting", expectations, "block", tree.number)
     expected = expectations[0]
     # Check basic properties we expect of loop expectations
     assert len(expected) == 2
@@ -350,15 +350,15 @@ def create_tree(code: str, write_tree: str = "", line=-1):
     parsed = ast.parse(code.strip())
     tree = build_tree(parsed)
     if write_tree != "":
-        print("writing tree!")
+        # print("writing tree!")
         write_dot(tree.dot(), write_tree)
         write_dot(tree.build_tree()[0].dot(), write_tree)
-    print("done writing")
+    # print("done writing")
     s = take_slice(line, parsed)
     if not s:
         warn("No such slice exists")
         return None
-    print("before", s.walk_tree())
+    # print("before", s.walk_tree())
     return tree.inflate(s)
 
 

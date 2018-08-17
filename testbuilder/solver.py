@@ -14,7 +14,7 @@ def solve(expr: z3.ExprRef) -> Optional[Solution]:
     res = solver.check()
     if res == z3.unsat:
         return None
-    print("model", solver.model())
+    # print("model", solver.model())
     # print("decls", solver.decls())
     standardized = {}
     model = solver.model()

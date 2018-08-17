@@ -22,7 +22,7 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
     if isinstance(code, ast.Expr):
         # Code that's just an expression should be something we are really wanting to test
         code = code.value
-    print("ast", ast.dump(code))
+    # print("ast", ast.dump(code))
     tree = make_ast(variables, code)
     result = convert(tree)
     print("expected", expected)

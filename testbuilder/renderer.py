@@ -2,7 +2,7 @@ from ast import FunctionDef
 from pathlib import Path
 from typing import Any, Mapping
 
-from astor import to_source # type: ignore
+from astor import to_source  # type: ignore
 
 
 def prompt_and_render_test(
@@ -32,7 +32,7 @@ def render_test(source: Path, name: str, args: Mapping[str, Any], expected: Any)
     call_args_string = ", ".join(keys)
     call_string = f"{name}({call_args_string})"
     expected = str(expected).strip()
-    print("callstring", call_string)
+    # print("callstring", call_string)
     return f"""
 from {source.stem} import {name}
 def test_{name}():

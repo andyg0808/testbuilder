@@ -54,7 +54,7 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
         return test
 
     def parse_file(text: str) -> AST:
-        print("text", text)
+        # print("text", text)
         return parse(text, str(source))
 
     return pipe(

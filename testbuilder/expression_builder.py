@@ -62,13 +62,13 @@ def bool_and(*exprs: Expression) -> Expression:
 def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
     dep_tree = take_slice(line, code)
-    print("dep_tree", dep_tree, "end")
+    # print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
     tree = block_tree.inflate(dep_tree)
     # from .test_utils import show_dot
 
-    print("tree", tree)
+    # print("tree", tree)
     # show_dot(tree.entrance.dot())
     variables = dep_tree.get_slice_variables()
     eb = ExpressionBuilder(depth, dep_tree.lines())
@@ -92,7 +92,7 @@ class ExpressionBuilder:
 
     def convert_tree(self, tree: BlockTree, variables: VarMapping) -> ExprList:
         assert tree.target
-        print("target", tree.target, tree.target.number)
+        # print("target", tree.target, tree.target.number)
         expected = self._convert_target_tree(tree.target, None, copy(variables), None)
         actual = self._modern_convert_tree(copy(variables), tree)
         print("Actual expression:", actual)
@@ -128,11 +128,11 @@ class ExpressionBuilder:
                   handle processing only the forked part of if statements.
         """
 
-        print("root type", root.type, root.number)
+        # print("root type", root.type, root.number)
         assert root.number != RETURNBLOCK
-        print("Not return block")
+        # print("Not return block")
         if root is stop:
-            print("stopping")
+            # print("stopping")
             return []
 
         if root.type == basic_block.Loop:
@@ -162,10 +162,10 @@ class ExpressionBuilder:
                     self._convert(parent.conditional.code, variables)
                 )
                 if invert_conditional:
-                    print("Inverting conditional on", root)
+                    # print("Inverting conditional on", root)
                     conditional = bool_not(conditional)
                 code.append(conditional)
-        print("parent code", code)
+        # print("parent code", code)
         return code
 
     def _convert_target_code_block(
@@ -176,7 +176,7 @@ class ExpressionBuilder:
         )
         code: ExprList
         if root.parents:
-            print("parents exist")
+            # print("parents exist")
             assert len(root.parents) == 1
             parent = root.parents[0]
             assert parent
@@ -185,7 +185,7 @@ class ExpressionBuilder:
             code = []
 
         code += [self._convert(c.code, variables) for c in root.code]
-        print("code block code", code)
+        # print("code block code", code)
         return code
 
     def _convert_target_loop(
@@ -218,8 +218,8 @@ class ExpressionBuilder:
         code = self._handle_parents(bypass, root, variables, stop)
 
         if root.conditional is None:
-            print("No conditional on root")
-            print("root", root.number)
+            # print("No conditional on root")
+            # print("root", root.number)
             # If the conditional is missing, this loop doesn't matter, and we
             # can skip it.
             return code
@@ -232,7 +232,7 @@ class ExpressionBuilder:
             loops += self._convert_target_tree(body, root, variables, root)
             paths.append(construct_path(loops, variables))
 
-        print("Paths through loop:", paths)
+        # print("Paths through loop:", paths)
         updated_conditions, updated_variables = _update_paths(paths)
         variables.clear()
         variables.update(updated_variables)
@@ -258,12 +258,12 @@ class ExpressionBuilder:
             branch_variables = copy(variables)
             branch: ExprList = []
             branch += self._convert_target_tree(parent, root, branch_variables, join)
-            print("branch code", branch)
+            # print("branch code", branch)
             return (branch, branch_variables)
 
         assert root.type == basic_block.Conditional
 
-        print("checking parent length")
+        # print("checking parent length")
         assert len(root.parents) == 3
         true_branch, false_branch, join = root.parents
         assert join is not None
@@ -274,8 +274,8 @@ class ExpressionBuilder:
             code = []
 
         if join.conditional is None:
-            print("No conditional on join")
-            print("join", join.number)
+            # print("No conditional on join")
+            # print("join", join.number)
             # If the conditional is missing, this branch doesn't matter, and
             # we can skip it.
             return code
@@ -289,7 +289,7 @@ class ExpressionBuilder:
             branches.append(
                 construct_branch(false_branch, join, invert_conditional=True)
             )
-        print("branches", branches)
+        # print("branches", branches)
 
         branch_exprs, updated_variables = _update_paths(branches)
         variables.clear()
