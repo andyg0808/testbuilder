@@ -72,23 +72,21 @@ class AstBuilder(ast.NodeVisitor):
 
         return cast(n.BinOp, reduce(combine, value_list))
 
-    def visit_Module(self, node: ast.Module) -> n.Module:
-        return n.Module([self.visit(s) for s in node.body])
-
     def visit_Name(self, node: ast.Name) -> n.Name:
         idx = self.variables.get(node.id, VAR_START_VALUE)
         return n.Name(node.id, idx)
 
     def generic_visit(self, node: ast.AST) -> Any:
-        if not isinstance(node, ast.AST):
-            return node
         # print(f"visiting generically to {node}")
+        assert isinstance(node, ast.AST)
+
         typename = type(node).__name__
         # print("typename", typename)
         equivalent = getattr(n, typename, None)
         if equivalent is None:
             raise RuntimeError(
-                f"Don't know what to do with a {typename} ({type(node)}); no such attribute exists"
+                f"Don't know what to do with a {typename}"
+                "({type(node)}); no such attribute exists"
             )
         fields = []
         for field in dataclasses.fields(equivalent):
