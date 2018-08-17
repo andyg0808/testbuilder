@@ -71,12 +71,6 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
         sbb.dump_tree(blocktree.end)
         blocks: BlockMapping = {}
 
-        # @assertify
-        # def parent_map(parent: sbb.BasicBlock) -> Optional[sbb.BasicBlock]:
-        #     assert isinstance(parent, sbb.BasicBlock)
-        #     return self.visit_block(parent, blocks)
-
-        # parents = list(filter(None, map(parent_map, blocktree.end.parents)))
         exitnode = self.visit_block(blocktree.end, blocks)
         if len(exitnode.parents) == 0:
             return sbb.BlockTree(start=exitnode, end=exitnode)
@@ -84,22 +78,6 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
             start_number = blocktree.start.number
             start = blocks[start_number]
             return sbb.BlockTree(start=start, end=exitnode)
-
-        # if all(map(lambda x: isinstance(x, sbb.StartBlock), parents)):
-        #     exitnode = sbb.ReturnBlock(blocktree.end.number)
-        #     return sbb.BlockTree(start=exitnode, end=exitnode)
-        # else:
-        #     entrance_number = blocktree.start.number
-        #     entrance = blocks[entrance_number]
-        #     # if blocktree.target is not None:
-        #     #     target_number = blocktree.target.number
-        #     #     target = blocks.get(target_number, None)
-        #     # else:
-        #     #     target = None
-        #     # exit_number = blocktree.end.number
-        #     # exitnode = blocks[exit_number]
-        #     exitnode = sbb.Return
-        #     return sbb.BlockTree(start=entrance, end=exitnode)
 
     def visit_StartBlock(
         self, block: sbb.StartBlock, blocks: BlockMapping

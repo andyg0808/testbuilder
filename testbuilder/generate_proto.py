@@ -83,20 +83,3 @@ def get_expression_at_depth(depth: int, funcstmt: FuncStmt) -> Expression:
 
 
 get_expression = partial(get_expression_at_depth, 2)
-
-
-# @dataclass
-# class StateM(Generic[A, B]):
-#     state: A
-#     value: B
-
-
-# FuncState = StateM[FunctionDef, A]
-# S = TypeVar("S")
-
-
-# def liftState(func: Callable[[A], B]) -> Callable[[StateM[S, A]], StateM[S, B]]:
-#     def _lift(state: StateM[S, A]) -> StateM[S, B]:
-#         return StateM(state.state, func(state.value))
-
-#     return _lift
