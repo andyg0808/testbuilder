@@ -2,15 +2,13 @@
 Converts an expression from Python AST into a z3 expression. The structural
 aspects of converting Python are handled by the code in expression_builder.
 """
-import ast
 import operator
-from functools import reduce
-from typing import Any, Callable, Mapping, MutableMapping as MMapping, Tuple, cast
+from functools import singledispatch
+from typing import Any, Callable, Mapping, TypeVar, cast
 
 import z3
 
 from . import nodetree as n
-from .visitor import Visitor
 
 Expression = z3.ExprRef
 
@@ -40,83 +38,121 @@ def get_variable_name(node: n.Name) -> str:
 OpFunc = Callable[..., Expression]
 
 
-class Z3Converter(Visitor[n.Node, Expression]):
-    def visit_Int(self, node: n.Int) -> z3.Int:
-        return z3.IntVal(node.v)
+@singledispatch
+def visit_expr(node: n.expr) -> Expression:
+    raise RuntimeError("Unimplemented handler for {type(node)}")
 
-    def visit_Str(self, node: n.Str) -> z3.StringVal:
-        return z3.StringVal(node.s)
 
-    def visit_BinOp(self, node: n.BinOp) -> Expression:
-        op = cast(OpFunc, self.visit(node.op))
-        return op(self.visit(node.left), self.visit(node.right))
-
-    def visit_Mult(self, node: n.Mult) -> OpFunc:
-        return operator.mul
-
-    def visit_Div(self, node: n.Div) -> OpFunc:
-        return operator.truediv
-
-    def visit_LtE(self, node: n.LtE) -> OpFunc:
-        return operator.le
-
-    def visit_GtE(self, node: n.GtE) -> OpFunc:
-        return operator.ge
-
-    def visit_USub(self, node: n.USub) -> OpFunc:
-        return operator.neg
-
-    def visit_UnaryOp(self, node: n.UnaryOp) -> Expression:
-        op = self.visit(node.op)
-        operand = self.visit(node.operand)
-        return cast(OpFunc, op)(operand)
-
-    def visit_Return(self, node: n.Return) -> Expression:
-        if node.value:
-            expr = self.visit(node.value)
-            return z3.Int("ret") == expr
-        else:
-            return z3.BoolVal(True)
-
-    def visit_NameConstant(self, node: n.NameConstant) -> Expression:
-        return Constants[node.value]
-
-    def visit_Name(self, node: n.Name) -> Expression:
-        variable = get_variable(node.id, node.set_count)
-        if node.id == "s":
-            return z3.String(variable)
-        else:
-            return z3.Int(variable)
-
-    def visit_Set(self, node: n.Set) -> Expression:
-        var = self.visit(node.target)
-        value = self.visit(node.e)
-        return var == value
-
-    def visit_Expr(self, node: n.Expr) -> Expression:
-        v = self.visit(node.value)
-        assert v is not None
-        return v
-
-    def visit_Call(self, node: n.Call) -> Expression:
-        # Temporarily treat functions as true
-        return z3.BoolVal(True)
-
-    def generic_visit(self, node: n.Node) -> Any:
-        name = type(node).__name__
-        op = getattr(operator, name.lower(), None)
+@singledispatch
+def visit_oper(node: n.Operator) -> OpFunc:
+    name = type(node).__name__
+    op = getattr(operator, name.lower(), None)
+    if op is not None:
+        return cast(OpFunc, op)
+    else:
+        op = getattr(z3, name, None)
         if op is not None:
             return op
         else:
-            op = getattr(z3, name, None)
-            if op is not None:
-                return op
-            else:
-                raise RuntimeError(f"Unknown node type {type(node)}")
+            raise RuntimeError(f"Unknown node type {type(node)}")
+
+
+@visit_expr.register(n.Int)
+def visit_Int(node: n.Int) -> z3.Int:
+    return z3.IntVal(node.v)
+
+
+@visit_expr.register(n.Str)
+def visit_Str(node: n.Str) -> z3.StringVal:
+    return z3.StringVal(node.s)
+
+
+@visit_expr.register(n.BinOp)
+def visit_BinOp(node: n.BinOp) -> Expression:
+    op = visit_oper(node.op)
+    return op(visit_expr(node.left), visit_expr(node.right))
+
+
+@visit_oper.register(n.Mult)
+def visit_Mult(node: n.Mult) -> OpFunc:
+    return operator.mul
+
+
+@visit_oper.register(n.Div)
+def visit_Div(node: n.Div) -> OpFunc:
+    return operator.truediv
+
+
+@visit_oper.register(n.LtE)
+def visit_LtE(node: n.LtE) -> OpFunc:
+    return operator.le
+
+
+@visit_oper.register(n.GtE)
+def visit_GtE(node: n.GtE) -> OpFunc:
+    return operator.ge
+
+
+@visit_oper.register(n.USub)
+def visit_USub(node: n.USub) -> OpFunc:
+    return operator.neg
+
+
+@visit_expr.register(n.UnaryOp)
+def visit_UnaryOp(node: n.UnaryOp) -> Expression:
+    op = visit_oper(node.op)
+    operand = visit_expr(node.operand)
+    return op(operand)
+
+
+@visit_expr.register(n.Return)
+def visit_Return(node: n.Return) -> Expression:
+    if node.value:
+        expr = visit_expr(node.value)
+        return z3.Int("ret") == expr
+    else:
+        return z3.BoolVal(True)
+
+
+@visit_expr.register(n.NameConstant)
+def visit_NameConstant(node: n.NameConstant) -> Expression:
+    return Constants[node.value]
+
+
+@visit_expr.register(n.Name)
+def visit_Name(node: n.Name) -> Expression:
+    variable = get_variable(node.id, node.set_count)
+    if node.id == "s":
+        return z3.String(variable)
+    else:
+        return z3.Int(variable)
+
+
+@visit_expr.register(n.Set)
+def visit_Set(node: n.Set) -> Expression:
+    var = visit_expr(node.target)
+    value = visit_expr(node.e)
+    return var == value
+
+
+E = TypeVar("E", bound=n.expr)
+B = TypeVar("B")
+
+
+@visit_expr.register(n.Expr)
+def visit_Expr(node: n.Expr[E]) -> Expression:
+    v = visit_expr(node.value)
+    assert v is not None
+    return v
+
+
+@visit_expr.register(n.Call)
+def visit_Call(node: n.Call) -> z3.BoolVal:
+    # Temporarily treat functions as true
+    return z3.BoolVal(True)
 
 
 def convert(tree: n.Node) -> Expression:
-    z3c = Z3Converter()
-    expr = z3c.visit(tree)
+    expr = visit_expr(tree)
     assert expr is not None
     return expr
