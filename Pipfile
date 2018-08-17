@@ -13,6 +13,7 @@ pygments-style-solarized = "==0.1.1"
 logbook = "*"
 toolz = "*"
 injectable = "*"
+typeassert = {editable = true, path = "./../typeassert"}
 
 [dev-packages]
 black = "==18.6b4"
