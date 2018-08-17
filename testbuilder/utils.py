@@ -12,3 +12,9 @@ def print_locations(node):
                     i, getattr(i, "lineno", "none"), getattr(i, "col_offset", "none")
                 )
             )
+
+
+def crash(reason: str = ""):
+    if reason:
+        raise RuntimeError("Crashing because" + reason)
+    raise RuntimeError("Crashing!")
