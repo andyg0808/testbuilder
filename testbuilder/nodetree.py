@@ -16,8 +16,9 @@ class Node(Visitable):
     pass
 
 
+@dataclass
 class stmt(Node):
-    pass
+    line: int
 
 
 class expr(Node):

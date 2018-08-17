@@ -90,6 +90,9 @@ class AstBuilder(ast.NodeVisitor):
             )
         fields = []
         for field in dataclasses.fields(equivalent):
+            if field.name == "line":
+                fields.append(getattr(node, "lineno"))
+                continue
             value = getattr(node, field.name)
             if isinstance(value, list):
                 fields.append([self.visit(v) for v in value])
