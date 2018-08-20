@@ -7,10 +7,10 @@ from typing import Any
 from termcolor import cprint
 
 
-def print_locations(node):
+def print_locations(node: ast.AST) -> None:
     for i in ast.walk(node):
         if not hasattr(i, "lineno") or not hasattr(i, "col_offset"):
-            cprint(i, "red")
+            cprint(str(i), "red")
         else:
             print(
                 "{} line={} col={}".format(
@@ -19,7 +19,7 @@ def print_locations(node):
             )
 
 
-def crash(reason: str = ""):
+def crash(reason: str = "") -> None:
     if reason:
         print("Crashing because" + reason, file=sys.stderr)
     print("Crashing!", file=sys.stderr)
