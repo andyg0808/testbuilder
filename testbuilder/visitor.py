@@ -28,6 +28,10 @@ B = TypeVar("B")
 Result = Union[Iterator[B], B]
 
 
+class VisitError(NotImplementedError):
+    pass
+
+
 class SimpleVisitor(Generic[B]):
     T = TypeVar("T")
 
@@ -45,7 +49,7 @@ class SimpleVisitor(Generic[B]):
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
                 return cast(Callable[..., B], func)
-        raise RuntimeError(f"No handler for {start_class}")
+        raise VisitError(f"No handler for {start_class}")
 
     def __scan_functions(self, target_class: Type) -> Callable[..., B]:
         typecache = getattr(self, "__type_cache", None)
