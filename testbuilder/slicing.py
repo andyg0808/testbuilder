@@ -96,7 +96,11 @@ class Dependency(Generic[T]):
         return [self] + [i.walk_tree() for i in self.dependencies]  # type: ignore
 
     def lines(self) -> Set[int]:
-        return {stmt.lineno for stmt in self.format_slice()}
+        return {
+            stmt.lineno
+            for stmt in self.format_slice()
+            if not isinstance(stmt, Variable)
+        }
 
 
 class Variable(Dependency[str]):
