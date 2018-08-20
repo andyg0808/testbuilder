@@ -86,7 +86,7 @@ class AstBuilder(ast.NodeVisitor):
         if equivalent is None:
             raise RuntimeError(
                 f"Don't know what to do with a {typename}"
-                "({type(node)}); no such attribute exists"
+                f"({type(node)}); no such attribute exists"
             )
         fields = []
         for field in dataclasses.fields(equivalent):
