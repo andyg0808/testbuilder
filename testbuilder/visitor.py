@@ -4,6 +4,7 @@ from typing import (
     Callable,
     Generic,
     Iterator,
+    List,
     MutableMapping as MMapping,
     Sequence,
     Type,
@@ -11,6 +12,8 @@ from typing import (
     Union,
     cast,
 )
+
+from toolz import mapcat
 
 import dataclasses
 
@@ -67,6 +70,54 @@ class SimpleVisitor(Generic[B]):
                 typecache[param.annotation] = method
             setattr(self, "__type_cache", typecache)
         return cast(Callable[..., B], typecache.get(target_class, None))
+
+
+class GenericVisitor(SimpleVisitor[List[A]], Generic[A]):
+    def visit(self, v: Any, *args: Any) -> List[A]:
+        try:
+            return super().visit(v, *args)
+        except VisitError:
+            try:
+                fields = dataclasses.fields(v)
+            except TypeError:
+                # If we are trying to look for fields on something
+                # that isn't a dataclass, it's probably a primitive
+                # field type, so just stop here.
+                return []
+            results: List[A] = []
+            for f in fields:
+                data = getattr(v, f.name)
+                if isinstance(data, Sequence):
+                    results += mapcat(self.visit, data)
+                else:
+                    results += self.visit(data)
+            return results
+
+
+class UpdateVisitor(SimpleVisitor):
+    def visit(self, v: A, *args: Any) -> A:
+        try:
+            visited = super().visit(v, *args)
+            assert isinstance(visited, v.__class__)
+            return cast(A, visited)
+        except VisitError:
+            try:
+                fields = dataclasses.fields(v)
+            except TypeError as err:
+                # If we are trying to look for fields on something
+                # that isn't a dataclass, it's probably a primitive
+                # field type, so just stop here.
+                return v
+            results: MMapping[str, Any] = {}
+            for f in fields:
+                data = getattr(v, f.name)
+                res: Any
+                if isinstance(data, Sequence):
+                    res = [self.visit(x) for x in data]
+                else:
+                    res = self.visit(data)
+                results[f.name] = res
+            return cast(A, v.__class__(**results))
 
 
 V = TypeVar("V", bound=Visitable)
