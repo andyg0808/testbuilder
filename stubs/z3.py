@@ -6,7 +6,11 @@ class SortRef:
         ...
 
 
-class ExprRef:
+class AstRef:
+    pass
+
+
+class ExprRef(AstRef):
     def __eq__(self, other: Any) -> "ExprRef":  # type: ignore
         ...
 
@@ -114,6 +118,10 @@ def is_bool(value: Any) -> bool:
 
 
 def is_string(value: Any) -> bool:
+    ...
+
+
+def eq(a: AstRef, b: AstRef) -> bool:
     ...
 
 
