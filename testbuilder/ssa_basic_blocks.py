@@ -3,14 +3,13 @@ from functools import partial, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Mapping, Optional, Set, TypeVar, Union
 
+import z3
 from dataclasses import dataclass, field
 
 from . import nodetree as n
 from .slicing import Dependency
 
-from
-
-
+Expression = z3.ExprRef
 
 
 def _default_list() -> Any:
@@ -30,6 +29,14 @@ class BasicBlock:
 class Positioned:
     lines: range
 
+    @property
+    def last_line(self) -> int:
+        return max(self.lines)
+
+    @property
+    def first_line(self) -> int:
+        return min(self.lines)
+
 
 @dataclass
 class Parented:
@@ -47,10 +54,10 @@ class ReturnBlock(BasicBlock):
     def line(self) -> int:
         lines = []
         for b in self.parents:
-            if isinstance(b, StartBlock):
-                lines.append(b.line)
-            else:
+            if isinstance(b, Positioned):
                 lines.append(max(b.lines))
+            elif isinstance(b, StartBlock):
+                lines.append(b.line)
         return max(lines)
 
 
@@ -93,11 +100,21 @@ class Conditional(BasicBlock, Positioned, Parented):
     false_branch: BasicBlock
 
 
+class TreeTail:
+
+
 @dataclass
 class BlockTree:
     start: StartBlock
-    # target: Optional[BasicBlock]
     end: ReturnBlock
+    target: Optional[BasicBlock] = None
+
+    def empty(self) -> bool:
+        if len(self.end.parents) == 0:
+            return True
+        if len(self.end.parents) == 1 and self.start is self.end.parents[0]:
+            return True
+        return False
 
 
 @dataclass
@@ -116,17 +133,24 @@ class Module:
 @dataclass
 class Request:
     module: Module
-    code: Union[FunctionDef, BasicBlock]
+    code: Union[FunctionDef, BlockTree]
+
+
+@dataclass
+class Variable:
+    id: str
 
 
 @dataclass
 class TestData:
-    filepath: Path
-    line: int
-    statements: Dependency
-    lines: Set[int]
-    function_text: str
-    function: FunctionDef
+    # filepath: Path
+    # line: int
+    name: str
+    # statements: Dependency
+    # lines: Set[int]
+    # function_text: str
+    # function: Optional[FunctionDef] = None
+    free_variables: List[Variable]
     expression: Expression
 
 

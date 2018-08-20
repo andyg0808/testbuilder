@@ -20,6 +20,7 @@ from typing import (
 from toolz import pipe
 
 import z3
+from typeassert import assertify
 
 from . import basic_block
 from .ast_builder import make_ast
@@ -87,29 +88,44 @@ class ExpressionBuilder:
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        expr_list: ExprList = self.convert_tree(flowgraph, mutation_counts)
-        return _combine_conditions(expr_list)
+        return self.convert_tree(flowgraph, mutation_counts)
 
-    def convert_tree(self, tree: BlockTree, variables: VarMapping) -> ExprList:
+    def convert_tree(self, tree: BlockTree, variables: VarMapping) -> Expression:
         assert tree.target
         # print("target", tree.target, tree.target.number)
-        expected = self._convert_target_tree(tree.target, None, copy(variables), None)
+        expr_list = self._convert_target_tree(tree.target, None, copy(variables), None)
+        expected = _combine_conditions(expr_list)
         actual = self._modern_convert_tree(copy(variables), tree)
         print("Actual expression:", actual)
         print("Expected expression:", expected)
-        assert actual == expected
+        assert z3.eq(actual, expected)
         return expected
 
-    def _modern_convert_tree(self, variables: VarMapping, tree: BlockTree) -> ExprList:
+    def _modern_convert_tree(
+        self, variables: VarMapping, tree: BlockTree
+    ) -> Expression:
         from .ast_to_ssa import ast_to_ssa
-        from .ssa_to_expression import blocktree_and_ssa_to_expression
+
+        # from .ssa_to_expression import blocktree_and_ssa_to_expression
+        # from .ssa_to_expression import ssa_to_expression
+        from .ssa_to_expression import ssa_lines_to_expression
         from toolz import pipe
         from functools import partial
+        from .ssa_basic_blocks import TestData
 
         _ast_to_ssa = partial(ast_to_ssa, self.lines, variables)
-        _ssa_to_expression = partial(blocktree_and_ssa_to_expression, self.depth, tree)
+        # _ssa_to_expression = partial(
+        #     blocktree_and_ssa_to_expression, self.depth, tree, variables=variables
+        # )
+        _ssa_to_expression = partial(ssa_lines_to_expression, self.lines)
 
-        return pipe(tree.code, _ast_to_ssa, _ssa_to_expression)
+        from .utils import pipe_print
+
+        variables = {}
+        testdata: TestData = pipe(
+            tree.code, _ast_to_ssa, pipe_print, _ssa_to_expression
+        )
+        return testdata.expression
 
     def _convert_target_tree(
         self,

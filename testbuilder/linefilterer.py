@@ -1,4 +1,4 @@
-from typing import MutableMapping as MMapping, Optional, Set
+from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
 
 from typeassert import assertify
 
@@ -7,14 +7,17 @@ from .visitor import SimpleVisitor
 
 BlockMapping = MMapping[int, sbb.BasicBlock]
 
+B = TypeVar("B", bound=sbb.BasicBlock)
 
+
+# TODO: Convert to UpdateVisitor
 class LineFilterer(SimpleVisitor[sbb.Module]):
     def __init__(self, lines: Set[int]) -> None:
         super().__init__()
         self.lines = lines
         self.min_line = min(lines)
         self.max_line = max(lines)
-        self.line_range = range(self.min_line, self.max_line)
+        self.line_range = range(self.min_line, self.max_line + 1)
 
     def visit_Module(self, module: sbb.Module) -> sbb.Request:
         code = []
@@ -26,31 +29,42 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
             # include from it.
             if isinstance(func.lines, int):
                 if func.lines > self.max_line:
+                    # print(f"Throwing out {func} because {func.lines} > {self.max_line}")
                     continue
-            else:
-                start = min(func.lines)
-                end = max(func.lines)
-                if start > self.max_line or end < self.min_line:
-                    continue
-            res = self.visit(func)
+            start = min(func.lines)
+            end = max(func.lines)
+            if start > self.max_line or end < self.min_line:
+                # print(
+                #     f"Throwing out {func} because {start}>{self.max_line} or {end} < {self.min_line}"
+                # )
+                continue
+            res = self.visit_FunctionDef(func)
             if res is not None:
                 code.append(res)
+            # else:
+            #     print("Throwing out {func} because no lines were kept")
+
         # Shouldn't have lines from more than one function or basic block
         if len(code) == 0:
-            raise RuntimeError("No code lines selected")
+            # Check module.code
+            blocktree = self.visit_BlockTree(module.code)
+            assert isinstance(blocktree, sbb.BlockTree)
+            if blocktree.empty():
+                raise RuntimeError("No code lines selected")
+            return sbb.Request(module=module, code=blocktree)
         elif len(code) > 1:
             raise RuntimeError("Lines from more than one function selected")
 
-        return sbb.Request(module, code[0])
+        return sbb.Request(module=module, code=code[0])
 
     def visit_FunctionDef(self, function: sbb.FunctionDef) -> Optional[sbb.FunctionDef]:
-        blocktree = self.visit(function.blocks)
+        blocktree = self.visit_BlockTree(function.blocks)
         if isinstance(blocktree.start, sbb.ReturnBlock):
             return None
         else:
             start_line = blocktree.start.line
             end_line = blocktree.end.line
-            lines = range(start_line, end_line)
+            lines = range(start_line, end_line + 1)
             return sbb.FunctionDef(
                 lines=lines, name=function.name, args=function.args, blocks=blocktree
             )
@@ -67,17 +81,15 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
         return sbb.ReturnBlock(number=block.number, parents=parents)
 
     def visit_BlockTree(self, blocktree: sbb.BlockTree) -> sbb.BlockTree:
-        print("visiting blocktree", blocktree)
+        # print("visiting blocktree", blocktree)
         sbb.dump_tree(blocktree.end)
         blocks: BlockMapping = {}
 
         exitnode = self.visit_block(blocktree.end, blocks)
-        if len(exitnode.parents) == 0:
-            return sbb.BlockTree(start=exitnode, end=exitnode)
-        else:
-            start_number = blocktree.start.number
-            start = blocks[start_number]
-            return sbb.BlockTree(start=start, end=exitnode)
+        start_number = blocktree.start.number
+        assert start_number in blocks
+        start = cast(sbb.StartBlock, blocks[start_number])
+        return sbb.BlockTree(start=start, end=exitnode)
 
     def visit_StartBlock(
         self, block: sbb.StartBlock, blocks: BlockMapping
@@ -85,13 +97,11 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
         return block
 
     @assertify
-    def visit_block(
-        self, block: sbb.BasicBlock, blocks: BlockMapping
-    ) -> Optional[sbb.BasicBlock]:
+    def visit_block(self, block: B, blocks: BlockMapping) -> B:
         if block.number in blocks:
-            return blocks[block.number]
+            return cast(B, blocks[block.number])
         else:
-            newblock = self.visit(block, blocks)
+            newblock = cast(B, self.visit(block, blocks))
             blocks[block.number] = newblock
             return newblock
 
@@ -100,11 +110,15 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
         parent = self.visit_block(code.parent, blocks)
         body = [i for i in code.code if i.line in self.lines]
         if body:
-            return sbb.Code(code.number, code.lines, parent, code)
+            return sbb.Code(
+                number=code.number, lines=code.lines, parent=parent, code=body
+            )
         else:
             return None
 
 
-def filter_lines(lines: Set[int], module: sbb.Module) -> sbb.Module:
+def filter_lines(lines: Set[int], module: sbb.Module) -> sbb.Request:
     print(f"Filtering on lines {lines}")
-    return LineFilterer(lines).visit(module)
+    filtered = LineFilterer(lines).visit_Module(module)
+    print("filtered code", filtered.code)
+    return filtered
