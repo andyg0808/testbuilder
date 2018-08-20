@@ -43,14 +43,14 @@ class AstBuilder(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign) -> n.Set:
         expr = self.visit(node.value)
         target = self.get_target_variable(node.targets[0])
-        return n.Set(target, expr)
+        return n.Set(line=node.lineno, target=target, e=expr)
 
     def visit_AugAssign(self, node: ast.AugAssign) -> n.Set:
         value = self.visit(node.value)
         var = self.visit(node.target)
         op = self.visit(node.op)
         target = self.get_target_variable(node.target)
-        return n.Set(target, n.BinOp(var, op, value))
+        return n.Set(line=node.lineno, target=target, e=n.BinOp(var, op, value))
 
     def visit_Compare(self, node: ast.Compare) -> n.BinOp:
         left = self.visit(node.left)
