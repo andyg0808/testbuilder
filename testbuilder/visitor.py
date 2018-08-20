@@ -42,13 +42,13 @@ class SimpleVisitor(Generic[B]):
     def __find_function(self, start_class: Type) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
         if start_class in cache:
-            return cache[start_class]
+            return cast(Callable[..., B], cache[start_class])
         for cls in inspect.getmro(start_class):
             func = self.__scan_functions(cls)
             if func is not None:
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
-                return cast(Callable[..., B], func)
+                return func
         raise VisitError(f"No handler for {start_class}")
 
     def __scan_functions(self, target_class: Type) -> Callable[..., B]:
@@ -66,7 +66,7 @@ class SimpleVisitor(Generic[B]):
                 param = parameters[0]
                 typecache[param.annotation] = method
             setattr(self, "__type_cache", typecache)
-        return typecache.get(target_class, None)
+        return cast(Callable[..., B], typecache.get(target_class, None))
 
 
 V = TypeVar("V", bound=Visitable)
