@@ -274,12 +274,10 @@ class ExpressionBuilder:
             branch_variables = copy(variables)
             branch: ExprList = []
             branch += self._convert_target_tree(parent, root, branch_variables, join)
-            # print("branch code", branch)
             return (branch, branch_variables)
 
         assert root.type == basic_block.Conditional
 
-        # print("checking parent length")
         assert len(root.parents) == 3
         true_branch, false_branch, join = root.parents
         assert join is not None
@@ -290,8 +288,6 @@ class ExpressionBuilder:
             code = []
 
         if join.conditional is None:
-            # print("No conditional on join")
-            # print("join", join.number)
             # If the conditional is missing, this branch doesn't matter, and
             # we can skip it.
             return code
