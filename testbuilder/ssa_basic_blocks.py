@@ -101,6 +101,7 @@ class Conditional(BasicBlock, Positioned, Parented):
 
 
 class TreeTail:
+    pass
 
 
 @dataclass
