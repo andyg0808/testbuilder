@@ -8,11 +8,9 @@ from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 import dataclasses
 from dataclasses import dataclass
 
-from .visitor import Visitable
-
 
 @dataclass
-class Node(Visitable):
+class Node:
     pass
 
 
