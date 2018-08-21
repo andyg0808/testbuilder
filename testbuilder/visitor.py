@@ -110,6 +110,9 @@ class GenericVisitor(SimpleVisitor[A]):
 
 class GatherVisitor(GenericVisitor[List[A]]):
     def generic_visit(self, v: Any, *args: Any) -> List[A]:
+        def arg_visit(v: Any) -> List[A]:
+            return self.visit(v, *args)
+
         try:
             fields = dataclasses.fields(v)
         except TypeError:
@@ -121,9 +124,9 @@ class GatherVisitor(GenericVisitor[List[A]]):
         for f in fields:
             data = getattr(v, f.name)
             if isinstance(data, Sequence):
-                results += mapcat(self.visit, data)
+                results += mapcat(arg_visit, data)
             else:
-                results += self.visit(data)
+                results += arg_visit(data)
         return results
 
 
@@ -146,8 +149,8 @@ class UpdateVisitor(GenericVisitor):
             data = getattr(v, f.name)
             res: Any
             if isinstance(data, Sequence):
-                res = [self.visit(x) for x in data]
+                res = [self.visit(x, *args) for x in data]
             else:
-                res = self.visit(data)
+                res = self.visit(data, *args)
             results[f.name] = res
         return cast(A, v.__class__(**results))
