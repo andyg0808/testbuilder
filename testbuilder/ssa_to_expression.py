@@ -20,7 +20,7 @@ from .iter_monad import chain, liftIter
 from .linefilterer import filter_lines
 from .ssa_repair import repair
 from .utils import crash
-from .visitor import GenericVisitor, SimpleVisitor
+from .visitor import GatherVisitor, SimpleVisitor
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -91,7 +91,7 @@ def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
     )
 
 
-class VariableFinder(GenericVisitor[sbb.Variable]):
+class VariableFinder(GatherVisitor[sbb.Variable]):
     def visit_Set(self, stmt: n.Set) -> List[sbb.Variable]:
         return []
 

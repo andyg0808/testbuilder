@@ -1,7 +1,7 @@
 from typing import List, Mapping, MutableMapping as MMapping, Set, Tuple, TypeVar, Union
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .visitor import GenericVisitor, UpdateVisitor
+from .visitor import GatherVisitor, UpdateVisitor
 
 
 class SSARepair(UpdateVisitor):
@@ -17,7 +17,7 @@ class SSARepair(UpdateVisitor):
         return n.Name(id=name.id, set_count=uselist.index(name.set_count))
 
 
-class VariableVersions(GenericVisitor[Tuple[str, int]]):
+class VariableVersions(GatherVisitor[Tuple[str, int]]):
     def visit_Name(self, name: n.Name) -> List[Tuple[str, int]]:
         return [(name.id, name.set_count)]
 
