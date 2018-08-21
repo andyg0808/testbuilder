@@ -1,4 +1,5 @@
 import inspect
+import re
 from typing import (
     Any,
     Callable,
@@ -29,6 +30,8 @@ A = TypeVar("A")
 B = TypeVar("B")
 
 Result = Union[Iterator[B], B]
+
+NameRegex = re.compile(r"visit_[A-Z]")
 
 
 class VisitError(NotImplementedError):
@@ -63,7 +66,7 @@ class SimpleVisitor(Generic[B]):
             typecache = {}
             # See https://stackoverflow.com/a/1911287/
             for name, method in inspect.getmembers(self, inspect.ismethod):
-                if not name.startswith("visit_"):
+                if not NameRegex.match(name):
                     continue
                 signature = inspect.signature(method)
                 if len(signature.parameters) < 1:
