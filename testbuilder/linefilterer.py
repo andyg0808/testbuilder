@@ -1,5 +1,7 @@
 from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
 
+from logbook import debug, info, notice
+
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
@@ -29,20 +31,24 @@ class LineFilterer(SimpleVisitor[sbb.Module]):
             # include from it.
             if isinstance(func.lines, int):
                 if func.lines > self.max_line:
-                    # print(f"Throwing out {func} because {func.lines} > {self.max_line}")
+                    notice(
+                        f"Throwing out {func} because {func.lines} > "
+                        f"{self.max_line}"
+                    )
                     continue
             start = min(func.lines)
             end = max(func.lines)
             if start > self.max_line or end < self.min_line:
-                # print(
-                #     f"Throwing out {func} because {start}>{self.max_line} or {end} < {self.min_line}"
-                # )
+                notice(
+                    f"Throwing out {func} because {start}>{self.max_line}"
+                    f" or {end} < {self.min_line}"
+                )
                 continue
             res = self.visit_FunctionDef(func)
             if res is not None:
                 code.append(res)
-            # else:
-            #     print("Throwing out {func} because no lines were kept")
+            else:
+                notice("Throwing out {func} because no lines were kept")
 
         # Shouldn't have lines from more than one function or basic block
         if len(code) == 0:
