@@ -34,8 +34,8 @@ def crash(reason: str = "") -> None:
 def pipe_print(value: Any, message: str = "") -> Any:
     if message == "":
         stack = inspect.stack()
-        assert len(stack) > 0
-        caller = stack[0]
+        assert len(stack) > 2
+        caller = stack[2]
         print(f"Pipe printing for {caller.function}")
         del caller
     else:
