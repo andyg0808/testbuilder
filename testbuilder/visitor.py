@@ -15,6 +15,7 @@ from typing import (
     cast,
 )
 
+from logbook import warn
 from toolz import mapcat
 
 import dataclasses
@@ -28,6 +29,7 @@ B = TypeVar("B")
 Result = Union[Iterator[B], B]
 
 NameRegex = re.compile(r"visit_[A-Z]")
+SuggestionRegex = re.compile(r"visit", flags=re.IGNORECASE)
 
 
 class VisitError(NotImplementedError):
@@ -46,6 +48,7 @@ class SimpleVisitor(Generic[B]):
 
     def __find_function(self, start_class: Type) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
+        suggestion = None
         if start_class in cache:
             return cast(Callable[..., B], cache[start_class])
         for cls in inspect.getmro(start_class):
@@ -54,23 +57,42 @@ class SimpleVisitor(Generic[B]):
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
                 return func
-        raise VisitError(f"No handler for {start_class}")
+            elif suggestion is None:
+                suggestions = getattr(self, "__suggestions", {})
+                print("suggestions", suggestions)
+                suggestion = suggestions.get(cls, None)
+        if suggestion is not None:
+            raise VisitError(
+                f"No handler for {start_class}. "
+                f"Maybe {suggestion} isn't capitalized correctly?"
+            )
+        else:
+            raise VisitError(f"No handler for {start_class}")
 
     def __scan_functions(self, target_class: Type) -> Callable[..., B]:
         typecache = getattr(self, "__type_cache", None)
         if typecache is None:
             typecache = {}
+            suggestions = {}
             # See https://stackoverflow.com/a/1911287/
             for name, method in inspect.getmembers(self, inspect.ismethod):
-                if not NameRegex.match(name):
-                    continue
                 signature = inspect.signature(method)
                 if len(signature.parameters) < 1:
+                    if SuggestionRegex.match(name):
+                        warn(f"Found {name} with too few parameters")
                     continue
                 parameters = list(signature.parameters.values())
                 param = parameters[0]
-                typecache[param.annotation] = method
+                if NameRegex.match(name):
+                    typecache[param.annotation] = method
+                elif SuggestionRegex.match(name):
+                    print("found suggestion", name)
+                    suggestions[param.annotation] = name
+                else:
+                    print("not suggesting", name)
+
             setattr(self, "__type_cache", typecache)
+            setattr(self, "__suggestions", suggestions)
         return cast(Callable[..., B], typecache.get(target_class, None))
 
 
