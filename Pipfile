@@ -13,7 +13,7 @@ pygments-style-solarized = "==0.1.1"
 logbook = "*"
 toolz = "*"
 injectable = "*"
-typeassert = {editable = true, path = "./../typeassert"}
+typeassert = {git = "ssh://git@gitlab.com/andyg0808/typeassert.git"}
 
 [dev-packages]
 black = "==18.6b4"
