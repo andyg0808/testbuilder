@@ -15,10 +15,13 @@ from typing import (
     cast,
 )
 
-from logbook import warn
+from logbook import Logger
 from toolz import mapcat
 
 import dataclasses
+
+log = Logger("visitor")
+
 
 # Generic types for visitors derived from
 # http://logji.blogspot.com/2012/02/correcting-visitor-pattern.html
@@ -59,7 +62,7 @@ class SimpleVisitor(Generic[B]):
                 return func
             elif suggestion is None:
                 suggestions = getattr(self, "__suggestions", {})
-                print("suggestions", suggestions)
+                log.debug("suggestions", suggestions)
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
             raise VisitError(
@@ -79,17 +82,17 @@ class SimpleVisitor(Generic[B]):
                 signature = inspect.signature(method)
                 if len(signature.parameters) < 1:
                     if SuggestionRegex.match(name):
-                        warn(f"Found {name} with too few parameters")
+                        log.warn(f"Found {name} with too few parameters")
                     continue
                 parameters = list(signature.parameters.values())
                 param = parameters[0]
                 if NameRegex.match(name):
                     typecache[param.annotation] = method
                 elif SuggestionRegex.match(name):
-                    print("found suggestion", name)
+                    log.debug("found suggestion", name)
                     suggestions[param.annotation] = name
                 else:
-                    print("not suggesting", name)
+                    log.debug("not suggesting", name)
 
             setattr(self, "__type_cache", typecache)
             setattr(self, "__suggestions", suggestions)

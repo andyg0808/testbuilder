@@ -5,7 +5,6 @@ import logbook
 import pytest
 from hypothesis import given
 from hypothesis.strategies import builds, deferred, integers, lists, one_of, recursive
-from toolz import mapcat
 
 from dataclasses import dataclass
 
