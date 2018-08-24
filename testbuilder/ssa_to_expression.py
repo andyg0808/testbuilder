@@ -48,7 +48,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return [bool_any(exprs)]
 
-    def visit_stmt(self, node: n.stmt) -> ExprList:
+    def visit_Stmt(self, node: n.stmt) -> ExprList:
         return [converter.visit_expr(node)]
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
