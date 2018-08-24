@@ -151,7 +151,7 @@ class UpdateVisitor(GenericVisitor):
         for f in fields:
             data = getattr(v, f.name)
             res: Any
-            if isinstance(data, Sequence):
+            if isinstance(data, list):
                 res = [self.visit(x, *args) for x in data]
             else:
                 res = self.visit(data, *args)
