@@ -79,7 +79,8 @@ class AstBuilder(GenericVisitor):
 
     def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
         # print(f"visiting generically to {node}")
-        assert isinstance(node, ast.AST)
+        if not isinstance(node, ast.AST):
+            return node
 
         typename = type(node).__name__
         # print("typename", typename)
