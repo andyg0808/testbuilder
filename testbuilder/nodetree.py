@@ -154,6 +154,10 @@ class Name(expr):
     id: str
     set_count: int
 
+    def __post_init__(self) -> None:
+        assert isinstance(self.id, str)
+        assert isinstance(self.set_count, int)
+
 
 @dataclass
 class Call(expr):
