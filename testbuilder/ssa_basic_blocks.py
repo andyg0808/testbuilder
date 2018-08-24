@@ -27,15 +27,12 @@ class BasicBlock:
 
 @dataclass
 class Positioned:
-    lines: range
+    first_line: int
+    last_line: int
 
     @property
-    def last_line(self) -> int:
-        return max(self.lines)
-
-    @property
-    def first_line(self) -> int:
-        return min(self.lines)
+    def lines(self) -> range:
+        return range(self.first_line, self.last_line + 1)
 
 
 @dataclass
@@ -52,6 +49,8 @@ class ReturnBlock(BasicBlock):
 
     @property
     def line(self) -> int:
+        if not self.parents:
+            raise RuntimeError("Should have at least one parent of a ReturnBlock")
         lines = []
         for b in self.parents:
             if isinstance(b, Positioned):
@@ -90,12 +89,12 @@ class FalseBranch(Controlled, Parented):
 
 
 @dataclass
-class Loop(BasicBlock, Positioned, Parented):
+class Loop(Controlled, Positioned, Parented):
     loop_branch: BasicBlock
 
 
 @dataclass
-class Conditional(BasicBlock, Positioned, Parented):
+class Conditional(Controlled, Positioned, Parented):
     true_branch: BasicBlock
     false_branch: BasicBlock
 
@@ -104,11 +103,13 @@ class TreeTail:
     pass
 
 
+T = TypeVar("T", bound=BasicBlock)
+
+
 @dataclass
 class BlockTree:
     start: StartBlock
     end: ReturnBlock
-    target: Optional[BasicBlock] = None
 
     def empty(self) -> bool:
         if len(self.end.parents) == 0:
@@ -116,6 +117,14 @@ class BlockTree:
         if len(self.end.parents) == 1 and self.start is self.end.parents[0]:
             return True
         return False
+
+
+@dataclass
+class BlockTreeIndex(BlockTree, Generic[T]):
+    target: T
+
+    def set_target(self, target: T) -> "BlockTreeIndex[T]":
+        return BlockTreeIndex(start=self.start, end=self.end, target=target)
 
 
 @dataclass

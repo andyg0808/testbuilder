@@ -24,13 +24,20 @@ class expr(Node):
 
 
 @dataclass
-class Module(Node):
+class Body(Node):
+    """
+    A body is a list of statements which are executed in sequence.
+    """
+
     body: List[stmt]
 
 
+E = TypeVar("E", bound=expr)
+
+
 @dataclass
-class Expr(stmt):
-    value: expr
+class Expr(stmt, Generic[E]):
+    value: E
 
 
 @dataclass

@@ -113,7 +113,7 @@ class ExpressionBuilder:
         from functools import partial
         from .ssa_basic_blocks import TestData
 
-        _ast_to_ssa = partial(ast_to_ssa, self.lines, variables)
+        _ast_to_ssa = partial(ast_to_ssa, variables)
         # _ssa_to_expression = partial(
         #     blocktree_and_ssa_to_expression, self.depth, tree, variables=variables
         # )

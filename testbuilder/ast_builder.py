@@ -13,13 +13,14 @@ from typing import (
 import dataclasses
 
 from . import nodetree as n
+from .visitor import GenericVisitor
 
 OpFunc = Callable[..., n.expr]
 
 VAR_START_VALUE = 0
 
 
-class AstBuilder(ast.NodeVisitor):
+class AstBuilder(GenericVisitor):
     def __init__(self, variables: MMapping[str, int]) -> None:
         super().__init__()
         self.variables = variables
@@ -32,7 +33,7 @@ class AstBuilder(ast.NodeVisitor):
 
     def get_target_variable(self, node: ast.expr) -> n.Name:
         if isinstance(node, ast.Name):
-            var: n.Name = self.visit(node)
+            var: n.Name = self.visit_Name(node)
             if var.id in self.variables:
                 var.set_count += 1
             self.variables[node.id] = var.set_count
@@ -76,7 +77,7 @@ class AstBuilder(ast.NodeVisitor):
         idx = self.variables.get(node.id, VAR_START_VALUE)
         return n.Name(node.id, idx)
 
-    def generic_visit(self, node: ast.AST) -> Any:
+    def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
         # print(f"visiting generically to {node}")
         assert isinstance(node, ast.AST)
 
@@ -98,7 +99,7 @@ class AstBuilder(ast.NodeVisitor):
                 fields.append([self.visit(v) for v in value])
             else:
                 fields.append(self.visit(value))
-        return equivalent(*fields)
+        return cast(n.Node, equivalent(*fields))
 
 
 def make_ast(variables: MMapping[str, int], code: ast.AST) -> n.Node:

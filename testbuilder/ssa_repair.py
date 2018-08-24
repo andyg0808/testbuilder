@@ -27,9 +27,11 @@ Tree = TypeVar("Tree", bound=Union[sbb.BlockTree, sbb.FunctionDef])
 
 def repair(request: sbb.Request) -> sbb.Request:
     print("repair_request", request)
-    used_vars = VariableVersions().visit(request.code)
+    used_vars: List[Tuple[str, int]] = VariableVersions().visit(request.code)
     varmap: MMapping[str, Set[int]] = {}
     for key, value in used_vars:
+        assert isinstance(key, str), f"{key} is not str"
+        assert isinstance(value, int), f"{value} is not int"
         if key in varmap:
             varmap[key].add(value)
         else:
