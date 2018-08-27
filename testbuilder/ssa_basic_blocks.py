@@ -90,7 +90,7 @@ class FalseBranch(Controlled, Parented):
 
 @dataclass
 class Loop(Controlled, Positioned, Parented):
-    loop_branch: BasicBlock
+    loops: List[BasicBlock]
 
 
 @dataclass

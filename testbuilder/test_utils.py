@@ -157,7 +157,7 @@ def nexts_code(obj: sbb.Code) -> List[Any]:
 
 @nexts.register(sbb.Loop)
 def nexts_loop(obj: sbb.Loop) -> List[Any]:
-    return [obj.loop_branch, obj.parent]
+    return obj.loops
 
 
 @nexts.register(sbb.Parented)

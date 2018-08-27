@@ -73,6 +73,14 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return code + [pipe(branches, liftIter(bool_all), bool_any)]
 
+    def visit_Loop(self, node: sbb.Loop, stop: StopBlock) -> ExprList:
+        if stop and node.number == stop.number:
+            return []
+
+        code = self.visit(node.parent, stop)
+        branches = [self.visit(branch, node.parent) for branch in node.loops]
+        return code + [pipe(branches, liftIter(bool_all), bool_any)]
+
     def visit_TrueBranch(self, node: sbb.TrueBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
             return []

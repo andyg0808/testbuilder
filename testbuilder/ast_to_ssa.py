@@ -30,8 +30,9 @@ AddedLine = -1
 
 
 class AstToSSABasicBlocks(SimpleVisitor):
-    def __init__(self, variables: VariableManager) -> None:
+    def __init__(self, depth: int, variables: VariableManager) -> None:
         self.block_id = 0
+        self.depth = depth
         self.variables = variables
         self.stmt_visitor = StatementVisitor(variables)
         self.expr_visitor = AstBuilder(variables)
@@ -134,6 +135,63 @@ class AstToSSABasicBlocks(SimpleVisitor):
                 false_branch=false_block.target,
             )
         )
+
+    def visit_While(
+        self, node: ast.While, tree: sbb.BlockTreeIndex
+    ) -> sbb.BlockTreeIndex:
+        assert isinstance(tree, sbb.BlockTreeIndex)
+        assert tree.target
+        parent = tree.target
+        paths = []
+
+        def add_block(block: sbb.BlockTreeIndex) -> None:
+            paths.append((block, self.variables.mapping()))
+
+        bypass = tree.set_target(
+            sbb.Code(
+                number=self.next_id(),
+                first_line=n.AddedLine,
+                last_line=n.AddedLine,
+                parent=parent,
+                code=[],
+            )
+        )
+        add_block(bypass)
+        for depth in range(1, self.depth + 1):
+            body_branch = tree
+            self.variables.push()
+            for _i in range(depth):
+                condition = self.expr_visitor(node.test)
+                body_branch = body_branch.set_target(
+                    sbb.TrueBranch(
+                        number=self.next_id(),
+                        conditional=condition,
+                        parent=body_branch.target,
+                    )
+                )
+                body_branch = self.line_visit(node.body, body_branch)
+            add_block(body_branch)
+            self.variables.pop()
+
+        loops, variables = self._update_paths(paths)
+        self.variables.update(variables)
+
+        assert len(paths) > 0
+        last_line = paths[0][0].target.last_line
+
+        loop = sbb.Loop(
+            number=self.next_id(),
+            conditional=condition,
+            first_line=node.lineno,
+            last_line=last_line,
+            parent=parent,
+            loops=[loop.target for loop in loops],
+        )
+        condition = self.expr_visitor(node.test)
+        child = sbb.FalseBranch(
+            number=self.next_id(), conditional=condition, parent=loop
+        )
+        return tree.set_target(child)
 
     def visit_Pass(
         self, node: ast.Pass, tree: sbb.BlockTreeIndex
@@ -297,10 +355,10 @@ def unify_all_variables(
 #     )
 
 
-def ast_to_ssa(variables: VarMapping, node: ast.Module) -> sbb.Module:
+def ast_to_ssa(depth: int, variables: VarMapping, node: ast.Module) -> sbb.Module:
     # print("input type", type(node))
     varmanager = VariableManager(variables)
-    t = AstToSSABasicBlocks(varmanager)
+    t = AstToSSABasicBlocks(depth, varmanager)
     assert isinstance(node, ast.Module)
     res = t.visit(node)
     assert isinstance(res, sbb.Module)
