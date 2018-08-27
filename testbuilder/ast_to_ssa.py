@@ -231,7 +231,11 @@ class AstToSSABasicBlocks(SimpleVisitor):
             return sbb.BlockTreeIndex(start=tree.start, end=tree.end, target=cur_block)
         else:
             cur_block.append(line)
-            cur_block.last_line = line.line
+            if line.line != AddedLine:
+                # Don't update line numbers to be negative. This
+                # eliminates later need to sort through the lines in
+                # the code block to find the actual end line.
+                cur_block.last_line = line.line
             return tree
 
     def _update_paths(

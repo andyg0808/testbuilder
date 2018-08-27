@@ -78,7 +78,9 @@ def get_expression_at_depth(depth: int, funcstmt: FuncStmt) -> Expression:
     variables = funcstmt.statement.get_slice_variables()
     block_tree = build_tree(funcstmt.function)
     flowgraph = block_tree.inflate(funcstmt.statement)
-    builder = ExpressionBuilder(depth, funcstmt.statement.lines())
+    builder = ExpressionBuilder(
+        depth, funcstmt.statement.lineno, funcstmt.statement.lines()
+    )
     return builder.get_expression(variables, flowgraph)
 
 

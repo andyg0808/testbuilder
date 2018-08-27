@@ -171,8 +171,10 @@ def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
     return process(request.code, v)
 
 
-def ssa_lines_to_expression(lines: Set[int], module: sbb.Module) -> sbb.TestData:
-    request = filter_lines(lines, module)
+def ssa_lines_to_expression(
+    target_line: int, lines: Set[int], module: sbb.Module
+) -> sbb.TestData:
+    request = filter_lines(target_line, lines, module)
     repaired_request = repair(request)
     return ssa_to_expression(repaired_request)
 

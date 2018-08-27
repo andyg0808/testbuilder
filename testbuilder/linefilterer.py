@@ -5,6 +5,7 @@ from logbook import debug, info, notice
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
+from .ast_to_ssa import AddedLine
 from .visitor import SimpleVisitor, UpdateVisitor
 
 BlockMapping = MMapping[int, sbb.BasicBlock]
@@ -14,12 +15,13 @@ B = TypeVar("B", bound=sbb.BasicBlock)
 
 # TODO: Convert to UpdateVisitor
 class LineFilterer(UpdateVisitor):
-    def __init__(self, lines: Set[int]) -> None:
+    def __init__(self, lines: Set[int], target_line: int) -> None:
         super().__init__()
         self.lines = lines
         self.min_line = min(lines)
         self.max_line = max(lines)
         self.line_range = range(self.min_line, self.max_line + 1)
+        self.target_line: int = target_line
 
     def visit_Module(self, module: sbb.Module) -> sbb.Request:
         code = []
@@ -137,19 +139,50 @@ class LineFilterer(UpdateVisitor):
         if block.first_line not in self.lines:
             return self.visit_block(block.parent, blocks)
         else:
+            parent = self.visit_block(block.parent, blocks)
+            true_branch = self.visit_block(block.true_branch, blocks)
+            false_branch = self.visit_block(block.false_branch, blocks)
+            # If the target line is within a branch, we want to force
+            # execution down that direction.
+            if self.target_line in line_range(parent, true_branch):
+                return true_branch
+            if self.target_line in line_range(parent, false_branch):
+                return false_branch
             return sbb.Conditional(
                 number=block.number,
                 first_line=block.first_line,
                 last_line=block.last_line,
-                parent=self.visit_block(block.parent, blocks),
+                parent=parent,
                 conditional=block.conditional,
-                true_branch=self.visit_block(block.true_branch, blocks),
-                false_branch=self.visit_block(block.false_branch, blocks),
+                true_branch=true_branch,
+                false_branch=false_branch,
             )
 
 
-def filter_lines(lines: Set[int], module: sbb.Module) -> sbb.Request:
+def line_range(parent: sbb.BasicBlock, end: sbb.BasicBlock) -> range:
+    """
+    Returns the range of line numbers after the end of the parent block,
+    but before the end of the end block.
+    """
+    start_line = last_line(parent)
+    end_line = last_line(end)
+    print("line_range", start_line, end_line)
+    return range(start_line + 1, end_line + 1)
+
+
+def last_line(block: sbb.BasicBlock) -> int:
+    if isinstance(block, sbb.Positioned) and block.last_line != AddedLine:
+        return block.last_line
+    elif isinstance(block, sbb.Parented):
+        return last_line(block.parent)
+    elif isinstance(block, sbb.StartBlock):
+        return 0
+    else:
+        raise RuntimeError(f"Unexpected end type: {block}")
+
+
+def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:
     print(f"Filtering on lines {lines}")
-    filtered = LineFilterer(lines).visit_Module(module)
+    filtered = LineFilterer(lines, target_line).visit_Module(module)
     print("filtered code", filtered.code)
     return filtered

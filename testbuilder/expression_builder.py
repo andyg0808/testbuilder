@@ -72,14 +72,15 @@ def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Express
     # print("tree", tree)
     # show_dot(tree.entrance.dot())
     variables = dep_tree.get_slice_variables()
-    eb = ExpressionBuilder(depth, dep_tree.lines())
+    eb = ExpressionBuilder(depth, dep_tree.lineno, dep_tree.lines())
     return eb.get_expression(variables, tree)
 
 
 class ExpressionBuilder:
-    def __init__(self, depth: int, lines: Set[int]) -> None:
+    def __init__(self, depth: int, target_line: int, lines: Set[int]) -> None:
         self.depth = depth
         self.lines = lines
+        self.target_line = target_line
 
     def get_expression(
         self, variables: Iterable[Variable], flowgraph: BlockTree
@@ -117,7 +118,9 @@ class ExpressionBuilder:
         # _ssa_to_expression = partial(
         #     blocktree_and_ssa_to_expression, self.depth, tree, variables=variables
         # )
-        _ssa_to_expression = partial(ssa_lines_to_expression, self.lines)
+        _ssa_to_expression = partial(
+            ssa_lines_to_expression, self.target_line, self.lines
+        )
 
         from .utils import pipe_print
 
