@@ -87,7 +87,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [converter.visit_expr(node.conditional)]
+        return code + [to_boolean(converter.visit_expr(node.conditional))]
 
     def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -95,7 +95,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [bool_not(converter.visit_expr(node.conditional))]
+        return code + [bool_not(to_boolean(converter.visit_expr(node.conditional)))]
 
 
 @singledispatch
