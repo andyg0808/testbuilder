@@ -1,10 +1,11 @@
 from typing import List, Mapping, MutableMapping as MMapping, Set, Tuple, TypeVar, Union
 
-from . import nodetree as n, ssa_basic_blocks as sbb
-from .visitor import GatherVisitor, UpdateVisitor
 from logbook import Logger
 
-log = Logger('ssa_repair')
+from . import nodetree as n, ssa_basic_blocks as sbb
+from .visitor import GatherVisitor, UpdateVisitor
+
+log = Logger("ssa_repair")
 
 
 class SSARepair(UpdateVisitor):
@@ -42,6 +43,5 @@ def repair(request: sbb.Request) -> sbb.Request:
             varmap[key] = {value}
 
     sorted_vars = {key: sorted(value) for key, value in varmap.items()}
-    print("sorted_vars", sorted_vars)
     updated = SSARepair(sorted_vars).visit(request)
     return updated
