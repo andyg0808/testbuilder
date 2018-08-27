@@ -40,6 +40,9 @@ def write_dot(lines: Sequence[str], filename: str) -> None:
         f.write(formatted)
 
 
+ascii_dot = False
+
+
 @singledispatch
 def show_dot(obj: Any) -> None:
     lines = dotify(obj)
@@ -50,7 +53,10 @@ def show_dot(obj: Any) -> None:
 @show_dot.register(list)
 def show_dot_from_lines(lines: Sequence[str]) -> None:
     formatted = format_dot(lines)
-    subprocess.run(["dot", "-Tx11"], input=formatted.encode())
+    if ascii_dot:
+        subprocess.run(["graph-easy", "--ascii"], input=formatted.encode())
+    else:
+        subprocess.run(["dot", "-Tx11"], input=formatted.encode())
 
 
 Lister = Callable[[Any], List[str]]
