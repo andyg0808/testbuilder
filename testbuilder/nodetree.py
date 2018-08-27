@@ -8,6 +8,8 @@ from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 import dataclasses
 from dataclasses import dataclass
 
+AddedLine = -1
+
 
 @dataclass
 class Node:

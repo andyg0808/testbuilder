@@ -5,7 +5,7 @@ from logbook import debug, info, notice
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
-from .ast_to_ssa import AddedLine
+from .nodetree import AddedLine
 from .visitor import SimpleVisitor, UpdateVisitor
 
 BlockMapping = MMapping[int, sbb.BasicBlock]

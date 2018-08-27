@@ -26,7 +26,6 @@ from .variable_manager import VariableManager
 from .visitor import GenericVisitor, SimpleVisitor
 
 StmtList = List[ast.stmt]
-AddedLine = -1
 
 
 class AstToSSABasicBlocks(SimpleVisitor):
@@ -272,7 +271,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
             return sbb.BlockTreeIndex(start=tree.start, end=tree.end, target=cur_block)
         else:
             cur_block.append(line)
-            if line.line != AddedLine:
+            if line.line != n.AddedLine:
                 # Don't update line numbers to be negative. This
                 # eliminates later need to sort through the lines in
                 # the code block to find the actual end line.
@@ -329,7 +328,7 @@ def unify_all_variables(
         for var_list, var_renaming in zip(variable_lists, renamings):
             if key in var_list and var_list[key] != max_value:
                 source = n.Name(id=key, set_count=var_list[key])
-                var_renaming.append(n.Set(line=AddedLine, target=dest, e=source))
+                var_renaming.append(n.Set(line=n.AddedLine, target=dest, e=source))
         variables[key] = max_value
 
     return (variables, renamings)
