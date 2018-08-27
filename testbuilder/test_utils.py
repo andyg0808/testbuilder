@@ -100,18 +100,43 @@ def _label_format(obj: Any, data: LabelData) -> str:
 
 @singledispatch
 def _dot_label(obj: object) -> LabelData:
-    raise RuntimeError(f"`dot` formatting not implemented for {type(obj)}")
+    name = obj.__class__.__name__
+    return f"*{name}*"
 
 
 @_dot_label.register(sbb.BasicBlock)
 def _dot_label_basic_block(block: sbb.BasicBlock) -> LabelData:
-    return {"xlabel": block.number}
+    name = block.__class__.__name__
+    return (name, {"xlabel": block.number})
 
 
 @_dot_label.register(sbb.Code)
 def _dot_label_code_block(block: sbb.Code) -> LabelData:
     body = "\n".join(format_tree(c) for c in block.code)
     return (body, {"xlabel": block.number})
+
+
+@_dot_label.register(sbb.Conditional)
+@_dot_label.register(sbb.TrueBranch)
+@_dot_label.register(sbb.FalseBranch)
+def _dot_label_controlled(block: sbb.Controlled) -> LabelData:
+    name = block.__class__.__name__
+    cond = format_tree(block.conditional)
+    return (f"*{name}*\n{cond}", {"xlabel": block.number})
+
+
+@_dot_label.register(sbb.BlockTree)
+def _dot_label_block_tree(tree: sbb.BlockTree) -> LabelData:
+    if tree.empty():
+        return "*Empty Block Tree*"
+    else:
+        return "*Block Tree*"
+
+
+@_dot_label.register(sbb.FunctionDef)
+def _dot_label_function_def(func: sbb.FunctionDef) -> LabelData:
+    args = ",".join(func.args)
+    return f"{func.name}({args})"
 
 
 @singledispatch
@@ -126,9 +151,46 @@ def nexts_code(obj: sbb.Code) -> List[Any]:
 
 @nexts.register(sbb.Loop)
 def nexts_loop(obj: sbb.Loop) -> List[Any]:
-    return [obj.loop_branch, obj.bypass]
+    return [obj.loop_branch, obj.parent]
 
 
-@nexts.register(sbb.BasicBlock)
-def nexts_block(obj: sbb.BasicBlock) -> List[Any]:
+@nexts.register(sbb.Parented)
+def next_parent(obj: sbb.Parented) -> List[Any]:
+    return [obj.parent]
+
+
+@nexts.register(sbb.StartBlock)
+def next_start_block(obj: sbb.StartBlock) -> List[Any]:
     return []
+
+
+@nexts.register(sbb.Request)
+def nexts_request(obj: sbb.Request) -> List[Any]:
+    return [obj.module, obj.code]
+
+
+@nexts.register(sbb.Module)
+def nexts_module(obj: sbb.Module) -> List[Any]:
+    functions: List[Any] = list(obj.functions.values())
+    code: List[Any] = [obj.code]
+    return functions + code
+
+
+@nexts.register(sbb.BlockTree)
+def nexts_block_tree(obj: sbb.BlockTree) -> List[Any]:
+    return [obj.start, obj.end]
+
+
+@nexts.register(sbb.ReturnBlock)
+def nexts_return_block(obj: sbb.ReturnBlock) -> List[Any]:
+    return obj.parents
+
+
+@nexts.register(sbb.Conditional)
+def nexts_conditional_block(obj: sbb.Conditional) -> List[Any]:
+    return [obj.true_branch, obj.false_branch]
+
+
+@nexts.register(sbb.FunctionDef)
+def nexts_function_def(obj: sbb.FunctionDef) -> List[Any]:
+    return [obj.blocks]
