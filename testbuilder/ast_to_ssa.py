@@ -3,19 +3,17 @@ from functools import reduce, singledispatch
 from typing import (
     Any,
     Callable,
-    Union,
-
     List,
     MutableMapping as MMapping,
     Optional,
     Sequence,
     Set,
     Tuple,
+    Union,
     cast,
 )
 
 import dataclasses
-
 import z3
 from typeassert import assertify
 
@@ -24,8 +22,8 @@ from .converter import get_variable
 from .expression_builder import VarMapping
 from .slicing import Dependency
 from .utils import crash
-from .visitor import GenericVisitor, SimpleVisitor
 from .variable_manager import VariableManager
+from .visitor import GenericVisitor, SimpleVisitor
 
 StmtList = List[ast.stmt]
 AddedLine = -1
@@ -103,7 +101,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
         paths = []
 
         def add_block(block: sbb.BlockTreeIndex) -> None:
-            print("adding block", type(block), "variables", self.variables)
             paths.append((block, self.variables.mapping()))
 
         true_branch = sbb.TrueBranch(
@@ -115,7 +112,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
         true_block = tree.set_target(true_branch)
         false_block = tree.set_target(false_branch)
 
-        print("start variables", self.variables)
         self.variables.push()
         add_block(self.line_visit(node.body, true_block))
         self.variables.refresh()
@@ -123,12 +119,8 @@ class AstToSSABasicBlocks(SimpleVisitor):
         self.variables.pop()
 
         blocks, variables = self._update_paths(paths)
-        print("updated variables", variables)
         self.variables.update(variables)
-        print('blocks', blocks)
         true_block, false_block = blocks
-        # true_block = self.append_lines(true_block, true_branch_extension)
-        # false_block = self.append_lines(false_block, false_branch_extension)
 
         last_line = max(true_block.target.last_line, false_block.target.last_line)
         return tree.set_target(
@@ -143,19 +135,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
             )
         )
 
-        # Need to join the true and false branches, after adding any
-        # code needed to set the correct result variables. Probably
-        # want to pull that code from expression_builder.
-
-    #     end_line = max(true_branch.last_line, false_branch.last_line)
-    #     lines = range(node.lineno, end_line)
-    #     return sbb.Conditional(
-    #         number=self.next_id(),
-    #         lines=lines,
-    #         parent=parent,
-    #         true_branch=true_branch,
-    #         false_branch=false_branch,
-    #     )
     def visit_Pass(
         self, node: ast.Pass, tree: sbb.BlockTreeIndex
     ) -> sbb.BlockTreeIndex:
@@ -246,10 +225,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
         self, paths: List[Tuple[sbb.BlockTreeIndex, VarMapping]]
     ) -> Tuple[List[sbb.BlockTreeIndex[sbb.Code]], VarMapping]:
         variables, edit_lists = unify_all_variables([p[1] for p in paths])
-        # updated_conditions = [
-        #     self.append_code(path[0], edit_list)
-        #     for path, edit_list in zip(paths, edit_lists)
-        # ]
         updated_conditions: List[sbb.BlockTreeIndex[sbb.Code]] = []
         for path, edit_list in zip(paths, edit_lists):
             newblock = self.append_lines(path[0], edit_list)
@@ -387,7 +362,6 @@ class StatementVisitor(GenericVisitor):
 
     def generic_visit(self, node: ast.AST, *args: Any) -> Any:
         return self.expr_visitor(node)
-
 
 
 class AstBuilder(GenericVisitor):

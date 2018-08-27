@@ -119,7 +119,6 @@ class LineFilterer(UpdateVisitor):
             return newblock
 
     def visit_Code(self, code: sbb.Code, blocks: BlockMapping) -> sbb.BasicBlock:
-        # print("code.parent", code.parent)
         parent = self.visit_block(code.parent, blocks)
         body = [i for i in code.code if i.line in self.lines or i.line == AddedLine]
         if body:
