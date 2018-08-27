@@ -134,12 +134,17 @@ class GatherVisitor(GenericVisitor[List[A]]):
 
 
 class UpdateVisitor(GenericVisitor):
+    def __init__(self) -> None:
+        self.visited_nodes: MMapping[int, Any] = {}
+
     def visit(self, v: A, *args: Any) -> A:
         visited = super().visit(v, *args)
         assert isinstance(visited, v.__class__)
         return cast(A, visited)
 
     def generic_visit(self, v: A, *args: Any) -> A:
+        if id(v) in self.visited_nodes:
+            return cast(A, self.visited_nodes[id(v)])
         try:
             fields = dataclasses.fields(v)
         except TypeError as err:
@@ -156,4 +161,6 @@ class UpdateVisitor(GenericVisitor):
             else:
                 res = self.visit(data, *args)
             results[f.name] = res
-        return cast(A, v.__class__(**results))
+        newnode = cast(A, v.__class__(**results))
+        self.visited_nodes[id(v)] = newnode
+        return newnode

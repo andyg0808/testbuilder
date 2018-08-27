@@ -2,10 +2,14 @@ from typing import List, Mapping, MutableMapping as MMapping, Set, Tuple, TypeVa
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .visitor import GatherVisitor, UpdateVisitor
+from logbook import Logger
+
+log = Logger('ssa_repair')
 
 
 class SSARepair(UpdateVisitor):
     def __init__(self, used_vars: Mapping[str, List[int]]) -> None:
+        super().__init__()
         self.used_vars = used_vars
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
@@ -13,7 +17,7 @@ class SSARepair(UpdateVisitor):
 
     def visit_Name(self, name: n.Name) -> n.Name:
         uselist = self.used_vars[name.id]
-        print(f"newcount for {name} is {uselist.index(name.set_count)}")
+        log.debug(f"newcount for {name} is {uselist.index(name.set_count)}")
         return n.Name(id=name.id, set_count=uselist.index(name.set_count))
 
 
@@ -40,5 +44,4 @@ def repair(request: sbb.Request) -> sbb.Request:
     sorted_vars = {key: sorted(value) for key, value in varmap.items()}
     print("sorted_vars", sorted_vars)
     updated = SSARepair(sorted_vars).visit(request)
-    print("updated_request", updated)
     return updated

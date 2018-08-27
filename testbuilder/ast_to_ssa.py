@@ -1,9 +1,10 @@
 import ast
-from copy import copy
 from functools import reduce, singledispatch
 from typing import (
     Any,
     Callable,
+    Union,
+
     List,
     MutableMapping as MMapping,
     Optional,
@@ -13,23 +14,25 @@ from typing import (
     cast,
 )
 
+import dataclasses
+
 import z3
 from typeassert import assertify
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .ast_builder import AstBuilder
 from .converter import get_variable
 from .expression_builder import VarMapping
 from .slicing import Dependency
 from .utils import crash
 from .visitor import GenericVisitor, SimpleVisitor
+from .variable_manager import VariableManager
 
 StmtList = List[ast.stmt]
 AddedLine = -1
 
 
 class AstToSSABasicBlocks(SimpleVisitor):
-    def __init__(self, variables: VarMapping) -> None:
+    def __init__(self, variables: VariableManager) -> None:
         self.block_id = 0
         self.variables = variables
         self.stmt_visitor = StatementVisitor(variables)
@@ -98,11 +101,10 @@ class AstToSSABasicBlocks(SimpleVisitor):
         parent = tree.target
         condition = self.expr_visitor(node.test)
         paths = []
-        original_variables = copy(self.variables)
 
         def add_block(block: sbb.BlockTreeIndex) -> None:
-            paths.append((block, copy(self.variables)))
-            self.variables = copy(original_variables)
+            print("adding block", type(block), "variables", self.variables)
+            paths.append((block, self.variables.mapping()))
 
         true_branch = sbb.TrueBranch(
             number=self.next_id(), conditional=condition, parent=parent
@@ -113,17 +115,17 @@ class AstToSSABasicBlocks(SimpleVisitor):
         true_block = tree.set_target(true_branch)
         false_block = tree.set_target(false_branch)
 
-        # true_block = self.line_visit(node.body, true_block)
-        # true_variables = self.variables
-
+        print("start variables", self.variables)
+        self.variables.push()
         add_block(self.line_visit(node.body, true_block))
+        self.variables.refresh()
         add_block(self.line_visit(node.orelse, false_block))
-
-        # self.variables = copy(original_variables)
-        # false_block = self.line_visit(node.orelse, false_block)
-        # false_variables = self.variables
+        self.variables.pop()
 
         blocks, variables = self._update_paths(paths)
+        print("updated variables", variables)
+        self.variables.update(variables)
+        print('blocks', blocks)
         true_block, false_block = blocks
         # true_block = self.append_lines(true_block, true_branch_extension)
         # false_block = self.append_lines(false_block, false_branch_extension)
@@ -314,7 +316,8 @@ def unify_all_variables(
 
 def ast_to_ssa(variables: VarMapping, node: ast.Module) -> sbb.Module:
     # print("input type", type(node))
-    t = AstToSSABasicBlocks(variables)
+    varmanager = VariableManager(variables)
+    t = AstToSSABasicBlocks(varmanager)
     assert isinstance(node, ast.Module)
     res = t.visit(node)
     assert isinstance(res, sbb.Module)
@@ -346,7 +349,7 @@ def find_block_start(block: sbb.Parented) -> int:
 
 
 class StatementVisitor(GenericVisitor):
-    def __init__(self, variables: VarMapping) -> None:
+    def __init__(self, variables: VariableManager) -> None:
         self.variables = variables
         self.expr_visitor = AstBuilder(variables)
 
@@ -358,9 +361,7 @@ class StatementVisitor(GenericVisitor):
     def get_target_variable(self, node: ast.expr) -> n.Name:
         if isinstance(node, ast.Name):
             var: n.Name = self.expr_visitor.visit_Name(node)
-            if var.id in self.variables:
-                var.set_count += 1
-            self.variables[node.id] = var.set_count
+            var.set_count = self.variables.get_target(node.id)
             return var
         else:
             raise RuntimeError("Unknown target type")
@@ -378,3 +379,65 @@ class StatementVisitor(GenericVisitor):
 
     def generic_visit(self, node: ast.AST, *args: Any) -> Any:
         return self.expr_visitor(node)
+
+
+
+class AstBuilder(GenericVisitor):
+    def __init__(self, variables: VariableManager) -> None:
+        super().__init__()
+        self.variables = variables
+
+    def visit_Num(self, node: ast.Num) -> Union[n.Int, n.Float]:
+        if int(node.n) == node.n:
+            return n.Int(int(node.n))
+        else:
+            return n.Float(node.n)
+
+    def visit_Compare(self, node: ast.Compare) -> n.BinOp:
+        left = self.visit(node.left)
+        ops = map(self.visit, node.ops)
+        comparators = map(self.visit, node.comparators)
+
+        def combine(left: n.expr, zipped: Tuple[n.expr, n.expr]) -> n.expr:
+            op, right = zipped
+            return n.BinOp(left, cast(n.Operator, op), right)
+
+        return cast(n.BinOp, reduce(combine, zip(ops, comparators), left))
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
+        op = self.visit(node.op)
+        value_list = [self.visit(v) for v in node.values]
+
+        def combine(left: n.expr, right: n.expr) -> n.expr:
+            return n.BinOp(left, op, right)
+
+        return cast(n.BinOp, reduce(combine, value_list))
+
+    def visit_Name(self, node: ast.Name) -> n.Name:
+        idx = self.variables.get(node.id)
+        return n.Name(node.id, idx)
+
+    def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
+        # print(f"visiting generically to {node}")
+        if not isinstance(node, ast.AST):
+            return node
+
+        typename = type(node).__name__
+        # print("typename", typename)
+        equivalent = getattr(n, typename, None)
+        if equivalent is None:
+            raise RuntimeError(
+                f"Don't know what to do with a {typename}"
+                f"({type(node)}); no such attribute exists"
+            )
+        fields = []
+        for field in dataclasses.fields(equivalent):
+            if field.name == "line":
+                fields.append(getattr(node, "lineno"))
+                continue
+            value = getattr(node, field.name)
+            if isinstance(value, list):
+                fields.append([self.visit(v) for v in value])
+            else:
+                fields.append(self.visit(value))
+        return cast(n.Node, equivalent(*fields))

@@ -31,8 +31,10 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         self.module = module
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
-        if node is stop:
+        print("visiting code", id(node), id(stop), node)
+        if stop and node.number == stop.number:
             return []
+
         exprs = self.visit(node.parent, stop)
         visited = list(mapcat(self.visit, node.code))
         res = exprs + visited
@@ -55,8 +57,12 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return self.visit(node.end, None)
 
     def visit_Conditional(self, node: sbb.Conditional, stop: StopBlock) -> ExprList:
+        if stop and node.number == stop.number:
+            return []
+
         code = self.visit(node.parent, stop)
 
+        print("node.parent", node.parent, id(node.parent))
         branches = []
         if node.true_branch:
             branches.append(self.visit(node.true_branch, node.parent))
@@ -66,6 +72,22 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         print("branches", branches)
 
         return code + [pipe(branches, liftIter(bool_all), bool_any)]
+
+    def visit_TrueBranch(self, node: sbb.TrueBranch, stop: StopBlock) -> ExprList:
+        if stop and node.number == stop.number:
+            return []
+
+        code = self.visit(node.parent, stop)
+
+        return code + [converter.visit_expr(node.conditional)]
+
+    def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
+        if stop and node.number == stop.number:
+            return []
+
+        code = self.visit(node.parent, stop)
+
+        return code + [bool_not(converter.visit_expr(node.conditional))]
 
 
 @singledispatch
