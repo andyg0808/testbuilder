@@ -143,9 +143,9 @@ class LineFilterer(UpdateVisitor):
             false_branch = self.visit_block(block.false_branch, blocks)
             # If the target line is within a branch, we want to force
             # execution down that direction.
-            if self.target_line in line_range(parent, true_branch):
+            if self.target_line in sbb.line_range(parent, true_branch):
                 return true_branch
-            if self.target_line in line_range(parent, false_branch):
+            if self.target_line in sbb.line_range(parent, false_branch):
                 return false_branch
             return sbb.Conditional(
                 number=block.number,
@@ -158,26 +158,6 @@ class LineFilterer(UpdateVisitor):
             )
 
 
-def line_range(parent: sbb.BasicBlock, end: sbb.BasicBlock) -> range:
-    """
-    Returns the range of line numbers after the end of the parent block,
-    but before the end of the end block.
-    """
-    start_line = last_line(parent)
-    end_line = last_line(end)
-    print("line_range", start_line, end_line)
-    return range(start_line + 1, end_line + 1)
-
-
-def last_line(block: sbb.BasicBlock) -> int:
-    if isinstance(block, sbb.Positioned) and block.last_line != AddedLine:
-        return block.last_line
-    elif isinstance(block, sbb.Parented):
-        return last_line(block.parent)
-    elif isinstance(block, sbb.StartBlock):
-        return 0
-    else:
-        raise RuntimeError(f"Unexpected end type: {block}")
 
 
 def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:

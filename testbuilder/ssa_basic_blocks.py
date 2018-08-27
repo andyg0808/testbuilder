@@ -180,3 +180,25 @@ def dump_ReturnBlock(block: ReturnBlock, depth: int = 0) -> None:
     print(" " * depth, block)
     for parent in block.parents:
         dump_tree(parent, depth + 1)
+
+
+def line_range(parent: BasicBlock, end: BasicBlock) -> range:
+    """
+    Returns the range of line numbers after the end of the parent block,
+    but before the end of the end block.
+    """
+    start_line = last_line(parent)
+    end_line = last_line(end)
+    print("line_range", start_line, end_line)
+    return range(start_line + 1, end_line + 1)
+
+
+def last_line(block: BasicBlock) -> int:
+    if isinstance(block, Positioned) and block.last_line != n.AddedLine:
+        return block.last_line
+    elif isinstance(block, Parented):
+        return last_line(block.parent)
+    elif isinstance(block, StartBlock):
+        return block.line
+    else:
+        raise RuntimeError(f"Unexpected end type: {block}")
