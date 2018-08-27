@@ -139,7 +139,6 @@ class UpdateVisitor(GenericVisitor):
 
     def visit(self, v: A, *args: Any) -> A:
         visited = super().visit(v, *args)
-        assert isinstance(visited, v.__class__)
         return cast(A, visited)
 
     def generic_visit(self, v: A, *args: Any) -> A:
