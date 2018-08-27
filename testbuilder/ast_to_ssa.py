@@ -156,6 +156,10 @@ class AstToSSABasicBlocks(SimpleVisitor):
     #         true_branch=true_branch,
     #         false_branch=false_branch,
     #     )
+    def visit_Pass(
+        self, node: ast.Pass, tree: sbb.BlockTreeIndex
+    ) -> sbb.BlockTreeIndex:
+        return tree
 
     # def visit_lines(self, code: StmtList, target: sbb.BlockTree) -> sbb.BlockTree:
     #     pass
