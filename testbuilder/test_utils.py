@@ -48,18 +48,15 @@ def write_dot_from_lines(lines: Sequence[str], filename: str) -> None:
         f.write(formatted)
 
 
-ascii_dot = False
-
-
 @singledispatch
-def show_dot(obj: Any) -> None:
+def show_dot(obj: Any, ascii_dot: bool = False) -> None:
     lines = dotify(obj)
     log.debug("Showing dot of", lines)
-    show_dot(lines)
+    show_dot(lines, ascii_dot)
 
 
 @show_dot.register(list)
-def show_dot_from_lines(lines: Sequence[str]) -> None:
+def show_dot_from_lines(lines: Sequence[str], ascii_dot: bool) -> None:
     formatted = format_dot(lines)
     if ascii_dot:
         subprocess.run(["graph-easy", "--ascii"], input=formatted.encode())
