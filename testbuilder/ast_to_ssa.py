@@ -197,57 +197,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
     ) -> sbb.BlockTreeIndex:
         return tree
 
-    # def visit_lines(self, code: StmtList, target: sbb.BlockTree) -> sbb.BlockTree:
-    #     pass
-
-    # def bind_tree(
-
-    #     self,
-    #     code: StmtList,
-    #     func: Callable[[ast.stmt, sbb.BasicBlock], sbb.BlockTree],
-    # ) -> Callable[sbb.BlockTree, sbb.BlockTree]:
-    #     def _bind(tree: sbb.BlockTree) -> sbb.BlockTree:
-    #         if code:
-    #             new_tree = func(code[0], tree.target)
-    #             return sbb.BlockTree(
-    #                 start=tree.start,
-    #                 target=new_tree.target,
-    #                 end=new_tree.end + tree.end,
-    #             )
-    #         else:
-    #             return target
-
-    # def visit_body(self, code: List[ast.stmt]) -> sbb.BlockTree:
-    #     if len(code) > 0:
-    #         lineno = code[0].lineno
-    #     else:
-    #         lineno = 0
-    #     start_block = sbb.StartBlock(number=self.next_id(), line=lineno)
-    #     ret_block = sbb.ReturnBlock(number=self.next_id())
-    #     block: sbb.BasicBlock = start_block
-    #     for line in code:
-    #         print("looking at line", line)
-    #         block = self.visit_stmt(ret_block, block, line)
-
-    #     ret_block.append(block)
-    #     return sbb.BlockTree(start=start_block, end=ret_block)
-
-    # def visit_stmt(
-    #     self, ret_block: sbb.BasicBlock, cur_block: sbb.BasicBlock, line: ast.stmt
-    # ) -> sbb.BasicBlock:
-    #     if not isinstance(cur_block, sbb.Code):
-    #         if isinstance(cur_block, sbb.Positioned):
-    #             cur_block.lines = range(cur_block.first_line, line.lineno)
-    #         cur_block = sbb.Code(
-    #             number=self.next_id(),
-    #             lines=range(line.lineno, line.lineno + 1),
-    #             parent=cur_block,
-    #             code=[self.visit(line)],
-    #         )
-    #     else:
-    #         cur_block.append(self.visit(line))
-    #         cur_block.lines = range(cur_block.first_line, line.lineno)
-    #     return cur_block
 
     def append_lines(
         self, tree: sbb.BlockTreeIndex, lines: Sequence[n.stmt]
