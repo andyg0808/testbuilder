@@ -150,9 +150,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
             )
         )
 
-    def visit_While(
-        self, node: ast.While, tree: sbb.BlockTreeIndex
-    ) -> sbb.BlockTreeIndex:
+    def visit_While(self, node: ast.While, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
         parent = tree.target
@@ -185,13 +183,20 @@ class AstToSSABasicBlocks(SimpleVisitor):
                     )
                 )
                 body_branch = self.line_visit(node.body, body_branch)
-            add_block(body_branch)
-            self.variables.pop()
+                if type(body_branch) == sbb.BlockTree:
+                    # We must have returned. We don't have an active
+                    # end to attach to.
+                    break
+            if type(body_branch) == sbb.BlockTree:
+                self.variables.pop()
+                break
+            else:
+                add_block(body_branch)
+                self.variables.pop()
 
         loops, variables = self._update_paths(paths)
         self.variables.update(variables)
 
-        assert len(paths) > 0
         last_line = paths[0][0].target.last_line
 
         loop = sbb.Loop(
@@ -205,6 +210,9 @@ class AstToSSABasicBlocks(SimpleVisitor):
         child = sbb.FalseBranch(
             number=self.next_id(), conditional=condition, parent=loop, line=node.lineno
         )
+        if type(body_branch) == sbb.BlockTree:
+            tree = tree.unify_return(body_branch)
+
         return tree.set_target(child)
 
     def visit_Pass(
