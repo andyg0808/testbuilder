@@ -162,6 +162,29 @@ class LineFilterer(UpdateVisitor):
                 false_branch=false_branch,
             )
 
+    def visit_Loop(self, block: sbb.Loop, blocks: BlockMapping) -> sbb.BasicBlock:
+        print("loop start", block.first_line)
+        if block.first_line not in self.lines:
+            print("dropping loop")
+            return self.visit_block(block.parent, blocks)
+        if len(block.loops) == 0:
+            raise RuntimeError("No loops present.")
+        elif len(block.loops) == 1:
+            return self.visit_block(block.loops[0], blocks)
+        else:
+            parent = self.visit_block(block.parent, blocks)
+            loops = [self.visit_block(loop, blocks) for loop in block.loops]
+            for loop in loops:
+                if self.target_line in sbb.line_range(parent, loop):
+                    return loop
+            return sbb.Loop(
+                number=block.number,
+                first_line=block.first_line,
+                last_line=block.last_line,
+                parent=parent,
+                loops=loops,
+            )
+
     def visit_TrueBranch(
         self, block: sbb.TrueBranch, blocks: BlockMapping
     ) -> sbb.BasicBlock:
