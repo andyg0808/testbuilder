@@ -1,7 +1,19 @@
 from abc import abstractmethod
-from functools import partial, singledispatch
+from functools import partial, reduce, singledispatch
 from pathlib import Path
-from typing import Any, Callable, Generic, List, Mapping, Optional, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import z3
 from dataclasses import dataclass, field
@@ -122,20 +134,61 @@ class BlockTree:
     def unify_return(self, tree: "BlockTree") -> "BlockTree":
         return BlockTree(start=self.start, end=self.end.unify(tree.end))
 
+    def set_target(self, target: T) -> "BlockTreeIndex[T]":
+        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
+
+
+U = TypeVar("U", bound=BasicBlock)
+
 
 @dataclass
 class BlockTreeIndex(BlockTree, Generic[T]):
-    target: T
+    __target: T = field(init=False)
 
-    def set_target(self, target: T) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex(start=self.start, end=self.end, target=target)
+    def __post_init__(self) -> None:
+        self.__target = cast(T, self.start)
+
+    @staticmethod
+    def construct(start: StartBlock, end: ReturnBlock) -> "BlockTreeIndex[StartBlock]":
+        return BlockTreeIndex(start=start, end=end)
+
+    @staticmethod
+    def __construct(
+        start: StartBlock, end: ReturnBlock, target: T
+    ) -> "BlockTreeIndex[T]":
+        tree: "BlockTreeIndex[T]" = BlockTreeIndex(start=start, end=end)
+        tree.__target = target
+        return tree
+
+    @property
+    def target(self) -> T:
+        return self.__target
+
+    def map_target(self, func: Callable[[T], U]) -> "BlockTreeIndex[U]":
+        return self.set_target(func(self.target))
+
+    def bind(self, func: Callable[[T], "BlockTreeIndex[U]"]) -> "BlockTreeIndex[U]":
+        tree = func(self.target)
+        return self.unify_return(tree).set_target(tree.target)
+
+    def map_targets(
+        self, func: Callable[..., U], *targets: "BlockTree"
+    ) -> "BlockTreeIndex[U]":
+        target_trees: List[BlockTree] = [self]
+        target_trees += list(targets)
+        tree = reduce(lambda acc, val: acc.unify_return(val), target_trees)
+        target_list = [t.target for t in target_trees if isinstance(t, BlockTreeIndex)]
+        return tree.set_target(func(*target_list))
+
+    def set_target(self, target: U) -> "BlockTreeIndex[U]":
+        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
 
     def return_target(self) -> BlockTree:
         end = self.end.append(self.target)
         return BlockTree(start=self.start, end=end)
 
     def unify_return(self, tree: BlockTree) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex(
+        return BlockTreeIndex.__construct(
             start=self.start, end=self.end.unify(tree.end), target=self.target
         )
 
@@ -202,7 +255,6 @@ def line_range(parent: BasicBlock, end: BasicBlock) -> range:
     """
     start_line = last_line(parent)
     end_line = last_line(end)
-    print("line_range", start_line, end_line)
     return range(start_line + 1, end_line + 1)
 
 
