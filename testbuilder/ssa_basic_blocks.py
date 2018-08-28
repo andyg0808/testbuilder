@@ -191,8 +191,14 @@ def line_range(parent: BasicBlock, end: BasicBlock) -> range:
     return range(start_line + 1, end_line + 1)
 
 
-def last_line(block: BasicBlock) -> int:
-    if isinstance(block, Positioned) and block.last_line != n.AddedLine:
+def last_line(block: Any) -> int:
+    if isinstance(block, BlockTreeIndex):
+        return last_line(block.target)
+    elif isinstance(block, BlockTree):
+        return last_line(block.end)
+    elif isinstance(block, ReturnBlock):
+        return max(last_line(p) for p in block.parents)
+    elif isinstance(block, Positioned) and block.last_line != n.AddedLine:
         return block.last_line
     elif isinstance(block, Parented):
         return last_line(block.parent)
