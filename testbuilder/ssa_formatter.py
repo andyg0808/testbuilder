@@ -39,6 +39,9 @@ class SSAVisitor(SimpleVisitor[str]):
     def visit_Gt(self, node: n.Gt) -> str:
         return ">"
 
+    def visit_Eq(self, node: n.Eq) -> str:
+        return "=="
+
     def visit_Set(self, node: n.Set) -> str:
         target = self.visit(node.target)
         expr = self.visit(node.e)
