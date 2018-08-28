@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable, Optional, Union
 
 
 def critical(*args: Any, **kwargs: Any) -> None:
@@ -53,3 +53,25 @@ class Logger:
 
     def info(self, *args: Any, **kwargs: Any) -> None:
         ...
+
+
+class LogRecord:
+    channel: Optional[str] = None
+
+
+class Handler:
+    def __init__(
+        self,
+        level: Union[str, int] = 0,
+        format_string: Optional[str] = None,
+        filter: Optional[Callable[[LogRecord, "Handler"], bool]] = None,
+        bubble: bool = False,
+    ) -> None:
+        ...
+
+    def push_application(self) -> None:
+        ...
+
+
+class StderrHandler(Handler):
+    pass
