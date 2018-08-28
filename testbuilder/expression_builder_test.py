@@ -581,7 +581,8 @@ def test(i):
 
 
 def test_conditional_return_in_loop():
-    code = """
+    check_expression(
+        """
 def test(i):
     while i > 0:
         if i == 2:
@@ -589,31 +590,36 @@ def test(i):
         else:
             i -= 1
     return i
-    """
-    check_expression(code, "pyname_i > 0 and pyname_i == 2 and ret == 2", line=4)
+    """,
+        "pyname_i > 0 and pyname_i == 2 and ret == 2",
+        line=4,
+    )
 
 
 def test_desired_loop():
-    code = """
+    check_expression(
+        """
 def test(i):
     while i > 0:
         i -= 1
     return i
-    """
-    check_expression(code, "pyname_i > 0 and pyname_i_1 == pyname_i - 1", line=3)
+    """,
+        "pyname_i > 0 and pyname_i_1 == pyname_i - 1",
+        line=3,
+    )
 
 
 @pytest.mark.skip
 def test_avoid_simple_infinite_loop():
-    code = """
+    check_expression(
+        """
 def test(i):
     while i > 1:
         pass
     return i
-    """
-    check_expression(
-        code,
-        "Or(true, pyname_i > 1, pyname_i > 1 and pyname_i > 1) and Not(pyname_i > 1) and ret == pyname_i",
+    """,
+        "Or(true, pyname_i > 1, pyname_i > 1 and pyname_i > 1)\
+         and Not(pyname_i > 1) and ret == pyname_i",
     )
 
 
