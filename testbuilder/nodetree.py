@@ -127,6 +127,11 @@ class Set(stmt):
 
 
 @dataclass
+class PhiSet(Set):
+    pass
+
+
+@dataclass
 class Store(expr):
     arr: expr
     idx: int

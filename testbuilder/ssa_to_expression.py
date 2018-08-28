@@ -18,6 +18,7 @@ from .expression_builder import (
 )
 from .iter_monad import chain, liftIter
 from .linefilterer import filter_lines
+from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .utils import crash
 from .visitor import GatherVisitor, SimpleVisitor
@@ -183,7 +184,8 @@ def ssa_lines_to_expression(
     target_line: int, lines: Set[int], module: sbb.Module
 ) -> sbb.TestData:
     request = filter_lines(target_line, lines, module)
-    repaired_request = repair(request)
+
+    repaired_request: sbb.Request = pipe(request, repair, PhiFilterer())
     return ssa_to_expression(repaired_request)
 
 
