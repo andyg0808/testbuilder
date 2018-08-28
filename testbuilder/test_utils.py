@@ -127,7 +127,6 @@ def _dot_label_code_block(block: sbb.Code) -> LabelData:
     return (body, {"xlabel": block.number})
 
 
-@_dot_label.register(sbb.Conditional)
 @_dot_label.register(sbb.TrueBranch)
 @_dot_label.register(sbb.FalseBranch)
 def _dot_label_controlled(block: sbb.Controlled) -> LabelData:

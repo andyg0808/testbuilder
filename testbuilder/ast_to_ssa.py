@@ -134,7 +134,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
         return tree.set_target(
             sbb.Conditional(
                 number=self.next_id(),
-                conditional=condition,
                 first_line=node.lineno,
                 last_line=last_line,
                 parent=parent,
@@ -189,7 +188,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
         loop = sbb.Loop(
             number=self.next_id(),
-            conditional=condition,
             first_line=node.lineno,
             last_line=last_line,
             parent=parent,

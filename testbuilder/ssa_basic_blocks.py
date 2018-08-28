@@ -90,12 +90,12 @@ class FalseBranch(Controlled, Parented):
 
 
 @dataclass
-class Loop(Controlled, Positioned, Parented):
+class Loop(BasicBlock, Positioned, Parented):
     loops: List[BasicBlock]
 
 
 @dataclass
-class Conditional(Controlled, Positioned, Parented):
+class Conditional(BasicBlock, Positioned, Parented):
     true_branch: BasicBlock
     false_branch: BasicBlock
 

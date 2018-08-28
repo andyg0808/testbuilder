@@ -158,7 +158,6 @@ class LineFilterer(UpdateVisitor):
                 first_line=block.first_line,
                 last_line=block.last_line,
                 parent=parent,
-                conditional=block.conditional,
                 true_branch=true_branch,
                 false_branch=false_branch,
             )
