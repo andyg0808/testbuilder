@@ -98,9 +98,8 @@ class ExpressionBuilder:
         expected = _combine_conditions(expr_list)
         actual = self._modern_convert_tree(copy(variables), tree)
         print("Actual expression:", actual)
-        print("Expected expression:", expected)
-        assert z3.eq(actual, expected)
-        return expected
+        print("Expression from old code:", expected)
+        return actual
 
     def _modern_convert_tree(
         self, variables: VarMapping, tree: BlockTree
