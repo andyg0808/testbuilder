@@ -55,7 +55,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
         blocktree = self.body_visit(node.body)
-        print(blocktree)
         return sbb.FunctionDef(
             first_line=blocktree.start.line,
             last_line=blocktree.end.line,

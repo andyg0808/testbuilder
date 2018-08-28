@@ -49,8 +49,8 @@ def check_expression(
         expected = expand_variables(expected)
     _get_expression = partial(get_expression, line, depth=depth)
     expr = pipe(code_string.strip(), ast.parse, _get_expression)
-    print("expected", expected)
-    print("expr", expr)
+    print("expected  ", expected)
+    print("expression", expr)
     if simplify:
         expected = z3.simplify(expected)
         expr = z3.simplify(expr)

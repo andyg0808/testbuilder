@@ -31,7 +31,6 @@ Tree = TypeVar("Tree", bound=Union[sbb.BlockTree, sbb.FunctionDef])
 
 
 def repair(request: sbb.Request) -> sbb.Request:
-    print("repair_request", request)
     used_vars: List[Tuple[str, int]] = VariableVersions().visit(request.code)
     varmap: MMapping[str, Set[int]] = {}
     for key, value in used_vars:

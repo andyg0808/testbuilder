@@ -32,7 +32,6 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         self.module = module
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
-        print("visiting code", id(node), id(stop), node)
         if stop and node.number == stop.number:
             return []
 
