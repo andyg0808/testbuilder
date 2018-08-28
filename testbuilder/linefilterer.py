@@ -13,7 +13,6 @@ BlockMapping = MMapping[int, sbb.BasicBlock]
 B = TypeVar("B", bound=sbb.BasicBlock)
 
 
-# TODO: Convert to UpdateVisitor
 class LineFilterer(UpdateVisitor):
     def __init__(self, lines: Set[int], target_line: int) -> None:
         super().__init__()
@@ -87,6 +86,13 @@ class LineFilterer(UpdateVisitor):
             return self.visit_block(parent, blocks)
 
         parents = list(filter(None, map(parent_map, block.parents)))
+        targeted = []
+        for parent in parents:
+            lines = sbb.lines(parent)
+            if self.target_line in lines:
+                targeted.append(parent)
+        if targeted:
+            parents = targeted
         return sbb.ReturnBlock(number=block.number, parents=parents)
 
     # def visit_BlockTreeIndex(self, blocktree: sbb.BlockTreeIndex) -> sbb.BlockTreeIndex:
