@@ -101,9 +101,13 @@ class AstToSSABasicBlocks(SimpleVisitor):
         parent = tree.target
         condition = self.expr_visitor(node.test)
         paths = []
+        returns = []
 
         def add_block(block: sbb.BlockTreeIndex) -> None:
-            paths.append((block, self.variables.mapping()))
+            if type(block) == sbb.BlockTree:
+                returns.append(block)
+            else:
+                paths.append((block, self.variables.mapping()))
 
         true_branch = sbb.TrueBranch(
             number=self.next_id(),
@@ -128,9 +132,13 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
         blocks, variables = self._update_paths(paths)
         self.variables.update(variables)
-        true_block, false_block = blocks
+        if len(blocks) == 1:
+            return blocks[0].unify_return(returns[0])
+        if len(blocks) == 0:
+            return returns[0].unify_return(returns[1])
 
-        last_line = max(true_block.target.last_line, false_block.target.last_line)
+        true_block, false_block = blocks
+        last_line = max(sbb.last_line(true_block), sbb.last_line(false_block))
         return tree.set_target(
             sbb.Conditional(
                 number=self.next_id(),
