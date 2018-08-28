@@ -2,26 +2,19 @@ import ast
 from functools import reduce, singledispatch
 from typing import (
     Any,
-    Callable,
     List,
     MutableMapping as MMapping,
     Optional,
     Sequence,
-    Set,
     Tuple,
     Union,
     cast,
 )
 
 import dataclasses
-import z3
-from typeassert import assertify
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .converter import get_variable
 from .expression_builder import VarMapping
-from .slicing import Dependency
-from .utils import crash
 from .variable_manager import VariableManager
 from .visitor import GenericVisitor, SimpleVisitor
 
