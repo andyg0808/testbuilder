@@ -1,12 +1,14 @@
 from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
 
-from logbook import debug, info, notice
+from logbook import Logger
 
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
 from .nodetree import AddedLine
-from .visitor import SimpleVisitor, UpdateVisitor
+from .visitor import UpdateVisitor
+
+log = Logger("linefilterer")
 
 BlockMapping = MMapping[int, sbb.BasicBlock]
 
@@ -32,7 +34,7 @@ class LineFilterer(UpdateVisitor):
             # include from it.
             if isinstance(func.lines, int):
                 if func.lines > self.max_line:
-                    notice(
+                    log.notice(
                         f"Throwing out {func} because {func.lines} > "
                         f"{self.max_line}"
                     )
@@ -40,7 +42,7 @@ class LineFilterer(UpdateVisitor):
             start = min(func.lines)
             end = max(func.lines)
             if start > self.max_line or end < self.min_line:
-                notice(
+                log.notice(
                     f"Throwing out {func} because {start}>{self.max_line}"
                     f" or {end} < {self.min_line}"
                 )
@@ -49,7 +51,7 @@ class LineFilterer(UpdateVisitor):
             if res is not None:
                 code.append(res)
             else:
-                notice("Throwing out {func} because no lines were kept")
+                log.notice("Throwing out {func} because no lines were kept")
 
         # Shouldn't have lines from more than one function or basic block
         if len(code) == 0:
@@ -118,8 +120,10 @@ class LineFilterer(UpdateVisitor):
     @assertify
     def visit_block(self, block: B, blocks: BlockMapping) -> B:
         if block.number in blocks:
+            log.debug("Found", block.number)
             return cast(B, blocks[block.number])
         else:
+            log.debug("Visiting", block.number)
             newblock = self.visit(block, blocks)
             blocks[block.number] = newblock
             return newblock
@@ -163,9 +167,8 @@ class LineFilterer(UpdateVisitor):
             )
 
     def visit_Loop(self, block: sbb.Loop, blocks: BlockMapping) -> sbb.BasicBlock:
-        print("loop start", block.first_line)
         if block.first_line not in self.lines:
-            print("dropping loop")
+            log.debug("dropping loop")
             return self.visit_block(block.parent, blocks)
         if len(block.loops) == 0:
             raise RuntimeError("No loops present.")
@@ -203,7 +206,6 @@ class LineFilterer(UpdateVisitor):
 
 
 def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:
-    print(f"Filtering on lines {lines}")
+    log.info(f"Filtering on lines {lines}")
     filtered = LineFilterer(lines, target_line).visit_Module(module)
-    print("filtered code", filtered.code)
     return filtered
