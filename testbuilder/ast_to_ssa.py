@@ -220,6 +220,14 @@ class AstToSSABasicBlocks(SimpleVisitor):
     ) -> sbb.BlockTreeIndex:
         return tree
 
+    def visit_Return(self, node: ast.Return, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
+        if node.value is None:
+            value = None
+        else:
+            value = self.expr_visitor(node.value)
+        ret = n.Return(line=node.lineno, value=value)
+        tree = self.append_code(tree, ret)
+        return tree.return_target()
 
     def append_lines(
         self, tree: sbb.BlockTreeIndex, lines: Sequence[n.stmt]
