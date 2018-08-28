@@ -445,7 +445,7 @@ def test(i):
         j = 1
     return 2
     """,
-        "ret == 2",
+        "Not(pyname_i < 5) and ret == 2",
     )
 
 
@@ -455,6 +455,26 @@ def test_sliced_dependent_while():
 def test(i):
     while i < 5:
         j = 1
+    return i
+    """,
+        # We used to have these as just `ret==pyname_i`, but it seems
+        # reasonable that, in order to get to the end line, we don't
+        # want to choose a value which might infinite loop in the
+        # `while`, so we should force the `while` condition to be
+        # false.
+        "Not(pyname_i < 5) and ret == pyname_i",
+    )
+
+
+def test_uninteresting_dependent_while():
+    # This case is where the `while` can't infinite loop, so the code
+    # below it shouldn't be controlled by it at all.
+    check_expression(
+        """
+def test(i):
+    j = 5
+    while j > 0:
+        j -= 1
     return i
     """,
         "ret == pyname_i",
@@ -483,6 +503,22 @@ def test(i):
     return i
     """,
         "Not(pyname_i > 8) and ret == pyname_i",
+    )
+
+
+def test_multiple_assignment_filtering():
+    check_expression(
+        """
+def test(i):
+    if i < 10:
+        i = 3
+        i = 4
+        i = 5
+    else:
+        return 1
+    return 4
+        """,
+        "pyname_i < 10 and ret == 4",
     )
 
 
