@@ -63,8 +63,8 @@ class AstToSSABasicBlocks(SimpleVisitor):
             lineno = 0
         start_block = sbb.StartBlock(number=self.next_id(), line=lineno)
         return_block = sbb.ReturnBlock(number=self.next_id())
-        blocktree = sbb.BlockTreeIndex(
-            start=start_block, end=return_block, target=start_block
+        blocktree: sbb.BlockTreeIndex[sbb.StartBlock] = sbb.BlockTreeIndex.construct(
+            start=start_block, end=return_block
         )
         final = self.line_visit(stmts, blocktree)
         if isinstance(final, sbb.BlockTreeIndex):
@@ -90,7 +90,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
     def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> sbb.BlockTreeIndex:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
-        parent = tree.target
         condition = self.expr_visitor(node.test)
         paths = []
         returns = []
@@ -101,20 +100,22 @@ class AstToSSABasicBlocks(SimpleVisitor):
             else:
                 paths.append((block, self.variables.mapping()))
 
-        true_branch = sbb.TrueBranch(
-            number=self.next_id(),
-            conditional=condition,
-            parent=parent,
-            line=node.lineno,
+        true_block = tree.map_target(
+            lambda parent: sbb.TrueBranch(
+                number=self.next_id(),
+                conditional=condition,
+                parent=parent,
+                line=node.lineno,
+            )
         )
-        false_branch = sbb.FalseBranch(
-            number=self.next_id(),
-            conditional=condition,
-            parent=parent,
-            line=node.lineno,
+        false_block = tree.map_target(
+            lambda parent: sbb.FalseBranch(
+                number=self.next_id(),
+                conditional=condition,
+                parent=parent,
+                line=node.lineno,
+            )
         )
-        true_block = tree.set_target(true_branch)
-        false_block = tree.set_target(false_branch)
 
         self.variables.push()
         add_block(self.line_visit(node.body, true_block))
@@ -129,30 +130,29 @@ class AstToSSABasicBlocks(SimpleVisitor):
         if len(blocks) == 0:
             return returns[0].unify_return(returns[1])
 
-        true_block, false_block = blocks
-        last_line = max(sbb.last_line(true_block), sbb.last_line(false_block))
-        return tree.set_target(
-            sbb.Conditional(
+        last_line = max(sbb.last_line(b) for b in blocks)
+        return tree.map_targets(
+            lambda parent, true, false: sbb.Conditional(
                 number=self.next_id(),
                 first_line=node.lineno,
                 last_line=last_line,
                 parent=parent,
-                true_branch=true_block.target,
-                false_branch=false_block.target,
-            )
+                true_branch=true,
+                false_branch=false,
+            ),
+            *blocks,
         )
 
     def visit_While(self, node: ast.While, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
-        parent = tree.target
         paths = []
 
         def add_block(block: sbb.BlockTreeIndex) -> None:
             paths.append((block, self.variables.mapping()))
 
-        bypass = tree.set_target(
-            sbb.Code(
+        bypass = tree.map_target(
+            lambda parent: sbb.Code(
                 number=self.next_id(),
                 first_line=n.AddedLine,
                 last_line=n.AddedLine,
@@ -166,11 +166,11 @@ class AstToSSABasicBlocks(SimpleVisitor):
             self.variables.push()
             for _i in range(depth):
                 condition = self.expr_visitor(node.test)
-                body_branch = body_branch.set_target(
-                    sbb.TrueBranch(
+                body_branch = body_branch.map_target(
+                    lambda parent: sbb.TrueBranch(
                         number=self.next_id(),
                         conditional=condition,
-                        parent=body_branch.target,
+                        parent=parent,
                         line=node.lineno,
                     )
                 )
@@ -191,21 +191,30 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
         last_line = paths[0][0].target.last_line
 
-        loop = sbb.Loop(
-            number=self.next_id(),
-            first_line=node.lineno,
-            last_line=last_line,
-            parent=parent,
-            loops=[loop.target for loop in loops],
+        loop = tree.map_targets(
+            lambda parent, *loops: sbb.Loop(
+                number=self.next_id(),
+                first_line=node.lineno,
+                last_line=last_line,
+                parent=parent,
+                loops=cast(List[sbb.BasicBlock], list(loops)),
+            ),
+            *loops,
         )
         condition = self.expr_visitor(node.test)
-        child = sbb.FalseBranch(
-            number=self.next_id(), conditional=condition, parent=loop, line=node.lineno
+        child = loop.map_target(
+            lambda parent: sbb.FalseBranch(
+                number=self.next_id(),
+                conditional=condition,
+                parent=parent,
+                line=node.lineno,
+            )
         )
         if type(body_branch) == sbb.BlockTree:
-            tree = tree.unify_return(body_branch)
+            child = child.unify_return(body_branch)
 
-        return tree.set_target(child)
+        # return tree.set_target(child)
+        return child
 
     def visit_Pass(
         self, node: ast.Pass, tree: sbb.BlockTreeIndex
@@ -229,26 +238,27 @@ class AstToSSABasicBlocks(SimpleVisitor):
         return tree
 
     def append_code(self, tree: sbb.BlockTreeIndex, line: n.stmt) -> sbb.BlockTreeIndex:
-        cur_block = tree.target
-        if not isinstance(cur_block, sbb.Code):
-            if isinstance(cur_block, sbb.Positioned):
-                cur_block.last_line = line.line - 1
-            cur_block = sbb.Code(
-                number=self.next_id(),
-                first_line=line.line,
-                last_line=line.line,
-                parent=cur_block,
-                code=[line],
-            )
-            return sbb.BlockTreeIndex(start=tree.start, end=tree.end, target=cur_block)
-        else:
-            cur_block.append(line)
-            if line.line != n.AddedLine:
-                # Don't update line numbers to be negative. This
-                # eliminates later need to sort through the lines in
-                # the code block to find the actual end line.
-                cur_block.last_line = line.line
-            return tree
+        def append_to_block(cur_block: sbb.BasicBlock) -> sbb.Code:
+            if not isinstance(cur_block, sbb.Code):
+                if isinstance(cur_block, sbb.Positioned):
+                    cur_block.last_line = line.line - 1
+                return sbb.Code(
+                    number=self.next_id(),
+                    first_line=line.line,
+                    last_line=line.line,
+                    parent=cur_block,
+                    code=[line],
+                )
+            else:
+                cur_block.append(line)
+                if line.line != n.AddedLine:
+                    # Don't update line numbers to be negative. This
+                    # eliminates later need to sort through the lines in
+                    # the code block to find the actual end line.
+                    cur_block.last_line = line.line
+                return cur_block
+
+        return tree.map_target(append_to_block)
 
     def _update_paths(
         self, paths: Sequence[Tuple[sbb.BlockTreeIndex, VarMapping]]
