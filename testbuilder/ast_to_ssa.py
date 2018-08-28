@@ -75,8 +75,10 @@ class AstToSSABasicBlocks(SimpleVisitor):
             start=start_block, end=return_block, target=start_block
         )
         final = self.line_visit(stmts, blocktree)
-        final.end.append(final.target)
-        return sbb.BlockTree(start=final.start, end=final.end)
+        if isinstance(final, sbb.BlockTreeIndex):
+            return final.return_target()
+        else:
+            return final
 
     def line_visit(
         self, stmts: StmtList, tree: sbb.BlockTreeIndex
