@@ -106,10 +106,16 @@ class AstToSSABasicBlocks(SimpleVisitor):
             paths.append((block, self.variables.mapping()))
 
         true_branch = sbb.TrueBranch(
-            number=self.next_id(), conditional=condition, parent=parent
+            number=self.next_id(),
+            conditional=condition,
+            parent=parent,
+            line=node.lineno,
         )
         false_branch = sbb.FalseBranch(
-            number=self.next_id(), conditional=condition, parent=parent
+            number=self.next_id(),
+            conditional=condition,
+            parent=parent,
+            line=node.lineno,
         )
         true_block = tree.set_target(true_branch)
         false_block = tree.set_target(false_branch)
@@ -168,6 +174,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
                         number=self.next_id(),
                         conditional=condition,
                         parent=body_branch.target,
+                        line=node.lineno,
                     )
                 )
                 body_branch = self.line_visit(node.body, body_branch)
@@ -190,7 +197,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
         )
         condition = self.expr_visitor(node.test)
         child = sbb.FalseBranch(
-            number=self.next_id(), conditional=condition, parent=loop
+            number=self.next_id(), conditional=condition, parent=loop, line=node.lineno
         )
         return tree.set_target(child)
 

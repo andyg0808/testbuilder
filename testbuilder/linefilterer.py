@@ -163,7 +163,21 @@ class LineFilterer(UpdateVisitor):
                 false_branch=false_branch,
             )
 
+    def visit_TrueBranch(
+        self, block: sbb.TrueBranch, blocks: BlockMapping
+    ) -> sbb.BasicBlock:
+        if block.line not in self.lines:
+            return self.visit_block(block.parent, blocks)
+        else:
+            return super().generic_visit(block, blocks)
 
+    def visit_FalseBranch(
+        self, block: sbb.FalseBranch, blocks: BlockMapping
+    ) -> sbb.BasicBlock:
+        if block.line not in self.lines:
+            return self.visit_block(block.parent, blocks)
+        else:
+            return super().generic_visit(block, blocks)
 
 
 def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:

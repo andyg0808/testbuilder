@@ -80,12 +80,12 @@ class Controlled(BasicBlock):
 
 @dataclass
 class TrueBranch(Controlled, Parented):
-    pass
+    line: int
 
 
 @dataclass
 class FalseBranch(Controlled, Parented):
-    pass
+    line: int
 
 
 @dataclass
