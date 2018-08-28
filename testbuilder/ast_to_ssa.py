@@ -263,8 +263,9 @@ class AstToSSABasicBlocks(SimpleVisitor):
     ) -> Tuple[List[sbb.BlockTreeIndex[sbb.Code]], VarMapping]:
         variables, edit_lists = unify_all_variables([p[1] for p in paths])
         updated_conditions: List[sbb.BlockTreeIndex[sbb.Code]] = []
-        for path, edit_list in zip(paths, edit_lists):
-            newblock = self.append_lines(path[0], edit_list)
+        for pathinfo, edit_list in zip(paths, edit_lists):
+            path = pathinfo[0]
+            newblock = self.append_lines(path, edit_list)
             updated_conditions.append(newblock)
         return (updated_conditions, variables)
 
