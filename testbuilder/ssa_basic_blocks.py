@@ -54,10 +54,7 @@ class ReturnBlock(BasicBlock):
             raise RuntimeError("Should have at least one parent of a ReturnBlock")
         lines = []
         for b in self.parents:
-            if isinstance(b, Positioned):
-                lines.append(max(b.lines))
-            elif isinstance(b, StartBlock):
-                lines.append(b.line)
+            lines.append(last_line(b))
         return max(lines)
 
 
