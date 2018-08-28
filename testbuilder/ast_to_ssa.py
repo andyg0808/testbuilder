@@ -259,7 +259,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
             return tree
 
     def _update_paths(
-        self, paths: List[Tuple[sbb.BlockTreeIndex, VarMapping]]
+        self, paths: Sequence[Tuple[sbb.BlockTreeIndex, VarMapping]]
     ) -> Tuple[List[sbb.BlockTreeIndex[sbb.Code]], VarMapping]:
         variables, edit_lists = unify_all_variables([p[1] for p in paths])
         updated_conditions: List[sbb.BlockTreeIndex[sbb.Code]] = []
