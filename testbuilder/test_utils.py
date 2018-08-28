@@ -33,7 +33,15 @@ digraph G {{
     return formatted
 
 
-def write_dot(lines: Sequence[str], filename: str) -> None:
+@singledispatch
+def write_dot(obj: Any, filename: str) -> None:
+    lines = dotify(obj)
+    log.debug("Showing dot of", lines)
+    write_dot(lines, filename)
+
+
+@write_dot.register(list)
+def write_dot_from_lines(lines: Sequence[str], filename: str) -> None:
     log.debug("Writing dot to", filename)
     with open(filename, "w") as f:
         formatted = format_dot(lines)
