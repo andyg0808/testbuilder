@@ -116,6 +116,12 @@ class BlockTree:
             return True
         return False
 
+    def deindex(self) -> "BlockTree":
+        return BlockTree(start=self.start, end=self.end)
+
+    def unify_return(self, tree: "BlockTree") -> "BlockTree":
+        return BlockTree(start=self.start, end=self.end.unify(tree.end))
+
 
 @dataclass
 class BlockTreeIndex(BlockTree, Generic[T]):
@@ -123,6 +129,15 @@ class BlockTreeIndex(BlockTree, Generic[T]):
 
     def set_target(self, target: T) -> "BlockTreeIndex[T]":
         return BlockTreeIndex(start=self.start, end=self.end, target=target)
+
+    def return_target(self) -> BlockTree:
+        end = self.end.append(self.target)
+        return BlockTree(start=self.start, end=end)
+
+    def unify_return(self, tree: BlockTree) -> "BlockTreeIndex[T]":
+        return BlockTreeIndex(
+            start=self.start, end=self.end.unify(tree.end), target=self.target
+        )
 
 
 @dataclass
