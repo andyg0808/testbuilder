@@ -341,11 +341,13 @@ def unify_all_variables(
 #     )
 
 
-def ast_to_ssa(depth: int, variables: VarMapping, node: ast.Module) -> sbb.Module:
+def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
     # print("input type", type(node))
     varmanager = VariableManager(variables)
     t = AstToSSABasicBlocks(depth, varmanager)
-    assert isinstance(node, ast.Module)
+    if not isinstance(node, ast.Module):
+        assert isinstance(node, ast.stmt)
+        node = ast.Module(body=[node])
     res = t.visit(node)
     assert isinstance(res, sbb.Module)
     # print("ast_to_ssa result", res)
