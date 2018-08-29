@@ -19,6 +19,7 @@ from .variable_manager import VariableManager
 from .visitor import GenericVisitor, SimpleVisitor
 
 StmtList = List[ast.stmt]
+MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
 
 
 class AstToSSABasicBlocks(SimpleVisitor):
@@ -72,11 +73,12 @@ class AstToSSABasicBlocks(SimpleVisitor):
         else:
             return final
 
-    def line_visit(
-        self, stmts: StmtList, tree: sbb.BlockTreeIndex
-    ) -> sbb.BlockTreeIndex:
+    def line_visit(self, stmts: StmtList, start_tree: sbb.BlockTreeIndex) -> MaybeIndex:
+        tree: MaybeIndex = start_tree
         for line in stmts:
             tree = self.visit(line, tree)
+            if not isinstance(tree, sbb.BlockTreeIndex):
+                break
 
         return tree
 
@@ -87,18 +89,18 @@ class AstToSSABasicBlocks(SimpleVisitor):
         expr = self.stmt_visitor(node)
         return self.append_code(tree, expr)
 
-    def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> sbb.BlockTreeIndex:
+    def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> MaybeIndex:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
         condition = self.expr_visitor(node.test)
-        paths = []
-        returns = []
+        paths: List[Tuple[sbb.BlockTreeIndex, VarMapping]] = []
+        returns: List[sbb.BlockTree] = []
 
-        def add_block(block: sbb.BlockTreeIndex) -> None:
-            if type(block) == sbb.BlockTree:
-                returns.append(block)
-            else:
+        def add_block(block: MaybeIndex) -> None:
+            if isinstance(block, sbb.BlockTreeIndex):
                 paths.append((block, self.variables.mapping()))
+            else:
+                returns.append(block)
 
         true_block = tree.map_target(
             lambda parent: sbb.TrueBranch(
@@ -174,17 +176,19 @@ class AstToSSABasicBlocks(SimpleVisitor):
                         line=node.lineno,
                     )
                 )
-                body_branch = self.line_visit(node.body, body_branch)
-                if type(body_branch) == sbb.BlockTree:
+                new_branch = self.line_visit(node.body, body_branch)
+                if isinstance(new_branch, sbb.BlockTreeIndex):
                     # We must have returned. We don't have an active
                     # end to attach to.
+                    body_branch = new_branch
+                else:
                     break
-            if type(body_branch) == sbb.BlockTree:
-                self.variables.pop()
-                break
-            else:
+            if isinstance(new_branch, sbb.BlockTreeIndex):
                 add_block(body_branch)
                 self.variables.pop()
+            else:
+                self.variables.pop()
+                break
 
         loops, variables = self._update_paths(paths)
         self.variables.update(variables)
