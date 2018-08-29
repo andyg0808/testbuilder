@@ -1,6 +1,6 @@
 from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
 
-from logbook import Logger
+from logbook import Logger, StderrHandler
 
 from typeassert import assertify
 
@@ -9,6 +9,11 @@ from .nodetree import AddedLine
 from .visitor import UpdateVisitor
 
 log = Logger("linefilterer")
+
+
+StderrHandler(
+    level="INFO", filter=lambda r, h: r.channel == "linefilterer"
+).push_application()
 
 BlockMapping = MMapping[int, sbb.BasicBlock]
 
