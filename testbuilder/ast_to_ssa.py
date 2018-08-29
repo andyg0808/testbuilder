@@ -193,7 +193,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
         loops, variables = self._update_paths(paths)
         self.variables.update(variables)
 
-        last_line = paths[0][0].target.last_line
+        last_line = sbb.last_line(new_branch)
 
         loop = tree.map_targets(
             lambda parent, *loops: sbb.Loop(
