@@ -344,7 +344,7 @@ def tester(a, b):
     return a
     """,
         """
-    (pyname_a_1 == pyname_a and pyname_b_1 == pyname_b or \
+    (pyname_a_1 == pyname_a or \
      (pyname_a > 1 and \
       (pyname_b_1 == pyname_b or \
        pyname_b > 1 and pyname_b_1 == pyname_b - 1) and Not(pyname_b_1 > 1) and \
