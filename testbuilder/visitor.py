@@ -1,5 +1,6 @@
 import inspect
 import re
+import traceback
 from abc import abstractmethod
 from typing import (
     Any,
@@ -36,7 +37,22 @@ SuggestionRegex = re.compile(r"visit", flags=re.IGNORECASE)
 
 
 class VisitError(NotImplementedError):
-    pass
+    def __str__(self) -> str:
+        msg = "Error from Visitor"
+        if len(self.args) > 0:
+            msg = f"No handler for {self.args[0]}."
+        if len(self.args) > 1:
+            msg += f"\nMaybe {self.args[1]} isn't capitalized correctly?"
+
+        stack = traceback.extract_tb(self.__traceback__)
+        filtered_stack = [s for s in stack if s.filename != __file__]
+        if filtered_stack:
+            caller = filtered_stack[-1]
+            msg += f"\nError at line {caller.lineno} while running {caller.name}"
+            msg += f"\nin {caller.filename}:"
+            msg += f"\n  {caller.line}"
+
+        return msg
 
 
 class SimpleVisitor(Generic[B]):
@@ -65,12 +81,9 @@ class SimpleVisitor(Generic[B]):
                 log.debug("suggestions", suggestions)
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
-            raise VisitError(
-                f"No handler for {start_class}. "
-                f"Maybe {suggestion} isn't capitalized correctly?"
-            )
+            raise VisitError(start_class, suggestion)
         else:
-            raise VisitError(f"No handler for {start_class}")
+            raise VisitError(start_class)
 
     def __scan_functions(self, target_class: Type) -> Callable[..., B]:
         typecache = getattr(self, "__type_cache", None)
