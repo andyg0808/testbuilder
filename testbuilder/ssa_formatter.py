@@ -47,6 +47,9 @@ class SSAVisitor(SimpleVisitor[str]):
         expr = self.visit(node.e)
         return f"{target} ← {expr}"
 
+    def visit_Str(self, node: n.Str) -> str:
+        return f"'{node.s}'"
+
 
 def format_tree(node: n.Node) -> str:
     v = SSAVisitor()
