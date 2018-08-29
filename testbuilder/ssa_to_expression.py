@@ -1,26 +1,16 @@
-from functools import partial, reduce, singledispatch
-from typing import List, MutableMapping as MMapping, Optional, Set, Union
+from functools import singledispatch
+from typing import List, Optional, Set
 
 from toolz import mapcat, pipe
 
 import z3
-from dataclasses import dataclass
 
-from . import basic_block as bb, converter, nodetree as n, ssa_basic_blocks as sbb
-from .basic_block import BlockTree
-from .expression_builder import (
-    ExprList,
-    VarMapping,
-    bool_and,
-    bool_not,
-    bool_or,
-    to_boolean,
-)
-from .iter_monad import chain, liftIter
+from . import converter, nodetree as n, ssa_basic_blocks as sbb
+from .expression_builder import ExprList, bool_and, bool_not, bool_or, to_boolean
+from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
-from .utils import crash
 from .visitor import GatherVisitor, SimpleVisitor
 
 Expression = z3.ExprRef
@@ -136,15 +126,6 @@ class VariableFinder(GatherVisitor[sbb.Variable]):
         else:
             return []
 
-    # def visit_BlockTree(self, tree: sbb.BlockTree) -> List[sbb.Variable]:
-    #     return self.visit(tree.end)
-
-    # def visit_ReturnBlock(self, block: sbb.ReturnBlock) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.parents))
-
-    # def visit_Code(self, block: sbb.Code) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.code))
-
 
 def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
@@ -193,29 +174,4 @@ def ssa_lines_to_expression(
     return ssa_to_expression(repaired_request)
 
 
-# def blocktree_and_ssa_to_expression(
-#     depth: int, tree: BlockTree, module: sbb.Module, variables: VarMapping
-# ) -> ExprList:
-#     from .basic_block_to_ssa import visit as basic_block_to_ssa
 
-#     assert tree.target
-#     code = basic_block_to_ssa(tree.target, variables)
-#     from .test_utils import show_dot
-
-#     # show_dot(code)
-#     return ssa_to_expression(sbb.Request(module, code))
-
-
-# @singledispatch
-# def is_false_path(node: sbb.Controlled, query: sbb.BasicBlock) -> bool:
-#     raise RuntimeError("Not implemented")
-
-
-# @is_false_path.register(sbb.Conditional)
-# def is_false_path(node: sbb.Conditional, query: sbb.BasicBlock) -> bool:
-#     return node.false_branch is query
-
-
-# @is_false_path.register(sbb.Loop)
-# def is_false_path(node: sbb.Loop, query: sbb.BasicBlock) -> bool:
-#     return node.bypass is query
