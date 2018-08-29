@@ -244,8 +244,6 @@ class AstToSSABasicBlocks(SimpleVisitor):
     def append_code(self, tree: sbb.BlockTreeIndex, line: n.stmt) -> sbb.BlockTreeIndex:
         def append_to_block(cur_block: sbb.BasicBlock) -> sbb.Code:
             if not isinstance(cur_block, sbb.Code):
-                if isinstance(cur_block, sbb.Positioned):
-                    cur_block.last_line = line.line - 1
                 return sbb.Code(
                     number=self.next_id(),
                     first_line=line.line,
