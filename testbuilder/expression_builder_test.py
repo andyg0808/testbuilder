@@ -60,6 +60,28 @@ def check_expression(
         assert z3.eq(expected, expr)
 
 
+def test_basic_call():
+    # TODO: Handle calls correctly
+    # What about recursion?
+    check_expression("abs(i)", "true")
+
+
+def test_multiplication():
+    check_expression("i * 2", "pyname_i * 2")
+
+
+def test_gte():
+    check_expression("i >= 4", "pyname_i >= 4")
+
+
+def test_lte():
+    check_expression("i <= 4", "pyname_i <= 4")
+
+
+def test_div():
+    check_expression("i / 3", "pyname_i / 3")
+
+
 def test_constant():
     check_expression(
         """
