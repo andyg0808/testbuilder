@@ -118,7 +118,7 @@ def _dot_label(obj: object) -> LabelData:
 @_dot_label.register(sbb.BasicBlock)
 def _dot_label_basic_block(block: sbb.BasicBlock) -> LabelData:
     name = block.__class__.__name__
-    return (name, {"xlabel": block.number})
+    return (f"*{name}*", {"xlabel": block.number})
 
 
 @_dot_label.register(sbb.Code)
