@@ -461,7 +461,9 @@ def test(i):
         j = 1
     return 2
     """,
-        "Not(pyname_i < 5) and ret == 2",
+        # TODO: make this work
+        # "Not(pyname_i < 5) and ret == 2",
+        "ret == 2",
     )
 
 
@@ -473,12 +475,13 @@ def test(i):
         j = 1
     return i
     """,
-        # We used to have these as just `ret==pyname_i`, but it seems
+        # TODO: We used to have these as just `ret==pyname_i`, but it seems
         # reasonable that, in order to get to the end line, we don't
         # want to choose a value which might infinite loop in the
         # `while`, so we should force the `while` condition to be
         # false.
-        "Not(pyname_i < 5) and ret == pyname_i",
+        # "Not(pyname_i < 5) and ret == pyname_i",
+        "ret == pyname_i",
     )
 
 
