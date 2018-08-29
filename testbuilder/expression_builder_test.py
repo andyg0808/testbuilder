@@ -354,6 +354,22 @@ def tester(a, b):
     )
 
 
+def test_return_before_conditional():
+    check_expression(
+        """
+def test(i):
+    i += 1
+    if i < 10:
+        i += 2
+    else:
+        i -= 10
+    return i
+        """,
+        "pyname_i_1 == pyname_i + 1",
+        line=2,
+    )
+
+
 def test_falsy_number():
     check_expression(
         """
