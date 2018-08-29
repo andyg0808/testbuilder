@@ -164,11 +164,11 @@ class AstToSSABasicBlocks(SimpleVisitor):
         )
         add_block(bypass)
         for depth in range(1, self.depth + 1):
-            body_branch = tree
+            indexed_branch = tree
             self.variables.push()
             for _i in range(depth):
                 condition = self.expr_visitor(node.test)
-                body_branch = body_branch.map_target(
+                indexed_branch = indexed_branch.map_target(
                     lambda parent: sbb.TrueBranch(
                         number=self.next_id(),
                         conditional=condition,
@@ -176,15 +176,15 @@ class AstToSSABasicBlocks(SimpleVisitor):
                         line=node.lineno,
                     )
                 )
-                new_branch = self.line_visit(node.body, body_branch)
+                new_branch = self.line_visit(node.body, indexed_branch)
                 if isinstance(new_branch, sbb.BlockTreeIndex):
+                    indexed_branch = new_branch
+                else:
                     # We must have returned. We don't have an active
                     # end to attach to.
-                    body_branch = new_branch
-                else:
                     break
             if isinstance(new_branch, sbb.BlockTreeIndex):
-                add_block(body_branch)
+                add_block(new_branch)
                 self.variables.pop()
             else:
                 self.variables.pop()
@@ -214,8 +214,8 @@ class AstToSSABasicBlocks(SimpleVisitor):
                 line=node.lineno,
             )
         )
-        if type(body_branch) == sbb.BlockTree:
-            child = child.unify_return(body_branch)
+        if type(new_branch) == sbb.BlockTree:
+            child = child.unify_return(new_branch)
 
         # return tree.set_target(child)
         return child
