@@ -57,8 +57,12 @@ class Parented:
 class ReturnBlock(BasicBlock):
     parents: List[BasicBlock] = _default_list()
 
-    def append(self, item: BasicBlock) -> None:
-        self.parents.append(item)
+    def append(self, item: BasicBlock) -> "ReturnBlock":
+        parents = self.parents + [item]
+        return ReturnBlock(number=self.number, parents=parents)
+    def unify(self, other: "ReturnBlock") -> "ReturnBlock":
+        parents = self.parents + other.parents
+        return ReturnBlock(number=self.number, parents=parents)
 
     @property
     def line(self) -> int:
