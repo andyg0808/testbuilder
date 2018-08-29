@@ -207,11 +207,12 @@ class AstToSSABasicBlocks(SimpleVisitor):
         )
         condition = self.expr_visitor(node.test)
         child = loop.map_target(
-            lambda parent: sbb.FalseBranch(
+            lambda parent: sbb.WhileFalseBranch(
                 number=self.next_id(),
                 conditional=condition,
                 parent=parent,
                 line=node.lineno,
+                controlled_line=last_line + 1,
             )
         )
         if type(new_branch) == sbb.BlockTree:

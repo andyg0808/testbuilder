@@ -209,6 +209,14 @@ class LineFilterer(UpdateVisitor):
         else:
             return super().generic_visit(block, blocks)
 
+    def visit_WhileFalseBranch(
+        self, block: sbb.WhileFalseBranch, blocks: BlockMapping
+    ) -> sbb.BasicBlock:
+        if self.target_line < block.controlled_line or block.line not in self.lines:
+            return self.visit_block(block.parent, blocks)
+        else:
+            return super().generic_visit(block, blocks)
+
 
 def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:
     log.info(f"Filtering on lines {lines}")
