@@ -21,6 +21,9 @@ class PhiFilterer(UpdateVisitor):
         else:
             return None
 
+    # TODO: Ensure that multi-path nodes get separate variable batches
+    # for each path.
+
     def visit_Code(self, code: sbb.Code, seen: NameSet) -> sbb.BasicBlock:
         visited = [self.visit(l, seen) for l in code.code]
         filtered = [l for l in visited if l is not None]
