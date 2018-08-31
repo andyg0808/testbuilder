@@ -190,6 +190,8 @@ class UpdateVisitor(GenericVisitor):
             return v
         results: MMapping[str, Any] = {}
         for f in fields:
+            if f.name.startswith("_"):
+                continue
             data = getattr(v, f.name)
             res: Any
             if isinstance(data, list):
