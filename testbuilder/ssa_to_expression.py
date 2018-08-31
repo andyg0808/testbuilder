@@ -168,10 +168,12 @@ def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
 def ssa_lines_to_expression(
     target_line: int, lines: Set[int], module: sbb.Module
 ) -> sbb.TestData:
+    from .test_utils import write_dot
+
+    write_dot(module, "showdot.dot")
     request = filter_lines(target_line, lines, module)
 
     repaired_request: sbb.Request = pipe(request, repair, PhiFilterer())
+
+    write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)
-
-
-
