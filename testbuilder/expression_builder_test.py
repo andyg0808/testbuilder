@@ -122,6 +122,19 @@ def twothings(a, b):
     )
 
 
+def test_multiple_functions():
+    check_expression(
+        """
+def first_func(a):
+    return a * 5
+
+def second_func(b):
+    return b + 8
+        """,
+        "ret == pyname_b + 8",
+    )
+
+
 def test_multiple_lines():
     check_expression(
         """
