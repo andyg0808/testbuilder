@@ -475,6 +475,17 @@ def test(i):
         "ret == 2",
     )
 
+def test_slice_on_condition():
+    check_expression(
+        """
+def test(i):
+    if i < 8:
+        i += 4
+    else:
+        i += 1
+    return i
+        """, "", line=2)
+
 
 def test_sliced_dependent_conditional():
     check_expression(
