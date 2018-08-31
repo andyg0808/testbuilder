@@ -5,11 +5,11 @@ from abc import abstractmethod
 from typing import (
     Any,
     Callable,
-    Optional,
     Generic,
     Iterator,
     List,
     MutableMapping as MMapping,
+    Optional,
     Sequence,
     Type,
     TypeVar,
@@ -172,15 +172,25 @@ class UpdateVisitor(GenericVisitor):
         self.visited_nodes: MMapping[int, Any] = {}
 
     def visit(self, v: A, *args: Any) -> A:
+        # Use already-visited object if it exists.
+        # This makes handling trees with joins well-behaved.
+        if self.id(v) in self.visited_nodes:
+            return self.get_updated(v)
         visited = super().visit(v, *args)
+        self.visited_nodes[self.id(v)] = visited
         return cast(A, visited)
 
     def get_updated(self, original: A) -> A:
-        return cast(A, self.visited_nodes[id(original)])
+        return cast(A, self.visited_nodes[self.id(original)])
+
+    def id(self, obj: Any) -> Any:
+        """
+        Returns a unique identifier for a node. Can be overridden to
+        modify the notion of equivalence.
+        """
+        return id(obj)
 
     def generic_visit(self, v: A, *args: Any) -> A:
-        if id(v) in self.visited_nodes:
-            return self.get_updated(v)
         try:
             fields = dataclasses.fields(v)
         except TypeError as err:
@@ -199,6 +209,4 @@ class UpdateVisitor(GenericVisitor):
             else:
                 res = self.visit(data, *args)
             results[f.name] = res
-        newnode = cast(A, v.__class__(**results))
-        self.visited_nodes[id(v)] = newnode
-        return newnode
+        return cast(A, v.__class__(**results))
