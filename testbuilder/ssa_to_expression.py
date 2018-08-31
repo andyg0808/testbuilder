@@ -109,7 +109,11 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
 
 @process.register(sbb.BlockTree)
 def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
-    expression = bool_all(visitor.visit(code))
+    expr_list = visitor.visit(code)
+    if expr_list:
+        expression = bool_all(expr_list)
+    else:
+        expression = bool_true()
     free_variables = find_variables(code)
     return sbb.TestData(
         name="code", free_variables=free_variables, expression=expression
@@ -153,6 +157,10 @@ def bool_any(exprs: List[Expression]) -> Expression:
         return exprs[0]
     else:
         raise RuntimeError("Taking any of no exprs")
+
+
+def bool_true() -> Expression:
+    return z3.BoolVal(True)
 
 
 def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
