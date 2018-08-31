@@ -175,9 +175,12 @@ class UpdateVisitor(GenericVisitor):
         visited = super().visit(v, *args)
         return cast(A, visited)
 
+    def get_updated(self, original: A) -> A:
+        return cast(A, self.visited_nodes[id(original)])
+
     def generic_visit(self, v: A, *args: Any) -> A:
         if id(v) in self.visited_nodes:
-            return cast(A, self.visited_nodes[id(v)])
+            return self.get_updated(v)
         try:
             fields = dataclasses.fields(v)
         except TypeError as err:
