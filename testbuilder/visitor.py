@@ -58,8 +58,8 @@ class VisitError(NotImplementedError):
 class SimpleVisitor(Generic[B]):
     T = TypeVar("T")
 
-    def __call__(self, *args: Any) -> B:
-        return self.visit(*args)
+    def __call__(self, v: Any, *args: Any) -> B:
+        return self.visit(v, *args)
 
     def visit(self, v: Any, *args: Any) -> B:
         func = self.__find_function(v.__class__)
