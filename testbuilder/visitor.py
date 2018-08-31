@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import (
     Any,
     Callable,
+    Optional,
     Generic,
     Iterator,
     List,
@@ -122,6 +123,26 @@ class GenericVisitor(SimpleVisitor[A]):
     @abstractmethod
     def generic_visit(self, v: Any, *args: Any) -> A:
         ...
+
+
+class SearchVisitor(GenericVisitor[Optional[A]]):
+    def generic_visit(self, v: Any, *args: Any) -> Optional[A]:
+        try:
+            fields = dataclasses.fields(v)
+        except TypeError:
+            return None
+        for f in fields:
+            data = getattr(v, f.name)
+            if isinstance(data, Sequence):
+                for d in data:
+                    res = self.visit(d, *args)
+                    if res is not None:
+                        return res
+            else:
+                res = self.visit(data, *args)
+                if res is not None:
+                    return res
+        return None
 
 
 class GatherVisitor(GenericVisitor[List[A]]):
