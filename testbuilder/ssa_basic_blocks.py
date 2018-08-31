@@ -145,7 +145,7 @@ class BlockTree:
         return BlockTree(start=self.start, end=self.end.unify(tree.end))
 
     def set_target(self, target: T) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
+        return BlockTreeIndex._construct(start=self.start, end=self.end, target=target)
 
 
 U = TypeVar("U", bound=BasicBlock)
@@ -163,7 +163,7 @@ class BlockTreeIndex(BlockTree, Generic[T]):
         return BlockTreeIndex(start=start, end=end)
 
     @staticmethod
-    def __construct(
+    def _construct(
         start: StartBlock, end: ReturnBlock, target: T
     ) -> "BlockTreeIndex[T]":
         tree: "BlockTreeIndex[T]" = BlockTreeIndex(start=start, end=end)
@@ -191,14 +191,14 @@ class BlockTreeIndex(BlockTree, Generic[T]):
         return tree.set_target(func(*target_list))
 
     def set_target(self, target: U) -> "BlockTreeIndex[U]":
-        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
+        return BlockTreeIndex._construct(start=self.start, end=self.end, target=target)
 
     def return_target(self) -> BlockTree:
         end = self.end.append(self.target)
         return BlockTree(start=self.start, end=end)
 
     def unify_return(self, tree: BlockTree) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex.__construct(
+        return BlockTreeIndex._construct(
             start=self.start, end=self.end.unify(tree.end), target=self.target
         )
 
