@@ -475,6 +475,7 @@ def test(i):
         "ret == 2",
     )
 
+
 def test_slice_on_condition():
     check_expression(
         """
@@ -484,7 +485,10 @@ def test(i):
     else:
         i += 1
     return i
-        """, "", line=2)
+        """,
+        "true",
+        line=2,
+    )
 
 
 def test_sliced_dependent_conditional():
