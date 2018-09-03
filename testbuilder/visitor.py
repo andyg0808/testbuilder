@@ -210,3 +210,37 @@ class UpdateVisitor(GenericVisitor):
                 res = self.visit(data, *args)
             results[f.name] = res
         return cast(A, v.__class__(**results))
+
+
+class Delayed(Generic[A]):
+    pass
+
+
+class ThunkVisitor(GenericVisitor[Delayed[A]]):
+    def generic_visit(self, v: Any, *args: Any) -> Delayed[A]:
+        try:
+            fields = dataclasses.fields(v)
+        except TypeError as err:
+            # If we are trying to look for fields on something
+            # that isn't a dataclass, it's probably a primitive
+            # field type, so just stop here.
+            return v
+        results: MMapping[str, Any] = {}
+        for f in fields:
+            if f.name.startswith("_"):
+                continue
+            data = getattr(v, f.name)
+            res: Any
+            if isinstance(data, list):
+                res = [self.visit(x, *args) for x in data]
+            else:
+                res = self.visit(data, *args)
+            results[f.name] = res
+
+        def doall(parent: Any):
+            found = {}
+            for key, value in results.items():
+                found[key] = value(parent)
+            return cast(A, v.__class__(**found))
+
+        return doall
