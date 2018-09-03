@@ -1,12 +1,29 @@
-from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
+# from __future__ import annotations
+from copy import copy
+from functools import singledispatch
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    List,
+    MutableMapping as MMapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+)
 
 from logbook import Logger, StderrHandler
+from toolz import pipe
 
 from typeassert import assertify
 
-from . import ssa_basic_blocks as sbb
+from . import nodetree as n, ssa_basic_blocks as sbb
+from .conditional_elimination import ConditionalElimination
 from .nodetree import AddedLine
-from .visitor import UpdateVisitor
+from .visitor import GatherVisitor, SearchVisitor, SimpleVisitor, UpdateVisitor
 
 log = Logger("linefilterer")
 
@@ -15,9 +32,201 @@ StderrHandler(
     level="INFO", filter=lambda r, h: r.channel == "linefilterer"
 ).push_application()
 
-BlockMapping = MMapping[int, sbb.BasicBlock]
-
+A = TypeVar("A", bound=sbb.BasicBlock)
 B = TypeVar("B", bound=sbb.BasicBlock)
+BlockMapping = MMapping[int, sbb.BasicBlock]
+StopBlock = Optional[sbb.BasicBlock]
+
+
+class Parentable(Generic[B]):
+    def __init__(self, func: Callable[[sbb.BasicBlock], B], contained: Type) -> None:
+        self.partial = func
+        self.contained = contained
+
+    def __call__(self, parent: sbb.BasicBlock) -> B:
+        return self.partial(parent)
+
+    def child(self, child: Callable[[sbb.BasicBlock], A]) -> "Parentable[A]":
+        parent_partial = self.partial
+
+        def parentable(parent: sbb.BasicBlock) -> A:
+            parent_val = parent_partial(parent)
+            return child(parent_val)
+
+        return Parentable(parentable, getattr(child, "contained", object))
+
+
+# Define an identity Parentable; useful as a do-nothing return value
+Empty = Parentable(lambda parent: parent, object)
+
+
+class ComputedLineFilterer(UpdateVisitor):
+    def __init__(self, target_line: int) -> None:
+        super().__init__()
+        self.target_line = target_line
+
+    def visit_Module(self, module: sbb.Module) -> sbb.Request:
+        for func in module.functions.values():
+            updated = self.visit_FunctionDef(func)
+            if updated is not None:
+                assert isinstance(updated, sbb.FunctionDef)
+                return sbb.Request(module=module, code=updated)
+            else:
+                log.notice(f"Throwing out {func.name} because no lines were kept")
+        blocktree = self.visit_BlockTree(module.code)
+        if blocktree is None:
+            raise RuntimeError("No code lines selected")
+        assert isinstance(blocktree, sbb.BlockTree)
+        return sbb.Request(module=module, code=blocktree)
+
+    def visit_FunctionDef(self, function: sbb.FunctionDef) -> Optional[sbb.FunctionDef]:
+        blocktree = self.visit_BlockTree(function.blocks)
+        if blocktree is None or blocktree.empty():
+            log.notice("Discarding function because it is empty")
+            return None
+        else:
+            return sbb.FunctionDef(
+                first_line=blocktree.start.line,
+                last_line=blocktree.end.line,
+                name=function.name,
+                args=function.args,
+                blocks=blocktree,
+            )
+        pass
+
+    def visit_BlockTree(self, blocktree: sbb.BlockTree) -> Optional[sbb.BlockTree]:
+        target = Discovery(self.target_line)(blocktree.end)
+        if target is None:
+            return None
+        filterer = Filter(self.target_line)
+        filtered: Parentable = filterer(target)
+        tree: sbb.BasicBlock = pipe(blocktree.start, filtered, ConditionalElimination())
+        # print("Visited nodes", [type(node) for node in filterer.visited_nodes.values()])
+        print("filtered", tree)
+        start_block = blocktree.start
+        return sbb.BlockTree(
+            start=start_block,
+            end=sbb.ReturnBlock(number=blocktree.end.number, parents=[tree]),
+        )
+
+
+class Discovery(SearchVisitor[sbb.BasicBlock]):
+    def __init__(self, target_line: int) -> None:
+        super().__init__()
+        self.target_line = target_line
+        print("searching for line", target_line)
+
+    def visit_Positioned(self, block: sbb.Positioned) -> Optional[sbb.BasicBlock]:
+        if self.target_line in block.lines:
+            assert isinstance(block, sbb.BasicBlock)
+            return block
+        elif isinstance(block, sbb.Parented):
+            return self.visit(block.parent)
+        else:
+            return None
+
+
+SSAName = Tuple[str, int]
+
+
+class DepFinder(GatherVisitor[SSAName]):
+    def visit_Name(self, name: n.Name) -> List[SSAName]:
+        return [(name.id, name.set_count)]
+
+    def visit_Set(self, assign: n.Set) -> List[SSAName]:
+        return self.visit(assign.e)
+
+
+@singledispatch
+def target_finder(obj: Any) -> Set[SSAName]:
+    return set()
+
+
+@target_finder.register(n.Set)
+def find_Set_target(obj: n.Set) -> Set[SSAName]:
+    return {(obj.target.id, obj.target.set_count)}
+
+
+class Filter(SimpleVisitor[Parentable]):
+    def __init__(self, target_line: int) -> None:
+        super().__init__()
+        self.target_line = target_line
+        self.dep_finder = DepFinder()
+
+    def __call__(self, block: Any, *args: Any) -> Parentable:
+        return self.visit(block, None, set(), *args)
+
+    def visit_Code(
+        self, code: sbb.Code, stop: StopBlock, targets: Set[SSAName]
+    ) -> Parentable:
+        if code is stop:
+            return Empty
+        print("-------------\nvisiting code block")
+        lines: List[n.stmt] = []
+        # We have to work up from the bottom
+        for line in reversed(code.code):
+            print("targets", targets)
+            target = target_finder(line)
+            print("target", target)
+            if line.line == self.target_line or targets & target:
+                deps = set(self.dep_finder(line))
+                print("deps on line", line.line, deps)
+                lines.insert(0, line)
+                targets = targets | deps - target
+                print("new targets", targets)
+            else:
+                print("Line discarded", line, target, targets, self.target_line)
+                continue
+
+        parent = self.visit(code.parent, targets)
+        if not lines:
+            return parent
+        return parent.child(
+            lambda p: sbb.Code(
+                number=code.number,
+                first_line=code.first_line,
+                last_line=code.last_line,
+                parent=p,
+                code=lines,
+            )
+        )
+
+    def visit_Conditional(
+        self, cond: sbb.Conditional, stop: sbb.BasicBlock, targets: Set[SSAName]
+    ) -> Parentable:
+        if cond is stop:
+            return Empty
+        true_targets = copy(targets)
+        false_targets = copy(targets)
+        true_branch = self.visit(cond.true_branch, cond.parent, true_targets)
+        false_branch = self.visit(cond.false_branch, cond.parent, false_targets)
+        targets = true_targets | false_targets
+        print(
+            "-----------------------\nupdated_conditional targets:",
+            targets,
+            "(from",
+            true_targets,
+            false_targets,
+            ")",
+        )
+        parent = self.visit(cond.parent, targets)
+        return parent.child(
+            lambda parent: sbb.Conditional(
+                number=cond.number,
+                first_line=cond.first_line,
+                last_line=cond.last_line,
+                parent=parent,
+                true_branch=true_branch(parent),
+                false_branch=false_branch(parent),
+            )
+        )
+
+    def visit_TrueBranch(self, branch: sbb.TrueBranch, stop: StopBlock, targets: Set[SSAName]) -> Parentable:
+        if branch is stop:
+            return Empty
+
+        parent = self.visit(branch.parent, targets)
+        return parent.child(
 
 
 class LineFilterer(UpdateVisitor):
@@ -73,7 +282,8 @@ class LineFilterer(UpdateVisitor):
 
     def visit_FunctionDef(self, function: sbb.FunctionDef) -> Optional[sbb.FunctionDef]:
         blocktree = self.visit_BlockTree(function.blocks)
-        if isinstance(blocktree.start, sbb.ReturnBlock):
+        if blocktree.empty():
+            log.notice("Discarding function because it is empty")
             return None
         else:
             return sbb.FunctionDef(
@@ -172,6 +382,12 @@ class LineFilterer(UpdateVisitor):
             )
 
     def visit_Loop(self, block: sbb.Loop, blocks: BlockMapping) -> sbb.BasicBlock:
+        # contained_lines = sbb.line_range(block.parent, block)
+        # print("contained_lines", contained_lines)
+        # if (
+        #     not self.lines.intersection(contained_lines)
+        #     or block.first_line not in self.lines
+        # ):
         if block.first_line not in self.lines:
             log.debug("dropping loop")
             return self.visit_block(block.parent, blocks)
@@ -220,5 +436,6 @@ class LineFilterer(UpdateVisitor):
 
 def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:
     log.info(f"Filtering on lines {lines}")
-    filtered = LineFilterer(lines, target_line).visit_Module(module)
+    # filtered = LineFilterer(lines, target_line).visit_Module(module)
+    filtered = ComputedLineFilterer(target_line).visit_Module(module)
     return filtered
