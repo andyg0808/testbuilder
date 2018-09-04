@@ -139,7 +139,7 @@ def find_Set_target(obj: n.Set) -> SSAName:
     return (obj.target.id, obj.target.set_count)
 
 
-class Filter(SimpleVisitor[Coroutine]):
+class Filter(GenericVisitor[Coroutine]):
     def __init__(self, target_line: int) -> None:
         super().__init__()
         self.target_line = target_line
@@ -237,26 +237,11 @@ class Filter(SimpleVisitor[Coroutine]):
             loops=completed_loops,
         )
 
-    def visit_TrueBranch(
-        self, branch: sbb.TrueBranch, stop: StopBlock, targets: TargetManager
-    ) -> Coroutine:
-        if branch is stop:
-            return (yield)
+    def generic_visit(self, v: sbb.BasicBlock, *args: Any) -> Coroutine:
+        assert isinstance(v, sbb.BasicBlock)
+        return (yield from self.visit_block(v, *args))
 
-        parent = yield from self.visit(branch.parent, stop, targets)
-        return sbb.TrueBranch(
-            number=branch.number,
-            conditional=branch.conditional,
-            parent=parent,
-            line=branch.line,
-        )
-
-    def visit_FalseBranch(
-        self, branch: sbb.FalseBranch, stop: StopBlock, targets: TargetManager
-    ) -> Coroutine:
-        return (yield from self.generic_visit(branch, stop, targets))
-
-    def generic_visit(
+    def visit_block(
         self, v: sbb.BasicBlock, stop: StopBlock, targets: TargetManager, **updates: Any
     ) -> Coroutine:
         if v is stop:
