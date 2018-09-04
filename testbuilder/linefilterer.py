@@ -21,6 +21,7 @@ from toolz import pipe
 
 from typeassert import assertify
 
+import dataclasses
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
 from .nodetree import AddedLine
@@ -273,40 +274,33 @@ class Filter(SimpleVisitor[Coroutine]):
     def visit_FalseBranch(
         self, branch: sbb.FalseBranch, stop: StopBlock, targets: TargetManager
     ) -> Coroutine:
-        if branch is stop:
+        return (yield from self.generic_visit(branch, stop, targets))
+
+    def generic_visit(
+        self, v: sbb.BasicBlock, stop: StopBlock, targets: TargetManager, **updates: Any
+    ) -> Coroutine:
+        if v is stop:
             return (yield)
-
-        parent = yield from self.visit(branch.parent, stop, targets)
-        return sbb.FalseBranch(
-            number=branch.number,
-            conditional=branch.conditional,
-            parent=parent,
-            line=branch.line,
-        )
-
-
-# def generic_visit(
-#     self, v: A, stop: StopBlock, targets: Set[SSAName]
-# ) -> Generator[None, sbb.StartBlock, A]:
-#     try:
-#         fields = dataclasses.fields(v)
-#     except TypeError as err:
-#         # If we are trying to look for fields on something
-#         # that isn't a dataclass, it's probably a primitive
-#         # field type, so just stop here.
-#         return v
-#     results: MMapping[str, Any] = {}
-#     for f in fields:
-#         if f.name.startswith("_"):
-#             continue
-#         data = getattr(v, f.name)
-#         res: Any
-#         if isinstance(data, list):
-#             res = [self.visit(x, *args) for x in data]
-#         else:
-#             res = self.visit(data, *args)
-#         results[f.name] = res
-#     return cast(A, v.__class__(**results))
+        fields = dataclasses.fields(v)
+        results: MMapping[str, Any] = {}
+        for f in fields:
+            if f.name.startswith("_"):
+                continue
+            elif f.name == "parent":
+                continue
+            data = getattr(v, f.name)
+            res: Any
+            if f.name in updates:
+                res = updates[f.name]
+            elif isinstance(data, sbb.BasicBlock):
+                raise RuntimeError(f"Unhandled basic block in field {f.name} ({data})")
+            else:
+                res = data
+            results[f.name] = res
+        parent = getattr(v, "parent", None)
+        if parent:
+            results["parent"] = yield from self.visit(parent, stop, targets)
+        return cast(sbb.BasicBlock, v.__class__(**results))
 
 
 class LineFilterer(UpdateVisitor):
