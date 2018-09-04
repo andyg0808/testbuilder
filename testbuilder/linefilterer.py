@@ -235,9 +235,9 @@ class Filter(SimpleVisitor[Coroutine]):
         )
 
     def visit_Loop(
-        self, loop: sbb.Loop, stop: sbb.BasicBlock, targets: TargetManger
+        self, loop: sbb.Loop, stop: sbb.BasicBlock, targets: TargetManager
     ) -> Coroutine:
-        if cond is stop:
+        if loop is stop:
             return (yield)
         loops = []
         post_targets = TargetManager()
@@ -248,7 +248,13 @@ class Filter(SimpleVisitor[Coroutine]):
         targets.update(post_targets)
         parent = yield from self.visit(loop.parent, stop, targets)
         completed_loops = [retrieve(l, parent) for l in loops]
-        return sbb.Loop(parent=parent, loops=completed_loops)
+        return sbb.Loop(
+            number=loop.number,
+            first_line=loop.first_line,
+            last_line=loop.last_line,
+            parent=parent,
+            loops=completed_loops,
+        )
 
     def visit_TrueBranch(
         self, branch: sbb.TrueBranch, stop: StopBlock, targets: TargetManager
