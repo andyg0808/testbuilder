@@ -15,6 +15,7 @@ from typing import (
     TypeVar,
     cast,
 )
+from collections.abc import Iterable
 
 from logbook import Logger, StderrHandler
 from toolz import pipe
@@ -271,7 +272,7 @@ class Filter(SimpleVisitor[Coroutine]):
             res: Any
             if f.name in updates:
                 res = updates[f.name]
-            elif isinstance(data, sbb.BasicBlock):
+            elif isinstance(data, sbb.BasicBlock) or isinstance(data, Iterable):
                 raise RuntimeError(f"Unhandled basic block in field {f.name} ({data})")
             else:
                 res = data
