@@ -83,7 +83,7 @@ class ComputedLineFilterer(UpdateVisitor):
                 assert isinstance(updated, sbb.FunctionDef)
                 return sbb.Request(module=module, code=updated)
             else:
-                log.notice(f"Throwing out {func.name} because no lines were kept")
+                log.notice(f"Throwing out `{func.name}` because no lines were kept")
         blocktree = self.visit_BlockTree(module.code)
         if blocktree is None:
             raise RuntimeError("No code lines selected")
