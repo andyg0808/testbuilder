@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Tuple, Set, Sequence, Optional
+from typing import Tuple, Set, Sequence, Optional, Iterable
 from dataclasses import dataclass, field
 
 SSAName = Tuple[str, int]
@@ -21,8 +21,23 @@ class TargetManager:
         else:
             return obj in self.targets
 
-    def __or__(self, other: TargetManager) -> TargetManager:
-        return TargetManager(self.targets | other.targets)
+    def __or__(self, other: object) -> TargetManager:
+        if isinstance(other, TargetManager):
+            return TargetManager(self.targets | other.targets)
+        elif isinstance(other, Iterable):
+            return TargetManager(self.targets.union(other))
+        raise TypeError(f"Cannot `or` TargetManager with {type(other)}")
+
+    __ror__ = __or__
+
+    def __and__(self, other: object) -> TargetManager:
+        if isinstance(other, TargetManager):
+            return TargetManager(self.targets & other.targets)
+        elif isinstance(other, Iterable):
+            return TargetManager(self.targets.intersection(other))
+        raise TypeError(f"Cannot `and` TargetManager with {type(other)}")
+
+    __rand__ = __and__
 
     def update(self, replacement: TargetManager) -> None:
         self.targets = replacement.targets
