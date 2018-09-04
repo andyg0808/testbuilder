@@ -1,6 +1,7 @@
 import inspect
 from functools import singledispatch
 from typing import Any, Union
+from .coroutines import result
 
 import pytest
 
@@ -29,23 +30,6 @@ class Thing(Node):
     right: Node
     join: Node
     value: Any
-
-
-def result(xs, val):
-    if not inspect.isgenerator(xs):
-        raise RuntimeError(f"{xs} is not a generator. Perhaps a yield is missing?")
-    # Start generator
-    try:
-        next(xs)
-        # Pass to yield
-    except TypeError as ex:
-        raise RuntimeError(f"No yields in {xs}! Exactly one yield is required.") from ex
-    try:
-        # Finish generator
-        xs.send(val)
-    except StopIteration as stop:
-        return stop.value
-    raise RuntimeError(f"Too many yields in {xs}!")
 
 
 @singledispatch
