@@ -480,13 +480,14 @@ def test_slice_on_condition():
     check_expression(
         """
 def test(i):
+    i += 1
     if i < 8:
         i += 4
     else:
         i += 1
     return i
         """,
-        "true",
+        "pyname_i_1 == pyname_i + 1",
         line=2,
     )
 
