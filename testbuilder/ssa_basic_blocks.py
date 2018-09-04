@@ -97,10 +97,18 @@ class Controlled(BasicBlock):
 class TrueBranch(Controlled, Parented):
     line: int
 
+@dataclass
+class ForcedTrueBranch(TrueBranch):
+    pass
+
 
 @dataclass
 class FalseBranch(Controlled, Parented):
     line: int
+
+@dataclass
+class ForcedFalseBranch(FalseBranch):
+    pass
 
 
 @dataclass
