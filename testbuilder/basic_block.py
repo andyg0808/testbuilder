@@ -1,5 +1,7 @@
 import ast
-from typing import Any, List, Optional, Set, Union
+from typing import Any, List, Optional, Set
+
+from dataclasses import dataclass
 
 from .ast_formatter import format_tree
 from .slicing import Dependency, NegConditional
@@ -18,6 +20,10 @@ class _Conditional(_BlockType):
     pass
 
 
+class _StartConditional(_BlockType):
+    pass
+
+
 class _Code(_BlockType):
     pass
 
@@ -25,6 +31,7 @@ class _Code(_BlockType):
 Loop = _Loop()
 Conditional = _Conditional()
 Code = _Code()
+StartConditional = _StartConditional()
 
 
 BlockType = _BlockType
@@ -47,7 +54,7 @@ class BasicBlock:
     def __init__(self, number: int = -1) -> None:
         self.conditional: Optional[Dependency] = None
         self.children: List[BasicBlock] = []
-        self.parents: List[BasicBlock] = []
+        self.parents: List[Optional[BasicBlock]] = []
         self.code: List[Dependency] = []
         self.join: Optional[BasicBlock] = None
         self.type: BlockType = Code
@@ -97,7 +104,11 @@ class BasicBlock:
     def trace_blocks(self) -> Any:
         seen = set([self])
         return (
-            [p.trace_parents(seen) for p in self.parents if p is not self]
+            [
+                p.trace_parents(seen)
+                for p in self.parents
+                if p is not self and p is not None
+            ]
             + [self]
             + [p.trace_children(seen) for p in self.children if p is not self]
         )
@@ -107,7 +118,11 @@ class BasicBlock:
             return []
         else:
             seen.add(self)
-        return [self] + [p.trace_parents(seen) for p in self.parents if p is not self]
+        return [self] + [
+            p.trace_parents(seen)
+            for p in self.parents
+            if p is not self and p is not None
+        ]
 
     def trace_children(self, seen: Set[Any]) -> Any:
         if self in seen:
@@ -118,13 +133,14 @@ class BasicBlock:
 
     def __repr__(self) -> str:
         if self.conditional:
-            return "BasicBlock({} <> {})".format(
+            return "BasicBlock_cond_{}({})".format(
+                self.number,
                 format_tree(self.conditional.code),
                 "\uf063".join(format_tree(c.code) for c in self.code),
             )
         else:
-            return "BasicBlock({})".format(
-                ";".join(format_tree(c.code) for c in self.code)
+            return "BasicBlock_{}({})".format(
+                self.number, ";".join(format_tree(c.code) for c in self.code)
             )
 
     def _get_label(self) -> str:
@@ -159,10 +175,21 @@ class BasicBlock:
                 output.append(link)
                 done.add(link)
         for parent in self.parents:
-            output += parent.dot(done)
-            link = "{} -> {};".format(id(parent), id(self))
+            if parent is not None:
+                output += parent.dot(done)
+                link = "{} -> {};".format(id(parent), id(self))
+            else:
+                link = "None -> {};".format(id(self))
             if link not in done:
                 output.append(link)
                 done.add(link)
 
         return output
+
+
+@dataclass
+class BlockTree:
+    entrance: BasicBlock
+    target: Optional[BasicBlock]
+    exit: BasicBlock
+    code: ast.AST

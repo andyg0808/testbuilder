@@ -4,29 +4,30 @@ value at a given line.
 """
 import ast
 from copy import copy
-from functools import reduce
+from functools import partial, reduce
 from typing import (
-    Any,
+    Callable,
     Iterable,
-    Iterator,
     List,
     Mapping,
     MutableMapping as MMapping,
-    NewType,
     Optional,
     Sequence,
     Set,
     Tuple,
-    cast,
 )
 
+from toolz import pipe
+
 import z3
+from typeassert import assertify
 
 from . import basic_block
-from .basic_block import BasicBlock
-from .build_tree import build_tree
+from .ast_builder import make_ast
+from .basic_block import BasicBlock, BlockTree
+from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
-from .slicing import Dependency, Variable, take_slice
+from .slicing import Variable, take_slice
 
 NULL = z3.DeclareSort("None")
 
@@ -38,58 +39,102 @@ Expression = z3.ExprRef
 ExprList = List[Expression]
 
 
+def _simplify_logical(
+    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
+) -> Expression:
+    if len(exprs) > 1:
+        return function(*exprs)
+    else:
+        return exprs[0]
+
+
 def bool_not(expr: Expression) -> Expression:
     return z3.Not(expr)
 
 
 def bool_or(*exprs: Expression) -> Expression:
-    return z3.Or(*exprs)
+    return _simplify_logical(exprs, z3.Or)
 
 
 def bool_and(*exprs: Expression) -> Expression:
-    return z3.And(*exprs)
+    return _simplify_logical(exprs, z3.And)
 
 
-def get_expression(code: ast.AST, line: int, depth: int = 1) -> Optional[Expression]:
+def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
     block_tree = build_tree(code)
-    dep_tree = take_slice(code, line)
-    print("dep_tree", dep_tree, "end")
+    dep_tree = take_slice(line, code)
+    # print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
-    flowgraph = block_tree.inflate(dep_tree)
-    eb = ExpressionBuilder(depth)
-    variables = get_slice_variables(dep_tree)
-    return eb.get_expression(variables, flowgraph)
+    tree = block_tree.inflate(dep_tree)
+    # from .test_utils import show_dot
 
-
-def get_slice_variables(dep_tree: Dependency) -> Iterator[Variable]:
-    """
-    Find all Variable instances in a dependency tree.
-    """
-    slice_tree = dep_tree.format_slice()
-    variables = filter(lambda x: isinstance(x, Variable), slice_tree)
-    return cast(Iterator[Variable], variables)
+    # print("tree", tree)
+    # show_dot(tree.entrance.dot())
+    variables = dep_tree.get_slice_variables()
+    eb = ExpressionBuilder(depth, dep_tree.lineno, dep_tree.lines())
+    return eb.get_expression(variables, tree)
 
 
 class ExpressionBuilder:
-    def __init__(self, depth: int) -> None:
+    def __init__(self, depth: int, target_line: int, lines: Set[int]) -> None:
         self.depth = depth
+        self.lines = lines
+        self.target_line = target_line
 
     def get_expression(
-        self, variables: Iterable[Variable], flowgraph: BasicBlock
+        self, variables: Iterable[Variable], flowgraph: BlockTree
     ) -> Expression:
-        expr_list: ExprList = self.convert_tree(flowgraph, variables)
-        return _combine_conditions(expr_list)
-
-    def convert_tree(self, root: BasicBlock, variables: Iterable[Variable]) -> ExprList:
         # Sets variables to the default value, to treat them as having been defined
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        return self._convert_block_tree(root, mutation_counts, None)
+        return self.convert_tree(flowgraph, mutation_counts)
 
-    def _convert_block_tree(
-        self, root: BasicBlock, variables: VarMapping, stop: StopBlock = None
+    def convert_tree(self, tree: BlockTree, variables: VarMapping) -> Expression:
+        assert tree.target
+        # print("target", tree.target, tree.target.number)
+        expr_list = self._convert_target_tree(tree.target, None, copy(variables), None)
+        expected = _combine_conditions(expr_list)
+        actual = self._modern_convert_tree(copy(variables), tree)
+        print("Actual expression:", actual)
+        print("Expression from old code:", expected)
+        return actual
+
+    def _modern_convert_tree(
+        self, variables: VarMapping, tree: BlockTree
+    ) -> Expression:
+        from .ast_to_ssa import ast_to_ssa
+
+        # from .ssa_to_expression import blocktree_and_ssa_to_expression
+        # from .ssa_to_expression import ssa_to_expression
+        from .ssa_to_expression import ssa_lines_to_expression
+        from toolz import pipe
+        from functools import partial
+        from .ssa_basic_blocks import TestData
+
+        _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
+        # _ssa_to_expression = partial(
+        #     blocktree_and_ssa_to_expression, self.depth, tree, variables=variables
+        # )
+        _ssa_to_expression = partial(
+            ssa_lines_to_expression, self.target_line, self.lines
+        )
+
+        from .utils import pipe_print
+
+        variables = {}
+        testdata: TestData = pipe(
+            tree.code, _ast_to_ssa, pipe_print, _ssa_to_expression
+        )
+        return testdata.expression
+
+    def _convert_target_tree(
+        self,
+        root: BasicBlock,
+        coming_from: Optional[BasicBlock],
+        variables: VarMapping,
+        stop: StopBlock = None,
     ) -> ExprList:
         """
         Args:
@@ -100,165 +145,177 @@ class ExpressionBuilder:
                   not considered in the processing at all. This is used to
                   handle processing only the forked part of if statements.
         """
+
+        # print("root type", root.type, root.number)
+        assert root.number != RETURNBLOCK
+        # print("Not return block")
         if root is stop:
+            # print("stopping")
             return []
 
         if root.type == basic_block.Loop:
-            return self._convert_loop(root, variables, stop)
+            return self._convert_target_loop(root, coming_from, variables, stop)
+            assert root.type != basic_block.Loop
         elif root.type == basic_block.Conditional:
-            return self._convert_conditional(root, variables, stop)
-        elif root.type == basic_block.Code:
-            return self._convert_code_block(root, variables, stop)
+            return self._convert_target_conditional(root, variables, stop)
+        elif root.type == basic_block.Code or root.type == basic_block.StartConditional:
+            return self._convert_target_code_block(root, variables, stop)
         raise RuntimeError(f"Unknown block type: {root.type}")
 
-    def _convert_loop(
+    def _handle_parents(
+        self,
+        parent: BasicBlock,
+        root: BasicBlock,
+        variables: VarMapping,
+        stop: StopBlock,
+    ) -> ExprList:
+        code = self._convert_target_tree(parent, root, variables, stop)
+        if (
+            parent.type == basic_block.StartConditional
+            or parent.type == basic_block.Loop
+        ):
+            if parent.conditional:
+                invert_conditional = root is parent.children[1]
+                conditional = to_boolean(
+                    self._convert(parent.conditional.code, variables)
+                )
+                if invert_conditional:
+                    # print("Inverting conditional on", root)
+                    conditional = bool_not(conditional)
+                code.append(conditional)
+        # print("parent code", code)
+        return code
+
+    def _convert_target_code_block(
         self, root: BasicBlock, variables: VarMapping, stop: StopBlock
     ) -> ExprList:
+        assert (
+            root.type == basic_block.Code or root.type == basic_block.StartConditional
+        )
+        code: ExprList
+        if root.parents:
+            # print("parents exist")
+            assert len(root.parents) == 1
+            parent = root.parents[0]
+            assert parent
+            code = self._handle_parents(parent, root, variables, stop)
+        else:
+            code = []
+
+        code += [self._convert(c.code, variables) for c in root.code]
+        # print("code block code", code)
+        return code
+
+    def _convert_target_loop(
+        self,
+        root: BasicBlock,
+        coming_from: Optional[BasicBlock],
+        variables: VarMapping,
+        stop: StopBlock,
+    ) -> ExprList:
         def construct_path(
-            path: ExprList, path_vars: VarMapping, returns: bool
+            path: ExprList, path_vars: VarMapping
         ) -> Tuple[ExprList, VarMapping]:
             path = copy(path)
             path_vars = copy(path_vars)
-            # Make typechecker happy. This should always be true of loops.
-            assert root.conditional
-            if not returns:
-                path.append(
-                    bool_not(to_boolean(convert(root.conditional.code, path_vars)))
-                )
             return (path, path_vars)
 
         assert root.type == basic_block.Loop
 
-        body, bypass = root.children
-
-        if _is_required(body, root):
-            # We can't bypass the loop: the body is required
-            paths: List[Tuple[ExprList, VarMapping]] = []
-        elif root.conditional is None:
-            return self._convert_block_tree(bypass, variables, stop)
-        elif body.returns:
-            code = [bool_not(to_boolean(convert(root.conditional.code, variables)))]
-            code += self._convert_block_tree(bypass, variables, stop)
-            return code
-        else:
-            paths = [construct_path([], variables, body.returns)]
-
-        # Make typechecker happy. This should always be true of loops.
-        assert root.conditional
-
-        # If the body returns, never iterate more than once!
-        if body.returns:
-            depth = 1
+        body, bypass = root.parents
+        assert len(root.children) > 0
+        body_end = root.children[0]
+        assert body_end is not None
+        assert bypass is not None
+        if body is None or body_end == coming_from:
+            # If we want to get into the body, there is no need to run it again
+            depth = 0
         else:
             depth = self.depth
 
+        code = self._handle_parents(bypass, root, variables, stop)
+
+        if root.conditional is None:
+            # print("No conditional on root")
+            # print("root", root.number)
+            # If the conditional is missing, this loop doesn't matter, and we
+            # can skip it.
+            return code
+
+        paths = [construct_path([], variables)]
+
         loops: ExprList = []
         for _i in range(depth):
-            print("start variables", variables, "for loop", _i)
-            loops += [to_boolean(convert(root.conditional.code, variables))]
-            loops += self._convert_block_tree(body, variables, root)
-            print("variables", variables, "for loop", _i)
-            paths.append(construct_path(loops, variables, body.returns))
+            assert body is not None
+            loops += self._convert_target_tree(body, root, variables, root)
+            paths.append(construct_path(loops, variables))
 
+        # print("Paths through loop:", paths)
         updated_conditions, updated_variables = _update_paths(paths)
         variables.clear()
         variables.update(updated_variables)
 
-        conditions = [_combine_conditions(code) for code in updated_conditions]
+        if any(len(c) == 0 for c in updated_conditions):
+            print("updated_conditions", updated_conditions)
+        conditions = [
+            _combine_conditions(code) for code in updated_conditions if len(code) > 0
+        ]
         if len(conditions) > 1:
-            code = [bool_or(*conditions)]
+            code += [bool_or(*conditions)]
         elif len(conditions) == 1:
-            code = [conditions[0]]
-        else:
-            raise RuntimeError("No conditions!")
+            code += [conditions[0]]
 
-        code += self._convert_block_tree(bypass, variables, stop)
         return code
 
-    def _convert_conditional(
+    def _convert_target_conditional(
         self, root: BasicBlock, variables: VarMapping, stop: StopBlock
     ) -> ExprList:
         def construct_branch(
-            child: BasicBlock, join: BasicBlock, invert_conditional: bool
+            parent: BasicBlock, join: BasicBlock, invert_conditional: bool
         ) -> Tuple[ExprList, VarMapping]:
-            branch: ExprList = []
             branch_variables = copy(variables)
-            # Make typechecker happy. Conditionals had better have a condition
-            assert root.conditional
-            conditional = to_boolean(convert(root.conditional.code, branch_variables))
-            if invert_conditional:
-                conditional = bool_not(conditional)
-            branch.append(conditional)
-            branch += self._convert_block_tree(child, branch_variables, join)
+            branch: ExprList = []
+            branch += self._convert_target_tree(parent, root, branch_variables, join)
             return (branch, branch_variables)
 
         assert root.type == basic_block.Conditional
 
-        true_child, false_child, join = root.children
-        code: ExprList = []
+        assert len(root.parents) == 3
+        true_branch, false_branch, join = root.parents
+        assert join is not None
+        assert len(join.parents) == 1
+        if join.parents[0] is not None:
+            code = self._handle_parents(join.parents[0], join, variables, stop)
+        else:
+            code = []
 
-        # If any child has a required decendant, convert only that child
-        if _is_required(true_child, join):
-            code, updated_variables = construct_branch(
-                true_child, join, invert_conditional=False
-            )
-            variables.clear()
-            variables.update(updated_variables)
-            return code
-
-        if _is_required(false_child, join):
-            code, updated_variables = construct_branch(
-                false_child, join, invert_conditional=True
-            )
-            variables.clear()
-            variables.update(updated_variables)
-            return code
-
-        if root.conditional is None:
+        if join.conditional is None:
             # If the conditional is missing, this branch doesn't matter, and
             # we can skip it.
-            return self._convert_block_tree(join, variables, stop)
-
-        if true_child.returns:
-            code, updated_variables = construct_branch(
-                false_child, join, invert_conditional=True
-            )
-            variables.clear()
-            variables.update(updated_variables)
-            code += self._convert_block_tree(join, variables, stop)
-            return code
-
-        if false_child.returns:
-            code, updated_variables = construct_branch(
-                true_child, join, invert_conditional=False
-            )
-            variables.clear()
-            variables.update(updated_variables)
-            code += self._convert_block_tree(join, variables, stop)
             return code
 
         branches = []
-        branches.append(construct_branch(true_child, join, invert_conditional=False))
-        branches.append(construct_branch(false_child, join, invert_conditional=True))
+        if true_branch:
+            branches.append(
+                construct_branch(true_branch, join, invert_conditional=False)
+            )
+        if false_branch:
+            branches.append(
+                construct_branch(false_branch, join, invert_conditional=True)
+            )
+        # print("branches", branches)
 
         branch_exprs, updated_variables = _update_paths(branches)
         variables.clear()
         variables.update(updated_variables)
         combined = map(_combine_conditions, branch_exprs)
         code.append(bool_or(*combined))
-        code += self._convert_block_tree(join, variables, stop)
+        code += [self._convert(s.code, variables) for s in root.code]
         return code
 
-    def _convert_code_block(
-        self, root: BasicBlock, variables: VarMapping, stop: StopBlock
-    ) -> ExprList:
-        assert root.type == basic_block.Code
-        print("block, code length", root.number, len(root.code))
-        code = [convert(c.code, variables) for c in root.code]
-        if root.children:
-            assert len(root.children) == 1
-            code += self._convert_block_tree(root.children[0], variables, stop)
-        return code
+    def _convert(self, code: ast.AST, variables: MMapping[str, int]) -> Expression:
+        _make_ast = partial(make_ast, variables)
+        return pipe(code, _make_ast, convert)
 
 
 def to_boolean(expr: Expression) -> Expression:

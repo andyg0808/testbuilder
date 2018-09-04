@@ -1,8 +1,9 @@
 import ast
 from typing import Optional
 
-import z3  # type: ignore
+import z3
 
+from .ast_builder import make_ast
 from .converter import convert
 from .variable_expander import expand_variables
 
@@ -15,8 +16,15 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
             code_string = expected
         expected = expand_variables(expected)
     code = ast.parse(code_string)
-    print("ast", ast.dump(code))
-    result = convert(code, variables)
+    if isinstance(code, ast.Module):
+        assert len(code.body) == 1
+        code = code.body[0]
+    if isinstance(code, ast.Expr):
+        # Code that's just an expression should be something we are really wanting to test
+        code = code.value
+    # print("ast", ast.dump(code))
+    tree = make_ast(variables, code)
+    result = convert(tree)
     print("expected", expected)
     print("actual", result)
     assert z3.eq(expected, result)
@@ -66,6 +74,10 @@ def test_gt():
 
 def test_gte():
     conversion_assert("4 >= 3")
+
+
+def test_eq():
+    conversion_assert("4 == 4")
 
 
 def test_bounding():
@@ -123,3 +135,8 @@ def test_mutation():
 def test_augmutation():
     conversion_assert("pyname_a_1 == pyname_a + 1", "a += 1", {"a": 0})
     conversion_assert("pyname_a_2 == pyname_a_1 + 1", "a += 1", {"a": 1})
+
+
+def test_booleans():
+    conversion_assert("true", "True")
+    conversion_assert("false", "False")

@@ -6,9 +6,11 @@ from typing import Mapping, Optional, Sequence, Set, Union
 import pytest
 from logbook import StreamHandler, debug, warn
 
+from dataclasses import dataclass
+
 from . import basic_block
 from .basic_block import BasicBlock
-from .build_tree import BlockTree, build_tree
+from .build_tree import RETURNBLOCK, TreeBuilder, TreeWalker, build_tree
 from .slicing import Conditional, take_slice
 from .test_utils import write_dot
 
@@ -29,6 +31,13 @@ class NotRequired:
         self.value = value
 
 
+@dataclass
+class AllExit:
+    cond: str
+    true: Optional[Sequence[str]]
+    false: Optional[Sequence[str]]
+
+
 def check_type(l, t):
     for i, v in enumerate(l):
         assert v is None or isinstance(
@@ -44,7 +53,7 @@ def check_block_tree(expectations, tree, stop=None):
     """
     Check that `tree` of basic blocks matches the description provided in
     `expectations`
-    
+
     Args:
         expectations: A list of expectations which should be fulfilled by the block tree in `tree`
         tree: The root of a basic block tree which will be compared to the expectations
@@ -95,6 +104,8 @@ def check_required_block(expectations, tree, stop):
         or isinstance(expected, NotRequired)
     ):
         check_code_block(expectations, tree, stop)
+    elif isinstance(expected, AllExit):
+        check_exit_conditional(expectations, tree, stop)
     elif isinstance(expected, tuple):
         if len(expected) == 2:
             check_loop(expectations, tree, stop)
@@ -109,7 +120,7 @@ def check_required_block(expectations, tree, stop):
 
 
 def check_loop(expectations, tree, stop):
-    print("checkloop expecting", expectations, "block", tree.number)
+    # print("checkloop expecting", expectations, "block", tree.number)
     expected = expectations[0]
     # Check basic properties we expect of loop expectations
     assert len(expected) == 2
@@ -120,7 +131,9 @@ def check_loop(expectations, tree, stop):
     # Check basic properties we expect of loop blocks
     assert tree.type == basic_block.Loop
     assert len(tree.children) == 2
+    assert len(tree.parents) == 2
     assert tree.conditional
+    assert is_descendent(tree.children[0], tree.parents[0])
 
     # Check that we have the right conditional
     check_code(expected_cond, tree.conditional.code)
@@ -139,21 +152,51 @@ def check_conditional(expectations, tree, stop):
     assert isinstance(expected_false, list) or expected_false is None
 
     # Check basic properties of conditional blocks
-    assert tree.type == basic_block.Conditional
+    assert tree.type == basic_block.StartConditional
     # The third child is the join block
     assert len(tree.children) == 3
+    assert len(tree.parents) == 1
+    true_branch, false_branch, join = tree.children
     assert tree.conditional
+    assert join.type == basic_block.Conditional
+    if join.number != RETURNBLOCK:
+        assert len(join.children) == 1
+        assert len(join.parents) == 3
+        assert is_descendent(true_branch, join.parents[0])
+        assert is_descendent(false_branch, join.parents[1])
+        assert tree is join.parents[2]
 
     debug("Checking conditional block {}", tree.number)
     check_code(expected_cond, tree.conditional.code)
 
-    # Rather than finding the junction point, just check all the remaining
-    # expectations against the children of each branch. It's a bit inefficient,
-    # but this is test code.
-    check_conditional_fork(expected_true, tree.children[0], tree.children[2])
-    check_conditional_fork(expected_false, tree.children[1], tree.children[2])
+    check_conditional_fork(expected_true, true_branch, join)
+    check_conditional_fork(expected_false, false_branch, join)
 
-    check_block_tree(expectations[1:], tree.children[2], stop)
+    check_block_tree(expectations[1:], join, stop)
+
+
+def check_exit_conditional(expectations, tree, stop):
+    expected = expectations[0]
+    # Check basic properties of conditional expectations
+
+    assert isinstance(expected.cond, str)
+    assert isinstance(expected.true, list) or expected.true is None
+    assert isinstance(expected.false, list) or expected.false is None
+
+    # Check basic properties of conditional blocks
+    assert tree.type == basic_block.StartConditional
+    # No join block exists for conditionals which return from all branches.
+    # They never join!
+    assert len(tree.children) == 2
+    assert len(tree.parents) == 1
+    true_branch, false_branch = tree.children
+    assert tree.conditional
+
+    debug("Checking conditional block {}", tree.number)
+    check_code(expected.cond, tree.conditional.code)
+
+    check_conditional_fork(expected.true, true_branch, None)
+    check_conditional_fork(expected.false, false_branch, None)
 
 
 def check_conditional_fork(expectations, tree, stop):
@@ -181,13 +224,23 @@ def check_empty_tree(tree, stop):
     # Search using standard pattern; run check_empty_tree on each block found
     if tree.type == basic_block.Loop:
         assert len(tree.children) == 2
+        assert len(tree.parents) == 2
         check_empty_tree(tree.children[0], tree.children[2])
         check_empty_tree(tree.children[1], tree.children[2])
-    elif tree.type == basic_block.Conditional:
-        assert len(tree.children) == 3
+    elif tree.type == basic_block.StartConditional:
+        assert len(tree.children) in (2, 3)
+        assert len(tree.parents) == 1
         check_empty_tree(tree.children[0], tree)
         check_empty_tree(tree.children[1], stop)
     elif tree.type == basic_block.Code:
+        if tree.number != RETURNBLOCK:
+            assert len(tree.parents) == 1
+        if tree.children:
+            assert len(tree.children) == 1
+            check_empty_tree(tree.children[0], stop)
+    elif tree.type == basic_block.Conditional:
+        if tree.number != RETURNBLOCK:
+            assert len(tree.parents) == 3
         if tree.children:
             assert len(tree.children) == 1
             check_empty_tree(tree.children[0], stop)
@@ -207,6 +260,8 @@ def check_code_block(expectations, tree, stop):
         check_done(tree, stop)
     else:
         assert len(tree.children) == 1
+        if tree.type == basic_block.Conditional:
+            assert len(tree.parents) == 3
         check_block_tree(expectations[len(tree.code) :], tree.children[0], stop)
 
 
@@ -257,6 +312,23 @@ def check_done(tree, stop):
         assert len(tree.children) == 0
 
 
+def is_descendent(node, maybeDescendent, seen=None) -> bool:
+    if not seen:
+        seen = set()
+
+    if node in seen:
+        return False
+    else:
+        seen.add(node)
+
+    if node is maybeDescendent:
+        return True
+    for child in node.children:
+        if is_descendent(child, maybeDescendent, seen):
+            return True
+    return False
+
+
 def empty_block(tree):
     return not tree.conditional and not tree.code
 
@@ -278,15 +350,15 @@ def create_tree(code: str, write_tree: str = "", line=-1):
     parsed = ast.parse(code.strip())
     tree = build_tree(parsed)
     if write_tree != "":
-        print("writing tree!")
+        # print("writing tree!")
         write_dot(tree.dot(), write_tree)
         write_dot(tree.build_tree()[0].dot(), write_tree)
-    print("done writing")
-    s = take_slice(parsed, line)
+    # print("done writing")
+    s = take_slice(line, parsed)
     if not s:
         warn("No such slice exists")
         return None
-    print("before", s.walk_tree())
+    # print("before", s.walk_tree())
     return tree.inflate(s)
 
 
@@ -294,12 +366,14 @@ def check_tree_builder(expected: str, code: str, write_tree: str = "", line=-1):
     tree = create_tree(code, write_tree, line=line)
     if write_tree != "":
         write_dot(tree.dot(), write_tree)
-    check_tree(expected, tree)
+    check_tree(expected, tree.entrance)
 
 
 def test_tree_building():
     tree = {1: [3], 2: [3], 3: [4, 5]}
-    bt = BlockTree(mapping={}, tree=tree, types={}, returns={})
+    bt = TreeBuilder(
+        mapping={}, tree=tree, types={}, returns={}, node_order={}, code=None
+    )
     block_tree = bt.build_tree()
     assert block_tree[1].children == [block_tree[3]]
     assert block_tree[2].children == [block_tree[3]]
@@ -308,12 +382,113 @@ def test_tree_building():
         assert isinstance(block_tree[i], BasicBlock)
 
 
+def test_tree_building2():
+    tree = {
+        0: [],
+        1: [2],
+        2: [3, 8],
+        3: [4],
+        4: [5, 7, 6],
+        5: [6],
+        6: [2],
+        7: [6],
+        8: [0],
+    }
+    types = {
+        2: basic_block.Loop,
+        4: basic_block.StartConditional,
+        6: basic_block.Conditional,
+    }
+    node_order = {2: [6, 1], 6: [5, 7, 4]}
+    bt = TreeBuilder(
+        mapping={}, tree=tree, types=types, returns={}, node_order=node_order, code=None
+    )
+    block_tree = bt.build_tree()
+    assert block_tree[0].children == []
+    assert block_tree[1].children == [block_tree[2]]
+    assert block_tree[2].children == [block_tree[3], block_tree[8]]
+    assert block_tree[3].children == [block_tree[4]]
+    assert block_tree[4].children == [block_tree[5], block_tree[7], block_tree[6]]
+    assert block_tree[5].children == [block_tree[6]]
+    assert block_tree[6].children == [block_tree[2]]
+    assert block_tree[7].children == [block_tree[6]]
+    assert block_tree[8].children == [block_tree[0]]
+
+    assert block_tree[0].parents == [block_tree[8]]
+    assert block_tree[1].parents == []
+    assert block_tree[2].parents == [block_tree[6], block_tree[1]]
+    assert block_tree[3].parents == [block_tree[2]]
+    assert block_tree[4].parents == [block_tree[3]]
+    assert block_tree[5].parents == [block_tree[4]]
+    assert block_tree[6].parents == [block_tree[5], block_tree[7], block_tree[4]]
+    assert block_tree[7].parents == [block_tree[4]]
+    assert block_tree[8].parents == [block_tree[2]]
+
+
+def test_tree_spec_creation():
+    code = """
+if ...:
+    while ...:
+        pass
+else:
+    while ...:
+        if ...:
+            pass
+        else:
+            pass
+    if ...:
+        pass
+"""
+
+    from .test_utils import show_dot
+
+    parsed = ast.parse(code)
+    tw = TreeWalker(parsed)
+    tw.visit(parsed)
+    # builder = tw.get_builder()
+    # tree = builder.build_tree()
+    # show_dot(tree[1].dot())
+    assert tw.tree == {
+        0: [],
+        1: [2],
+        2: [3, 8, 7],
+        3: [4],
+        4: [5, 6],
+        5: [4],
+        6: [7],
+        7: [22],
+        8: [9],
+        9: [10, 16],
+        10: [11],
+        11: [12, 14, 13],
+        12: [13],
+        13: [15],
+        14: [13],
+        15: [9],
+        16: [17],
+        17: [18, 20, 19],
+        18: [19],
+        19: [21],
+        20: [19],
+        21: [7],
+        22: [],
+    }
+
+    assert tw.node_order == {
+        4: [5, 3],
+        7: [6, 21, 2],
+        9: [15, 8],
+        13: [12, 14, 11],
+        19: [18, 20, 17],
+    }
+
+
 def test_block_creation():
     code = """
 def example(a):
     return a
     """
-    expected = [Required("return a")]
+    expected = [Required("return a"), None]
     check_tree_builder(expected, code)
 
 
@@ -324,7 +499,7 @@ def example(a, b):
     b = a
     return b
     """
-    expected = ["a = 3", "b = a", Required("return b")]
+    expected = ["a = 3", "b = a", Required("return b"), None]
     check_tree_builder(expected, code)
 
 
@@ -335,7 +510,7 @@ def example(a, b):
     b = 3
     return a + b
     """
-    expected = ["a = b", "b = 3", Required("return a + b")]
+    expected = ["a = b", "b = 3", Required("return a + b"), None]
     check_tree_builder(expected, code)
 
 
@@ -346,7 +521,12 @@ def example(a, b):
         r = a
     return r
     """
-    expected = [None, ("a < b", [NotRequired("r = a")], None), Required("return r")]
+    expected = [
+        None,
+        ("a < b", [NotRequired("r = a")], None),
+        Required("return r"),
+        None,
+    ]
     check_tree_builder(expected, code)
 
 
@@ -358,7 +538,7 @@ def things(a, b):
     else:
         return b
     """
-    expected = [None, ("4 < 3", None, ["return b"]), None]
+    expected = [None, AllExit("4 < 3", None, ["return b", None]), None]
     check_tree_builder(expected, code)
 
 
@@ -371,7 +551,7 @@ def example(a, b):
         r = b
     return r
     """
-    expected = [None, ("a < b", ["r = a"], ["r = b"]), "return r"]
+    expected = [None, ("a < b", ["r = a"], ["r = b"]), "return r", None]
     check_tree_builder(expected, code)
 
 
@@ -391,7 +571,7 @@ def min(a, b, c):
     """
     expected = [
         None,
-        ("a < b", None, [None, ("b < c", None, ["return c"]), None]),
+        AllExit("a < b", None, [None, AllExit("b < c", None, ["return c", None])]),
         None,
     ]
     check_tree_builder(expected, code)
@@ -407,7 +587,7 @@ def forked(a):
         c = c + 2
     return c
     """
-    expected = ["c = 0", ("a < 3", ["c = c + 3"], ["c = c + 2"]), "return c"]
+    expected = ["c = 0", ("a < 3", ["c = c + 3"], ["c = c + 2"]), "return c", None]
     check_tree_builder(expected, code)
 
 
@@ -418,7 +598,7 @@ def while_away(i):
         i -= 1
     return i
     """
-    expected = [None, ("i > 0", ["i -= 1"]), "return i"]
+    expected = [None, ("i > 0", ["i -= 1"]), "return i", None]
     check_tree_builder(expected, code)
 
 
@@ -429,7 +609,7 @@ def while_away(i):
         i -= 1
     return i
     """
-    tree = create_tree(code)
+    tree = create_tree(code).entrance
     assert len(tree.children) == 1
     tree = tree.children[0]
 
@@ -455,6 +635,7 @@ def maybe_while(a, b):
         None,
         ("a < 4", [None, ("b > 0", ["b -= 1"]), None], ["b = a"]),
         "return b",
+        None,
     ]
     check_tree_builder(expected, code)
 
@@ -470,8 +651,9 @@ return a
     """
     expected = [
         None,
-        ("a > 1", [None, ("b > 1", ["a -= b"], ["a += b"]), None]),
+        ("a > 1", [None, ("b > 1", ["a -= b"], ["a += b"]), None, None]),
         "return a",
+        None,
     ]
     check_tree_builder(expected, code)
 
@@ -486,7 +668,7 @@ return 2
 
 
 def test_is_parent():
-    b = BlockTree({}, {}, {}, {})
+    b = TreeBuilder({}, {}, {}, {}, {}, None)
     start = BasicBlock()
     end = start.start_block().start_block()
     end.children.append(start)

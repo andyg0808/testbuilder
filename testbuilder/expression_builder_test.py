@@ -1,10 +1,11 @@
 import ast
+from functools import partial
 
 import pytest
+from toolz import pipe
 
 import z3
 
-from .build_tree import build_tree
 from .expression_builder import ExpressionBuilder, get_expression
 from .slicing import take_slice
 from .test_utils import write_dot
@@ -46,9 +47,10 @@ def check_expression(
     """
     if isinstance(expected, str):
         expected = expand_variables(expected)
-    expr = get_expression(ast.parse(code_string.strip()), line, depth)
-    print("expected", expected)
-    print("expr", expr)
+    _get_expression = partial(get_expression, line, depth=depth)
+    expr = pipe(code_string.strip(), ast.parse, _get_expression)
+    print("expected  ", expected)
+    print("expression", expr)
     if simplify:
         expected = z3.simplify(expected)
         expr = z3.simplify(expr)
@@ -56,6 +58,28 @@ def check_expression(
         assert expr is None
     else:
         assert z3.eq(expected, expr)
+
+
+def test_basic_call():
+    # TODO: Handle calls correctly
+    # What about recursion?
+    check_expression("abs(i)", "true")
+
+
+def test_multiplication():
+    check_expression("i * 2", "pyname_i * 2")
+
+
+def test_gte():
+    check_expression("i >= 4", "pyname_i >= 4")
+
+
+def test_lte():
+    check_expression("i <= 4", "pyname_i <= 4")
+
+
+def test_div():
+    check_expression("i / 3", "pyname_i / 3")
 
 
 def test_constant():
@@ -282,8 +306,8 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_1 == pyname_a) or \
- (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and Not(pyname_a_1 > 1))) and \
+(pyname_a_1 == pyname_a or \
+ pyname_a > 1 and pyname_a_1 == pyname_a - 1) and Not(pyname_a_1 > 1) and \
 ret == pyname_a_1
     """,
     )
@@ -298,12 +322,12 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_2 == pyname_a) or \
- (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and Not(pyname_a_1 > 1) \
+((pyname_a_2 == pyname_a) or \
+ (pyname_a > 1 and pyname_a_1 == pyname_a - 1 \
   and pyname_a_2 == pyname_a_1) or \
  (pyname_a > 1 and pyname_a_1 == pyname_a - 1 and \
-  pyname_a_1 > 1 and pyname_a_2 == pyname_a_1 - 1 and Not(pyname_a_2 > 1))) and \
-ret == pyname_a_2
+  pyname_a_1 > 1 and pyname_a_2 == pyname_a_1 - 1)) and Not(pyname_a_2 > 1) \
+  and ret == pyname_a_2
     """,
         depth=2,
     )
@@ -321,11 +345,11 @@ def things(a, b):
     return a
     """,
         """
-((Not(pyname_a > 1) and pyname_a_1 == pyname_a) or \
+((pyname_a_1 == pyname_a) or \
  (pyname_a > 1 and \
   (pyname_b > 1 and pyname_a_1 == pyname_a - pyname_b or \
    Not(pyname_b > 1) and pyname_a_1 == pyname_a + pyname_b) \
-  and Not(pyname_a_1 > 1))) and \
+  )) and Not(pyname_a_1 > 1) and \
 ret == pyname_a_1
     """,
     )
@@ -342,13 +366,29 @@ def tester(a, b):
     return a
     """,
         """
-    (Not(pyname_a > 1) and pyname_a_1 == pyname_a and pyname_b_1 == pyname_b or \
+    (pyname_a_1 == pyname_a or \
      (pyname_a > 1 and \
-      (Not(pyname_b > 1) and pyname_b_1 == pyname_b or \
-       pyname_b > 1 and pyname_b_1 == pyname_b - 1 and Not(pyname_b_1 > 1)) and \
-      pyname_a_1 == pyname_b_1 and Not(pyname_a_1 > 1))) and \
+      (pyname_b_1 == pyname_b or \
+       pyname_b > 1 and pyname_b_1 == pyname_b - 1) and Not(pyname_b_1 > 1) and \
+      pyname_a_1 == pyname_b_1)) and Not(pyname_a_1 > 1) and \
     ret == pyname_a_1
     """,
+    )
+
+
+def test_return_before_conditional():
+    check_expression(
+        """
+def test(i):
+    i += 1
+    if i < 10:
+        i += 2
+    else:
+        i -= 10
+    return i
+        """,
+        "pyname_i_1 == pyname_i + 1",
+        line=2,
     )
 
 
@@ -376,8 +416,8 @@ def test(i):
     return i
     """,
         """
-    (Not(pyname_i == 0) and pyname_i_1 == pyname_i or \
-     pyname_i == 0 and pyname_i_1 == pyname_i - 1 and Not(pyname_i_1 == 0)) and \
+    (pyname_i_1 == pyname_i or \
+     pyname_i == 0 and pyname_i_1 == pyname_i - 1) and Not(pyname_i_1 == 0) and \
     ret == pyname_i_1
     """,
     )
@@ -393,7 +433,8 @@ def test(i):
     """,
         "pyname_i > 0 and ret == 2",
         line=3,
-        depth=22,
+        # depth=22,
+        depth=2,
     )
 
 
@@ -442,6 +483,8 @@ def test(i):
         j = 1
     return 2
     """,
+        # TODO: make this work
+        # "Not(pyname_i < 5) and ret == 2",
         "ret == 2",
     )
 
@@ -452,6 +495,27 @@ def test_sliced_dependent_while():
 def test(i):
     while i < 5:
         j = 1
+    return i
+    """,
+        # TODO: We used to have these as just `ret==pyname_i`, but it seems
+        # reasonable that, in order to get to the end line, we don't
+        # want to choose a value which might infinite loop in the
+        # `while`, so we should force the `while` condition to be
+        # false.
+        # "Not(pyname_i < 5) and ret == pyname_i",
+        "ret == pyname_i",
+    )
+
+
+def test_uninteresting_dependent_while():
+    # This case is where the `while` can't infinite loop, so the code
+    # below it shouldn't be controlled by it at all.
+    check_expression(
+        """
+def test(i):
+    j = 5
+    while j > 0:
+        j -= 1
     return i
     """,
         "ret == pyname_i",
@@ -468,6 +532,65 @@ def test(i):
     return 2
     """,
         "Or(pyname_i < 8 and Not(pyname_i < 2), Not(pyname_i < 8)) and ret == 2",
+    )
+
+
+def test_basic_conditional_return():
+    check_expression(
+        """
+def test(i):
+    if i > 8:
+        return i
+    return i
+    """,
+        "Not(pyname_i > 8) and ret == pyname_i",
+    )
+
+
+def test_multiple_assignment_filtering():
+    check_expression(
+        """
+def test(i):
+    if i < 10:
+        i = 3
+        i = 4
+        i = 5
+    else:
+        return 1
+    return 4
+        """,
+        "pyname_i < 10 and ret == 4",
+    )
+
+
+def test_desired_conditional_return():
+    check_expression(
+        """
+def test(i):
+    if i > 8:
+        return i
+    return i
+    """,
+        "pyname_i > 8 and ret == pyname_i",
+        line=3,
+    )
+
+
+@pytest.mark.skip()
+def test_avoid_infinite_loop():
+    # We can't actually check for termination in all cases (thanks halting
+    # problem!), but it would be nice if we could at least avoid running loops
+    # which our checker can't confirm exit. To do this, we probably need to
+    # stop slicing code.
+    check_expression(
+        """
+def test(i):
+    j = i
+    while j > 1:
+        j += 1
+    return i
+    """,
+        "Not(i > 1) and ret == pyname_i",
     )
 
 
@@ -498,9 +621,9 @@ def test(i):
     )
 
 
-@pytest.mark.skip
 def test_conditional_return_in_loop():
-    code = """
+    check_expression(
+        """
 def test(i):
     while i > 0:
         if i == 2:
@@ -508,8 +631,37 @@ def test(i):
         else:
             i -= 1
     return i
-    """
-    check_expression(code, "pyname_i > 0 and pyname_i == 2 and ret == 2", line=4)
+    """,
+        "pyname_i > 0 and pyname_i == 2 and ret == 2",
+        line=4,
+    )
+
+
+def test_desired_loop():
+    check_expression(
+        """
+def test(i):
+    while i > 0:
+        i -= 1
+    return i
+    """,
+        "pyname_i > 0 and pyname_i_1 == pyname_i - 1",
+        line=3,
+    )
+
+
+@pytest.mark.skip
+def test_avoid_simple_infinite_loop():
+    check_expression(
+        """
+def test(i):
+    while i > 1:
+        pass
+    return i
+    """,
+        "Or(true, pyname_i > 1, pyname_i > 1 and pyname_i > 1)\
+         and Not(pyname_i > 1) and ret == pyname_i",
+    )
 
 
 @pytest.mark.skip
@@ -644,3 +796,33 @@ def tester(b):
     # After an example in canon2005
     # This function will crash if passed False (because it tries to add a number to
     # a string). This needs to be discovered!
+
+
+@pytest.mark.skip
+def test_node_swap():
+    # After an example in khurshid2003
+    code = """
+@dataclass
+class Node:
+    elem: int
+    next: "Node"
+
+def swapNode(node):
+    if node.next is not None:
+        next = node.next
+        if node.elem - next.elem > 0:
+            t = next
+            node.next = t.next
+            t.next = node
+            return t
+    return node
+    """
+    check_expression(
+        code,
+        [
+            """
+        (ite (Node.is_new pyname_node)
+             (let ((pyname_next
+    """
+        ],
+    )

@@ -7,8 +7,9 @@ from unicodedata import normalize
 from logbook import Logger, StreamHandler  # type: ignore
 
 from .build_tree import build_tree
-from .expression_builder import Expression, ExpressionBuilder, get_slice_variables
+from .expression_builder import Expression, ExpressionBuilder
 from .function_walker import FunctionWalker
+from .renderer import render_test
 from .slicing import Dependency, Slicer
 from .solver import Solution, solve
 
@@ -24,10 +25,10 @@ class TestConstructor:
         self.slicer = Slicer(self.function)
         self.block_tree = build_tree(self.function)
 
-    def get_expression(self, dep_tree: Dependency) -> Expression:
+    def get_expression(self, dep_tree: Dependency, depth: int = 1) -> Expression:
+        variables = dep_tree.get_slice_variables()
         flowgraph = self.block_tree.inflate(dep_tree)
-        variables = get_slice_variables(dep_tree)
-        builder = ExpressionBuilder(1)
+        builder = ExpressionBuilder(depth)
         return builder.get_expression(variables, flowgraph)
 
     def solve_expression(self, expression: Expression) -> Optional[Solution]:
@@ -53,7 +54,7 @@ class TestConstructor:
             )
             return ""
 
-        if prompt != "":
+        if prompt == "":
             print(f"What is the expected output from these arguments? {inputs}")
         expected = io.readline()
         return self.generate_test(inputs, expected)
@@ -79,24 +80,6 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
         c = TestConstructor(source, function)
         tests += c.generate_all(io, prompt)
     return tests
-
-
-def render_test(source: Path, name: str, args: Mapping[str, Any], expected: Any) -> str:
-    keys = [x for x in sorted(args.keys()) if x != "ret"]
-    arg_strings = [f"{key} = {args[key]}" for key in keys]
-    args_string = "\n    ".join(arg_strings)
-    call_args_string = ", ".join(keys)
-    call_string = f"{name}({call_args_string})"
-    expected = str(expected).strip()
-    print("callstring", call_string)
-    return f"""
-from {source.stem} import {name}
-def test_{name}():
-    {args_string}
-    actual = {call_string}
-    expected = {expected}
-    assert actual == expected
-    """
 
 
 def run_test(func_name: str, code_string: str) -> None:

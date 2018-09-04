@@ -5,8 +5,10 @@ import pytest
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
-from .generate import generate_tests, render_test, run_test
+from .generate import run_test
+from .generate_proto import generate_tests
 from .hypothesis_entities import function_names, functions
+from .renderer import render_test
 
 
 def test_generation():

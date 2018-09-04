@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import ast
-from copy import copy
 from abc import abstractmethod
+from copy import copy
 from functools import reduce
 from typing import (
     Any,
     Generic,
+    Iterator,
     List,
     MutableMapping as MMapping,
     Optional,
@@ -16,7 +17,8 @@ from typing import (
     cast,
 )
 
-from .linemapper import LineMapper
+from dataclasses import dataclass
+
 from .var_collector import find_targets, find_vars
 
 T = TypeVar("T")
@@ -77,6 +79,14 @@ class Dependency(Generic[T]):
                     added.add(i)
         return descr
 
+    def get_slice_variables(self) -> Iterator["Variable"]:
+        """
+        Find all Variable instances in a dependency tree.
+        """
+        slice_tree = self.format_slice()
+        variables = filter(lambda x: isinstance(x, Variable), slice_tree)
+        return cast(Iterator[Variable], variables)
+
     def linearize(self) -> List["Dependency"]:
         deps = self.format_slice()
         deps.sort(key=lambda d: d.lineno)
@@ -84,6 +94,13 @@ class Dependency(Generic[T]):
 
     def walk_tree(self) -> DependencyTree:
         return [self] + [i.walk_tree() for i in self.dependencies]  # type: ignore
+
+    def lines(self) -> Set[int]:
+        return {
+            stmt.lineno
+            for stmt in self.format_slice()
+            if not isinstance(stmt, Variable)
+        }
 
 
 class Variable(Dependency[str]):
@@ -188,7 +205,9 @@ class SliceVisitor(ast.NodeVisitor):
             if self.last_var is not None:
                 self.variables[var] = {self.last_var}
 
-    def visit_single_assignment(self, node: Union[ast.AugAssign, ast.AnnAssign]) -> None:
+    def visit_single_assignment(
+        self, node: Union[ast.AugAssign, ast.AnnAssign]
+    ) -> None:
         self.generic_visit(node)
         var = find_targets(node.target)[0]
         if self.last_var is not None:
@@ -360,13 +379,25 @@ class Slicer:
 
 
 def take_slice(
-    code: ast.AST, line: int, filename: Optional[str] = None
+    line: int, code: ast.AST, filename: Optional[str] = None
 ) -> Optional[Dependency]:
     s = Slicer(code)
     if line in s:
         return s.take_slice(line, filename)
     else:
         return None
+
+
+@dataclass
+class FuncStmt:
+    statement: Statement
+    function: ast.FunctionDef
+
+
+def split_statements(func: ast.FunctionDef) -> Iterator[FuncStmt]:
+    assert isinstance(func, ast.FunctionDef)
+    s = Slicer(func)
+    return map(lambda stmt: FuncStmt(stmt, func), s.statements())
 
 
 class FoundReturn(Exception):

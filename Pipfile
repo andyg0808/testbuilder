@@ -4,13 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-astor = "==0.6"
+astor = "==0.7.1"
 "beautifulsoup4" = "*"
 docopt = "*"
 Flask = "==0.12.2"
 Pygments = "==2.2.0"
 pygments-style-solarized = "==0.1.1"
 logbook = "*"
+toolz = "*"
+injectable = "*"
+typeassert = {git = "ssh://git@gitlab.com/andyg0808/typeassert.git"}
 
 [dev-packages]
 black = "==18.6b4"
@@ -24,6 +27,7 @@ pytest = "*"
 sphinx = "*"
 termcolor = "*"
 hypothesis = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.7"
