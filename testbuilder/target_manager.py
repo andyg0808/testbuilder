@@ -23,3 +23,9 @@ class TargetManager:
 
     def __or__(self, other: TargetManager) -> TargetManager:
         return TargetManager(self.targets | other.targets)
+
+    def update(self, replacement: TargetManager) -> None:
+        self.targets = replacement.targets
+
+    def merge(self, other: TargetManager) -> None:
+        self.targets |= other.targets

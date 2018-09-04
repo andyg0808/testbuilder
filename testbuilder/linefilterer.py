@@ -223,7 +223,7 @@ class Filter(SimpleVisitor[Coroutine]):
         false_branch: Coroutine = run_to_suspend(
             self.visit(cond.false_branch, cond.parent, false_targets)
         )
-        targets = true_targets | false_targets
+        targets.update(true_targets | false_targets)
         parent = yield from self.visit(cond.parent, stop, targets)
         return sbb.Conditional(
             number=cond.number,
@@ -240,12 +240,12 @@ class Filter(SimpleVisitor[Coroutine]):
         if cond is stop:
             return (yield)
         loops = []
-        post_targets = targets
+        post_targets = TargetManager()
         for l in loop.loops:
             branch_targets = copy(targets)
             loops.append(run_to_suspend(self.visit(l, loop.parent, branch_targets)))
-            post_targets.append(branch_targets)
-        target = reduce(lambda x, y: x | y, post_targets)
+            post_targets.merge(branch_targets)
+        targets.update(post_targets)
         parent = yield from self.visit(loop.parent, stop, targets)
         completed_loops = [retrieve(l, parent) for l in loops]
         return sbb.Loop(parent=parent, loops=completed_loops)
