@@ -599,10 +599,11 @@ def test(i):
 
 @pytest.mark.skip()
 def test_avoid_infinite_loop():
-    # We can't actually check for termination in all cases (thanks halting
-    # problem!), but it would be nice if we could at least avoid running loops
-    # which our checker can't confirm exit. To do this, we probably need to
-    # stop slicing code.
+    # We can't actually check for termination in all cases (thanks
+    # halting problem!), but it would be nice if we could at least
+    # avoid running loops which our checker can't confirm exit. We
+    # probably will need to track dependencies through loop
+    # conditionals for this.
     check_expression(
         """
 def test(i):
@@ -611,7 +612,7 @@ def test(i):
         j += 1
     return i
     """,
-        "Not(i > 1) and ret == pyname_i",
+        "pyname_j == pyname_i and Not(pyname_j > 1) and ret == pyname_i",
     )
 
 
