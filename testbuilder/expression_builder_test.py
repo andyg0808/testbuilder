@@ -777,6 +777,42 @@ def tester(count):
         overall=True,
     )
 
+def test_function_call():
+    check_expression(
+        """
+def double(i):
+    return i * 2
+
+def call_func(i):
+    return double(i)
+        """, "ret == 2 * pyname_i")
+
+def test_conditional_functions():
+    check_expression(
+        """
+def conditioned(i):
+    if i > 4:
+        return 6
+    else:
+        return 14
+
+def run_func(i):
+    return i * conditioned(i)
+        """, """
+conditioned = Function('conditioned', IntSort(), IntSort())
+
+""")
+
+@pytest.mark.skip
+def test_function_recursion():
+    check_expression(
+        """
+def zero(i):
+    if i == 0:
+        return 0
+    else:
+        return zero(i-1)
+        """, "ret == 0")
 
 @pytest.mark.skip
 def test_flow_dependent_type():
