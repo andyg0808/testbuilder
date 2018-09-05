@@ -785,7 +785,10 @@ def double(i):
 
 def call_func(i):
     return double(i)
-        """, "ret == 2 * pyname_i")
+        """,
+        "ret == 2 * pyname_i",
+    )
+
 
 def test_conditional_functions():
     check_expression(
@@ -798,10 +801,13 @@ def conditioned(i):
 
 def run_func(i):
     return i * conditioned(i)
-        """, """
+        """,
+        """
 conditioned = Function('conditioned', IntSort(), IntSort())
 
-""")
+""",
+    )
+
 
 @pytest.mark.skip
 def test_function_recursion():
@@ -812,7 +818,10 @@ def zero(i):
         return 0
     else:
         return zero(i-1)
-        """, "ret == 0")
+        """,
+        "ret == 0",
+    )
+
 
 @pytest.mark.skip
 def test_flow_dependent_type():

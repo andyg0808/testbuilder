@@ -1,7 +1,6 @@
 from typing import MutableMapping as MMapping, Optional, Set, TypeVar, cast
 
 from logbook import Logger, StderrHandler
-
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
@@ -48,7 +47,7 @@ class LineFilterer(UpdateVisitor):
             end = max(func.lines)
             if start > self.max_line or end < self.min_line:
                 log.notice(
-                    f"Throwing out {func} because {start}>{self.max_line}"
+                    f"Throwing out {func} because {start} > {self.max_line}"
                     f" or {end} < {self.min_line}"
                 )
                 continue

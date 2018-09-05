@@ -1,10 +1,9 @@
+from dataclasses import dataclass
 from functools import partial, reduce, singledispatch
 from typing import List, MutableMapping as MMapping, Optional, Set, Union
 
-from toolz import mapcat, pipe
-
 import z3
-from dataclasses import dataclass
+from toolz import mapcat, pipe
 
 from . import basic_block as bb, converter, nodetree as n, ssa_basic_blocks as sbb
 from .basic_block import BlockTree
@@ -136,15 +135,6 @@ class VariableFinder(GatherVisitor[sbb.Variable]):
         else:
             return []
 
-    # def visit_BlockTree(self, tree: sbb.BlockTree) -> List[sbb.Variable]:
-    #     return self.visit(tree.end)
-
-    # def visit_ReturnBlock(self, block: sbb.ReturnBlock) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.parents))
-
-    # def visit_Code(self, block: sbb.Code) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.code))
-
 
 def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
@@ -191,31 +181,3 @@ def ssa_lines_to_expression(
 
     repaired_request: sbb.Request = pipe(request, repair, PhiFilterer())
     return ssa_to_expression(repaired_request)
-
-
-# def blocktree_and_ssa_to_expression(
-#     depth: int, tree: BlockTree, module: sbb.Module, variables: VarMapping
-# ) -> ExprList:
-#     from .basic_block_to_ssa import visit as basic_block_to_ssa
-
-#     assert tree.target
-#     code = basic_block_to_ssa(tree.target, variables)
-#     from .test_utils import show_dot
-
-#     # show_dot(code)
-#     return ssa_to_expression(sbb.Request(module, code))
-
-
-# @singledispatch
-# def is_false_path(node: sbb.Controlled, query: sbb.BasicBlock) -> bool:
-#     raise RuntimeError("Not implemented")
-
-
-# @is_false_path.register(sbb.Conditional)
-# def is_false_path(node: sbb.Conditional, query: sbb.BasicBlock) -> bool:
-#     return node.false_branch is query
-
-
-# @is_false_path.register(sbb.Loop)
-# def is_false_path(node: sbb.Loop, query: sbb.BasicBlock) -> bool:
-#     return node.bypass is query
