@@ -3,6 +3,7 @@ Most of the names in this class are based on the names used in the Python AST.
 The visit and generic_visit methods are potentially based on the equivalent
 functions for the Python AST.
 """
+from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass
 from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
@@ -132,7 +133,8 @@ class PhiSet(Set):
 
 @dataclass
 class ArgumentBind(Set):
-    pass
+    target: PrefixedName
+    e: expr
 
 
 @dataclass
