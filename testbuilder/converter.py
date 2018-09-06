@@ -40,7 +40,7 @@ OpFunc = Callable[..., Expression]
 
 @singledispatch
 def visit_expr(node: n.expr) -> Expression:
-    raise RuntimeError("Unimplemented handler for {type(node)}")
+    raise RuntimeError(f"Unimplemented handler for {type(node)}")
 
 
 @singledispatch
