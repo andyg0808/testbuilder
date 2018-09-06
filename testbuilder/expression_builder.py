@@ -17,9 +17,8 @@ from typing import (
     Tuple,
 )
 
-from toolz import pipe
-
 import z3
+from toolz import pipe
 from typeassert import assertify
 
 from . import basic_block
@@ -106,17 +105,12 @@ class ExpressionBuilder:
     ) -> Expression:
         from .ast_to_ssa import ast_to_ssa
 
-        # from .ssa_to_expression import blocktree_and_ssa_to_expression
-        # from .ssa_to_expression import ssa_to_expression
         from .ssa_to_expression import ssa_lines_to_expression
         from toolz import pipe
         from functools import partial
         from .ssa_basic_blocks import TestData
 
         _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
-        # _ssa_to_expression = partial(
-        #     blocktree_and_ssa_to_expression, self.depth, tree, variables=variables
-        # )
         _ssa_to_expression = partial(
             ssa_lines_to_expression, self.target_line, self.lines
         )
