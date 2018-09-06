@@ -3,10 +3,9 @@ Most of the names in this class are based on the names used in the Python AST.
 The visit and generic_visit methods are potentially based on the equivalent
 functions for the Python AST.
 """
-from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
-
 import dataclasses
 from dataclasses import dataclass
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 
 AddedLine = -1
 
@@ -132,6 +131,11 @@ class PhiSet(Set):
 
 
 @dataclass
+class ArgumentBind(Set):
+    pass
+
+
+@dataclass
 class Store(expr):
     arr: expr
     idx: int
@@ -164,6 +168,27 @@ class Name(expr):
     def __post_init__(self) -> None:
         assert isinstance(self.id, str)
         assert isinstance(self.set_count, int)
+
+
+@dataclass
+class Prefix:
+    func: str
+    number: int
+
+
+@dataclass
+class PrefixedName(Name, Prefix):
+    pass
+
+
+@dataclass
+class Result(expr, Prefix):
+    pass
+
+
+@dataclass
+class ReturnResult(stmt, Prefix):
+    value: Optional[expr]
 
 
 @dataclass

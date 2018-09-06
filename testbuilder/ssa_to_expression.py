@@ -15,10 +15,12 @@ from .expression_builder import (
     bool_or,
     to_boolean,
 )
+from .function_substituter import FunctionSubstitute
 from .iter_monad import chain, liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
+from .test_utils import write_dot
 from .utils import crash
 from .visitor import GatherVisitor, SimpleVisitor
 
@@ -179,5 +181,8 @@ def ssa_lines_to_expression(
 ) -> sbb.TestData:
     request = filter_lines(target_line, lines, module)
 
-    repaired_request: sbb.Request = pipe(request, repair, PhiFilterer())
+    repaired_request: sbb.Request = pipe(
+        request, repair, PhiFilterer(), FunctionSubstitute(module)
+    )
+    write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)

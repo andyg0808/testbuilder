@@ -35,6 +35,10 @@ def get_variable_name(node: n.Name) -> str:
         return name + "_" + str(node.set_count)
 
 
+def get_result(func: str, number: int) -> str:
+    return f"function_{func}_{number}_return"
+
+
 OpFunc = Callable[..., Expression]
 
 
@@ -128,6 +132,12 @@ def visit_Name(node: n.Name) -> Expression:
         return z3.Int(variable)
 
 
+@visit_expr.register(n.Result)
+def visit_Result(node: n.Result) -> Expression:
+    variable = get_result(node.func, node.number)
+    return z3.Int(variable)
+
+
 @visit_expr.register(n.Set)
 def visit_Set(node: n.Set) -> Expression:
     var = visit_expr(node.target)
@@ -150,6 +160,16 @@ def visit_Expr(node: n.Expr[E]) -> Expression:
 def visit_Call(node: n.Call) -> z3.BoolVal:
     # Temporarily treat functions as true
     return z3.BoolVal(True)
+
+
+@visit_expr.register(n.ReturnResult)
+def visit_ReturnResult(node: n.ReturnResult) -> Expression:
+    var = z3.Int(get_result(node.func, node.number))
+    if node.value:
+        expr = visit_expr(node.value)
+        return var == expr
+    else:
+        return var == z3.BoolVal(True)
 
 
 def convert(tree: n.Node) -> Expression:

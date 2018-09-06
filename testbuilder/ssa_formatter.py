@@ -71,6 +71,15 @@ class SSAVisitor(SimpleVisitor[str]):
 
         return f"{func}({args})"
 
+    def visit_PrefixedName(self, node: n.PrefixedName) -> str:
+        return f"{node.func}_{node.number}_{self.visit_Name(node)}"
+
+    def visit_Result(self, node: n.Result) -> str:
+        return f"<{node.func}_{node.number} result>"
+
+    def visit_ReturnResult(self, node: n.ReturnResult) -> str:
+        return f"<{node.func}_{node.number} result> = {self.visit(node.value)}"
+
 
 def format_tree(node: n.Node) -> str:
     v = SSAVisitor()
