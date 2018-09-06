@@ -7,6 +7,11 @@ NameSet = Set[Tuple[str, int]]
 
 
 class PhiFilterer(UpdateVisitor):
+    """
+    Discards `PhiSet`s which are no longer needed because their
+    destination variables are not used after assignment.
+    """
+
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
         return sbb.Request(module=request.module, code=self.visit(request.code, set()))
 
