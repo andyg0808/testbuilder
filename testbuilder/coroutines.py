@@ -1,5 +1,5 @@
-from typing import Generator, TypeVar, cast, Generic
 import inspect
+from typing import Generator, Generic, List, TypeVar, cast
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -8,6 +8,10 @@ U = TypeVar("U")
 def result(xs: Generator[None, T, U], val: T) -> U:
     run_to_suspend(xs)
     return retrieve(xs, val)
+
+
+def gather(xs: Generator[T, None, None]) -> List[T]:
+    return list(xs)
 
 
 def run_to_suspend(xs: Generator[None, T, U]) -> Generator[None, T, U]:
