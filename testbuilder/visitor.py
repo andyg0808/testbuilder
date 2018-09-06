@@ -117,7 +117,16 @@ class GenericVisitor(SimpleVisitor[A]):
         try:
             return super().visit(v, *args)
         except VisitError:
-            return self.generic_visit(v, *args)
+            # If we get a VisitError, fall through to using the
+            # `generic_visit` function. Trying to call `generic_visit`
+            # here causes later, genuine VisitErrors to be caused
+            # during handling of this VisitError. We want them to be
+            # independent---this error is completely dealt with after
+            # this line (because `generic_visit` is the correct action
+            # to take when a specialized function is missing).
+            pass
+        return self.generic_visit(v, *args)
+
 
     @abstractmethod
     def generic_visit(self, v: Any, *args: Any) -> A:
