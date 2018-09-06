@@ -777,6 +777,20 @@ def tester(count):
         overall=True,
     )
 
+
+def test_simplest_function_call():
+    check_expression(
+        """
+def inner(i):
+    return i
+def outer(i):
+    return inner(i)
+        """,
+        "ret == pyname_i",
+    )
+
+
+@pytest.mark.skip
 def test_function_call():
     check_expression(
         """
@@ -790,6 +804,7 @@ def call_func(i):
     )
 
 
+@pytest.mark.skip
 def test_conditional_functions():
     check_expression(
         """
