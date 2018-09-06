@@ -11,13 +11,13 @@ class FunctionSubstitute(UpdateVisitor):
         super().__init__()
         self.call_id = 0
 
-    def visit_Code(self, node: sbb.Code, start_line: int=0) -> sbb.BasicBlock:
+    def visit_Code(self, node: sbb.Code, start_line: int = 0) -> sbb.BasicBlock:
         lines = list(enumerate(node.code[start_line:]))
         for num, line in reversed(lines):
             calls = find_calls(line)
             if calls:
                 assert len(calls) == 1
-                return self.split_code(node, num+start_line, calls[0])
+                return self.split_code(node, num + start_line, calls[0])
         # If there are no function calls here, move on to the parent node.
         return self.generic_visit(node)
 
@@ -39,7 +39,7 @@ class FunctionSubstitute(UpdateVisitor):
         parent = node.parent
         func = self.module.functions.get(call_info.func, None)
         if not func:
-            return self.visit(node, num+1)
+            return self.visit(node, num + 1)
 
         argument_bindings = bind_arguments(call_info, call, func)
         first_lines = node.code[:num] + argument_bindings
