@@ -107,7 +107,7 @@ def bind_arguments(
         pass
 
     assert len(call.args) == len(func.args)
-    return [bind_arg(*arg) for arg in zip(call.args, func.args)]
+    return [bind_arg(*arg) for arg in zip(func.args, call.args)]
 
 
 class CallFinder(CoroutineVisitor[n.Call, None]):
