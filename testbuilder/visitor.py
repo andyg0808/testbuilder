@@ -1,3 +1,4 @@
+import dataclasses
 import inspect
 import re
 import traceback
@@ -5,6 +6,7 @@ from abc import abstractmethod
 from typing import (
     Any,
     Callable,
+    Generator,
     Generic,
     Iterator,
     List,
@@ -18,8 +20,6 @@ from typing import (
 
 from logbook import Logger
 from toolz import mapcat
-
-import dataclasses
 
 log = Logger("visitor")
 
@@ -144,6 +144,25 @@ class GatherVisitor(GenericVisitor[List[A]]):
             else:
                 results += arg_visit(data)
         return results
+
+
+class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
+    def generic_visit(self, v: Any, *args: Any) -> Generator[A, B, None]:
+        def arg_visit(v: Any) -> Generator[A, B, None]:
+            return self.visit(v, *args)
+
+        try:
+            fields = dataclasses.fields(v)
+        except TypeError:
+            return
+        for f in fields:
+            data = getattr(v, f.name)
+            if isinstance(data, Sequence):
+                for d in data:
+                    yield from arg_visit(d)
+            else:
+                yield from arg_visit(data)
+        return
 
 
 class UpdateVisitor(GenericVisitor):
