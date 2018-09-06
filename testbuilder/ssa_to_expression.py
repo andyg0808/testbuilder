@@ -45,6 +45,8 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return []
 
     def visit_ReturnBlock(self, node: sbb.ReturnBlock, stop: StopBlock) -> ExprList:
+        if len(node.parents) == 1:
+            return self.visit(node.parents[0], stop)
         exprs = []
         for parent in node.parents:
             exprs.append(bool_all(self.visit(parent, stop)))
