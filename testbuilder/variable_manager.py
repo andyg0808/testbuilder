@@ -50,3 +50,6 @@ class VariableManager:
 
     def update(self, mapping: VarMapping) -> None:
         self.variables = mapping
+
+    def __repr__(self) -> str:
+        return f"<VariableManager variables={self.variables}, stack={self.stack}>"
