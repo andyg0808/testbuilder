@@ -4,9 +4,10 @@ The visit and generic_visit methods are potentially based on the equivalent
 functions for the Python AST.
 """
 from __future__ import annotations
-import dataclasses
+
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
+
 from dataclasses import dataclass
-from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, cast
 
 AddedLine = -1
 
