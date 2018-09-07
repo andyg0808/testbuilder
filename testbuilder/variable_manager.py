@@ -13,10 +13,13 @@ class VariableManager:
         self.variables = variables
 
     def get(self, name: str) -> int:
-        return self.variables.get(name, VAR_START_VALUE)
+        set_count = self.variables.get(name, VAR_START_VALUE)
+        if name not in self.variables:
+            self.variables[name] = set_count
+        return set_count
 
     def get_target(self, name: str) -> int:
-        set_count = self.get(name)
+        set_count = self.variables.get(name, VAR_START_VALUE)
         if name in self.variables:
             set_count += 1
         self.variables[name] = set_count
