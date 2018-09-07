@@ -73,14 +73,8 @@ class ExpressionBuilder:
         self.depth = depth
         self.target_line = target_line
 
-    def get_expression(
-        self, variables: Iterable[Variable], code: ast.AST
-    ) -> Expression:
-        # Sets variables to the default value, to treat them as having been defined
-        # before the blocks begin. Mostly important for handling function
-        # arguments.
-        mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        return self.convert_tree(code, mutation_counts)
+    def get_expression(self, code: ast.AST) -> Expression:
+        return self.convert_tree(code, {})
 
     def convert_tree(self, code: ast.AST, variables: VarMapping) -> Expression:
         # assert tree.target
@@ -105,7 +99,6 @@ class ExpressionBuilder:
 
         from .utils import pipe_print
 
-        variables = {}
         testdata: TestData = pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)
         return testdata.expression
 
