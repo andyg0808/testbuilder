@@ -1,6 +1,7 @@
 from typing import Generator, List, Optional
 
 from . import nodetree as n, ssa_basic_blocks as sbb
+from .ast_builder import VAR_START_VALUE
 from .coroutines import result
 from .visitor import CoroutineVisitor, UpdateVisitor
 
@@ -41,7 +42,7 @@ class FunctionSubstitute(UpdateVisitor):
         if not func:
             return self.visit(node, num + 1)
 
-        argument_bindings = bind_arguments(call_info, call, func)
+        argument_bindings = bind_arguments(call_info, call, func, num)
         first_lines = node.code[:num] + argument_bindings
 
         print("building new parent")
@@ -101,10 +102,16 @@ def find_calls(node: n.Node) -> List[n.Call]:
 
 
 def bind_arguments(
-    call_info: n.Prefix, call: n.Call, func: sbb.FunctionDef
+    call_info: n.Prefix, call: n.Call, func: sbb.FunctionDef, line: int
 ) -> List[n.stmt]:
     def bind_arg(formal_param: str, value: n.expr) -> n.ArgumentBind:
-        pass
+        name = n.PrefixedName(
+            func=call_info.func,
+            number=call_info.number,
+            id=formal_param,
+            set_count=VAR_START_VALUE,
+        )
+        return n.ArgumentBind(line=line, target=name, e=value)
 
     assert len(call.args) == len(func.args)
     return [bind_arg(*arg) for arg in zip(func.args, call.args)]
