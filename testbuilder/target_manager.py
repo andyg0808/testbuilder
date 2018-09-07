@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Tuple, Set, Sequence, Optional, Iterable
+
+from typing import Iterable, Optional, Sequence, Set, Tuple
+
 from dataclasses import dataclass, field
 
 SSAName = Tuple[str, int]
@@ -44,3 +46,6 @@ class TargetManager:
 
     def merge(self, other: TargetManager) -> None:
         self.targets |= other.targets
+
+    def add(self, id: str, count: int) -> None:
+        self.targets.add((id, count))
