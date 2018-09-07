@@ -1,13 +1,13 @@
 import ast
 from functools import reduce, singledispatch
 from typing import (
-    Type,
     Any,
     List,
     MutableMapping as MMapping,
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -16,9 +16,9 @@ import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .expression_builder import VarMapping
+from .return_checker import contains_return
 from .variable_manager import VariableManager
 from .visitor import GenericVisitor, SimpleVisitor
-from .return_checker import contains_return
 
 StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
@@ -50,7 +50,10 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
+        self.variables.push()
+        self.variables.add(args)
         blocktree = self.body_visit(node.body)
+        self.variables.pop()
         return sbb.FunctionDef(
             first_line=blocktree.start.line,
             last_line=blocktree.end.line,
