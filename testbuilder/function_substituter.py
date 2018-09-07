@@ -45,8 +45,8 @@ class FunctionSubstitute(UpdateVisitor):
         argument_bindings = bind_arguments(call_info, call, func, num)
         first_lines = node.code[:num] + argument_bindings
 
-        print("building new parent")
-        parent = build_block(first_lines, node.first_line, parent)
+        if first_lines:
+            parent = build_block(first_lines, node.first_line, parent)
         parent = self.visit(parent)
 
         if func:
