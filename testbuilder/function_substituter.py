@@ -2,7 +2,6 @@ from typing import Generator, List, Optional
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .ast_builder import VAR_START_VALUE
-from .coroutines import result
 from .visitor import CoroutineVisitor, UpdateVisitor
 
 
@@ -74,7 +73,7 @@ class FunctionSubstitute(UpdateVisitor):
         self.call_id += 1
         return self.call_id
 
-    def visit_Call(self, call: n.Call, call_info: Optional[n.Prefix]=None) -> n.expr:
+    def visit_Call(self, call: n.Call, call_info: Optional[n.Prefix] = None) -> n.expr:
         # If a call_info is passed, we want to substitute the
         # call. Otherwise, leave it alone.
         if call_info:

@@ -812,7 +812,7 @@ def outer(i):
         And(function_inner_1_pyname_i == pyname_i,
         function_inner_1_return == function_inner_1_pyname_i,
         ret == function_inner_1_return)
-        """
+        """,
     )
 
 
@@ -830,7 +830,7 @@ def call_func(i):
         And(function_double_1_pyname_i == pyname_i,
         function_double_1_return == function_double_1_pyname_i * 2,
         ret == function_double_1_return)
-        """
+        """,
     )
 
 

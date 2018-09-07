@@ -333,28 +333,7 @@ def unify_all_variables(
     return (variables, renamings)
 
 
-# def merge_block_trees(
-#     self,
-#     left: sbb.BlockTree,
-#     right: sbb.BlockTree,
-#     joint: Callable[[sbb.BasicBlock, sbb.BasicBlock], sbb.BasicBlock],
-# ) -> sbb.BlockTree:
-#     assert (
-#         left.start is right.start
-#     ), "Both BlockTrees need to originate from the same start point"
-#     assert left.target, f"Left {left} does not have target set"
-#     assert right.target, f"Right {right} does not have target set"
-#     return sbb.BlockTree(
-#         start=left.start,
-#         target=joint(left.target, right.target),
-#         end=sbb.ReturnBlock(
-#             number=self.next_id(), parents=left.end.parents + right.end.parents
-#         ),
-#     )
-
-
 def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
-    # print("input type", type(node))
     varmanager = VariableManager(variables)
     t = AstToSSABasicBlocks(depth, varmanager)
     if not isinstance(node, ast.Module):
@@ -362,7 +341,6 @@ def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
         node = ast.Module(body=[node])
     res = t.visit(node)
     assert isinstance(res, sbb.Module)
-    # print("ast_to_ssa result", res)
     return res
 
 
