@@ -4,37 +4,25 @@ from copy import copy
 from functools import singledispatch
 from typing import (
     Any,
-    Callable,
     Generator,
-    Generic,
     List,
     MutableMapping as MMapping,
     Optional,
     Set,
     Tuple,
-    Type,
     TypeVar,
     cast,
 )
 
 from logbook import Logger, StderrHandler
-from toolz import pipe
 
 import dataclasses
-from typeassert import assertify
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
 from .coroutines import result, retrieve, run_to_suspend
-from .nodetree import AddedLine
 from .target_manager import TargetManager
-from .visitor import (
-    GatherVisitor,
-    GenericVisitor,
-    SearchVisitor,
-    SimpleVisitor,
-    UpdateVisitor,
-)
+from .visitor import GatherVisitor, GenericVisitor, SearchVisitor, UpdateVisitor
 
 Coroutine = Generator[None, sbb.BasicBlock, sbb.BasicBlock]
 
