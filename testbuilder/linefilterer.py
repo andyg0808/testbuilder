@@ -224,6 +224,15 @@ class Filter(GenericVisitor[Coroutine]):
             loops=completed_loops,
         )
 
+    def visit_Controlled(
+        self, controller: sbb.Controlled, stop: sbb.BasicBlock, targets: TargetManager
+    ) -> Coroutine:
+        if controller is stop:
+            return (yield)
+        deps = self.dep_finder(controller.conditional)
+        targets.merge(TargetManager(set(deps)))
+        return (yield from self.visit_block(controller, stop, targets))
+
     def generic_visit(self, v: sbb.BasicBlock, *args: Any) -> Coroutine:
         assert isinstance(v, sbb.BasicBlock)
         return (yield from self.visit_block(v, *args))
