@@ -34,9 +34,11 @@ def get_variable_name(node: n.Name) -> str:
     else:
         return name + "_" + str(node.set_count)
 
+def get_prefix(prefix: n.Prefix) -> str:
+    return f"function_{prefix.func}_{prefix.number}"
 
-def get_result(func: str, number: int) -> str:
-    return f"function_{func}_{number}_return"
+def get_result(prefix: n.Prefix) -> str:
+    return get_prefix(prefix) + "_return"
 
 
 OpFunc = Callable[..., Expression]
@@ -131,10 +133,16 @@ def visit_Name(node: n.Name) -> Expression:
     else:
         return z3.Int(variable)
 
+@visit_expr.register(n.PrefixedName)
+def visit_PrefixedName(node: n.PrefixedName) -> Expression:
+    prefix = get_prefix(node)
+    variable = get_variable(node.id, node.set_count)
+    return z3.Int(prefix + "_" + variable)
+
 
 @visit_expr.register(n.Result)
 def visit_Result(node: n.Result) -> Expression:
-    variable = get_result(node.func, node.number)
+    variable = get_result(node)
     return z3.Int(variable)
 
 
@@ -164,7 +172,7 @@ def visit_Call(node: n.Call) -> z3.BoolVal:
 
 @visit_expr.register(n.ReturnResult)
 def visit_ReturnResult(node: n.ReturnResult) -> Expression:
-    var = z3.Int(get_result(node.func, node.number))
+    var = z3.Int(get_result(node))
     if node.value:
         expr = visit_expr(node.value)
         return var == expr
