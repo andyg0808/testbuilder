@@ -61,6 +61,15 @@ class PhiFilterer(UpdateVisitor):
             loops=loops,
         )
 
+    def visit_Controlled(
+        self, node: sbb.Controlled, seen: TargetManager
+    ) -> sbb.Controlled:
+        # Make sure to visit condition before visiting parent. Because
+        # we are only adding items to a set, it won't matter that we
+        # visit it twice
+        self.visit(node.conditional, seen)
+        return self.generic_visit(node, seen)
+
     def visit_Code(self, code: sbb.Code, seen: TargetManager) -> sbb.BasicBlock:
         visited = [self.visit(l, seen) for l in code.code]
         filtered = [l for l in visited if l is not None]
