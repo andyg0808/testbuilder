@@ -786,11 +786,14 @@ def inner(i):
 def outer(i):
     return inner(i)
         """,
-        "ret == pyname_i",
+        """
+        And(function_inner_1_pyname_i == pyname_i,
+        function_inner_1_return == function_inner_1_pyname_i,
+        ret == function_inner_1_return)
+        """
     )
 
 
-@pytest.mark.skip
 def test_function_call():
     check_expression(
         """
@@ -800,7 +803,12 @@ def double(i):
 def call_func(i):
     return double(i)
         """,
-        "ret == 2 * pyname_i",
+        # "ret == 2 * pyname_i",
+        """
+        And(function_double_1_pyname_i == pyname_i,
+        function_double_1_return == function_double_1_pyname_i * 2,
+        ret == function_double_1_return)
+        """
     )
 
 
