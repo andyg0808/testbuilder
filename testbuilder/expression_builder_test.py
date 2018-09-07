@@ -834,8 +834,9 @@ def call_func(i):
     )
 
 
-@pytest.mark.skip
 def test_conditional_functions():
+    # TODO: Extract the initial line of each of the innermost `And`s
+    # into the outer `And`.
     check_expression(
         """
 def conditioned(i):
@@ -848,9 +849,17 @@ def run_func(i):
     return i * conditioned(i)
         """,
         """
-conditioned = Function('conditioned', IntSort(), IntSort())
+        And(
+        Or(And(function_conditioned_1_pyname_i == pyname_i,
+               function_conditioned_1_pyname_i > 4,
+               function_conditioned_1_return == 6),
+           And(function_conditioned_1_pyname_i == pyname_i,
+               Not(function_conditioned_1_pyname_i > 4),
+               function_conditioned_1_return == 14)),
+        ret == pyname_i * function_conditioned_1_return)
+        """,
+    )
 
-""",
     )
 
 
