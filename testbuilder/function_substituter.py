@@ -49,8 +49,7 @@ class FunctionSubstitute(UpdateVisitor):
             parent = build_block(first_lines, node.first_line, parent)
         parent = self.visit(parent)
 
-        if func:
-            parent = self.fetch_function(call_info, call, func, parent)
+        parent = self.fetch_function(call_info, call, func, parent)
 
         return_binding = [self.visit(node.code[num], call_info)]
         last_lines = return_binding + node.code[num + 1 :]
