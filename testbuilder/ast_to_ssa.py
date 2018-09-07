@@ -344,29 +344,6 @@ def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
     return res
 
 
-@singledispatch
-def find_start_line(block: object) -> Optional[int]:
-    return None
-
-
-@find_start_line.register(sbb.Parented)
-def find_parented_start(block: sbb.Parented) -> int:
-    parent_line = find_start_line(block.parent)
-    if parent_line is None:
-        return find_block_start(block)
-    else:
-        return parent_line
-
-
-@singledispatch
-def find_block_start(block: sbb.Parented) -> int:
-    raise RuntimeError(f"Unimplemented for type {type(block)}")
-
-
-# @find_block_start.regsiter(sbb.Code)
-# def find_code_start(block: sbb.Code) ->
-
-
 class StatementVisitor(GenericVisitor):
     def __init__(self, variables: VariableManager) -> None:
         self.variables = variables

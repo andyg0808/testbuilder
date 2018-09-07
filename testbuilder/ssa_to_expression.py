@@ -1,28 +1,18 @@
-from functools import partial, reduce, singledispatch
-from typing import List, MutableMapping as MMapping, Optional, Set, Union
+from functools import singledispatch
+from typing import List, Optional
 
 from toolz import mapcat, pipe
 
 import z3
-from dataclasses import dataclass
 
-from . import basic_block as bb, converter, nodetree as n, ssa_basic_blocks as sbb
-from .basic_block import BlockTree
-from .expression_builder import (
-    ExprList,
-    VarMapping,
-    bool_and,
-    bool_not,
-    bool_or,
-    to_boolean,
-)
+from . import converter, nodetree as n, ssa_basic_blocks as sbb
+from .expression_builder import ExprList, bool_and, bool_not, bool_or, to_boolean
 from .function_substituter import FunctionSubstitute
-from .iter_monad import chain, liftIter
+from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .test_utils import write_dot
-from .utils import crash
 from .visitor import GatherVisitor, SimpleVisitor
 
 Expression = z3.ExprRef
