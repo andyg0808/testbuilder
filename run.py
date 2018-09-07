@@ -12,8 +12,12 @@ import sys
 from pathlib import Path
 
 from docopt import docopt
+from logbook import NullHandler, StderrHandler
 
 from testbuilder.generate_proto import generate_tests
+
+NullHandler().push_application()
+StderrHandler(level="NOTICE").push_application()
 
 # from testbuilder.generate import generate_tests
 

@@ -46,15 +46,14 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
         solution: Optional[Solution] = pipe(funcstmt, get_expression, solve)
         if not solution:
             logger.error(
-                f"Couldn't generate a test for line {funcstmt.statement.lineno}; \
-                  maybe try increasing the loop unrolling depth?"
+                f"Couldn't generate a test for line {funcstmt.statement.lineno};"
+                " maybe try increasing the loop unrolling depth?"
             )
             return ""
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
 
     def parse_file(text: str) -> AST:
-        # print("text", text)
         return parse(text, str(source))
 
     return pipe(
