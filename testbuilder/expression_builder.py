@@ -77,21 +77,13 @@ class ExpressionBuilder:
         return self.convert_tree(code, {})
 
     def convert_tree(self, code: ast.AST, variables: VarMapping) -> Expression:
-        # assert tree.target
-        # print("target", tree.target, tree.target.number)
-        # expr_list = self._convert_target_tree(tree.target, None, copy(variables), None)
-        # expected = _combine_conditions(expr_list)
         actual = self._modern_convert_tree(copy(variables), code)
-        print("Actual expression:", actual)
-        # print("Expression from old code:", expected)
         return actual
 
     def _modern_convert_tree(self, variables: VarMapping, code: ast.AST) -> Expression:
         from .ast_to_ssa import ast_to_ssa
 
         from .ssa_to_expression import ssa_lines_to_expression
-        from toolz import pipe
-        from functools import partial
         from .ssa_basic_blocks import TestData
 
         _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
