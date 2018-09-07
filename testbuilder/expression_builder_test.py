@@ -530,7 +530,9 @@ def test(i):
 
 def test_uninteresting_dependent_while():
     # This case is where the `while` can't infinite loop, so the code
-    # below it shouldn't be controlled by it at all.
+    # below it shouldn't be controlled by it at all. But proving that
+    # seems too complicated, so for now we're allowing it to be
+    # rendered.
     check_expression(
         """
 def test(i):
@@ -539,7 +541,13 @@ def test(i):
         j -= 1
     return i
     """,
-        "Not(pyname_j > 0) and ret == pyname_i",
+        """
+        And(pyname_j == 5,
+        Or(pyname_j_1 == pyname_j,
+           And(pyname_j > 0, pyname_j_1 == pyname_j - 1)),
+        Not(pyname_j_1 > 0),
+        ret == pyname_i)
+        """,
     )
 
 
@@ -860,6 +868,38 @@ def run_func(i):
         """,
     )
 
+
+def test_ignorable_conditional():
+    check_expression(
+        """
+def test(i, j):
+    if j > 4:
+        j += 4
+    else:
+        j += 8
+    return i
+        """,
+        "ret == pyname_i",
+    )
+
+
+def test_affecting_conditional():
+    check_expression(
+        """
+def test(i, j):
+    j += 4
+    if j > 3:
+        i += 2
+    else:
+        i += 3
+    return i
+        """,
+        """
+        And(pyname_j_1 == pyname_j + 4,
+        Or(    pyname_j_1 > 3  and pyname_i_1 == pyname_i + 2,
+           Not(pyname_j_1 > 3) and pyname_i_1 == pyname_i + 3),
+        ret == pyname_i_1)
+        """,
     )
 
 
