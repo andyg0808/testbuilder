@@ -264,7 +264,7 @@ class Filter(GenericVisitor[Coroutine]):
         return cast(sbb.BasicBlock, v.__class__(**results))
 
 
-def filter_lines(target_line: int, lines: Set[int], module: sbb.Module) -> sbb.Request:
+def filter_lines(target_line: int, module: sbb.Module) -> sbb.Request:
     log.info(f"Filtering starting at line {target_line}")
     filtered = ComputedLineFilterer(target_line).visit_Module(module)
     return filtered

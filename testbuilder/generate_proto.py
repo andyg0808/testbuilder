@@ -75,13 +75,8 @@ def filter_inputs(function: FunctionDef, inputs: Solution) -> Solution:
 
 
 def get_expression_at_depth(depth: int, funcstmt: FuncStmt) -> Expression:
-    variables = funcstmt.statement.get_slice_variables()
-    # block_tree = build_tree(funcstmt.function)
-    # flowgraph = block_tree.inflate(funcstmt.statement)
-    builder = ExpressionBuilder(
-        depth, funcstmt.statement.lineno, funcstmt.statement.lines()
-    )
-    return builder.get_expression(variables, funcstmt.function)
+    builder = ExpressionBuilder(depth, funcstmt.statement.lineno)
+    return builder.get_expression(funcstmt.function)
 
 
 get_expression = partial(get_expression_at_depth, 2)

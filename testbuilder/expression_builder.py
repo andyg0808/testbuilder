@@ -61,20 +61,16 @@ def bool_and(*exprs: Expression) -> Expression:
 
 
 def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
-    # block_tree = build_tree(code)
     dep_tree = take_slice(line, code)
     if not dep_tree:
         return None
-    # tree = block_tree.inflate(dep_tree)
-    variables = dep_tree.get_slice_variables()
-    eb = ExpressionBuilder(depth, dep_tree.lineno, dep_tree.lines())
-    return eb.get_expression(variables, code)
+    eb = ExpressionBuilder(depth, dep_tree.lineno)
+    return eb.get_expression(code)
 
 
 class ExpressionBuilder:
-    def __init__(self, depth: int, target_line: int, lines: Set[int]) -> None:
+    def __init__(self, depth: int, target_line: int) -> None:
         self.depth = depth
-        self.lines = lines
         self.target_line = target_line
 
     def get_expression(
@@ -105,9 +101,7 @@ class ExpressionBuilder:
         from .ssa_basic_blocks import TestData
 
         _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
-        _ssa_to_expression = partial(
-            ssa_lines_to_expression, self.target_line, self.lines
-        )
+        _ssa_to_expression = partial(ssa_lines_to_expression, self.target_line)
 
         from .utils import pipe_print
 
