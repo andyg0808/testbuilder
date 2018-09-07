@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 from functools import partial, reduce, singledispatch
 from typing import List, MutableMapping as MMapping, Optional, Set, Union
 
-import z3
 from toolz import mapcat, pipe
+
+import z3
+from dataclasses import dataclass
 
 from . import basic_block as bb, converter, nodetree as n, ssa_basic_blocks as sbb
 from .basic_block import BlockTree
@@ -113,7 +114,10 @@ def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
 
 @process.register(sbb.FunctionDef)
 def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
-    expression = bool_all(visitor.visit(node.blocks))
+    if node.blocks.empty():
+        expression = bool_true()
+    else:
+        expression = bool_all(visitor.visit(node.blocks))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
         name=node.name, free_variables=free_variables, expression=expression
@@ -122,7 +126,10 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
 
 @process.register(sbb.BlockTree)
 def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
-    expression = bool_all(visitor.visit(code))
+    if code.empty():
+        expression = bool_true()
+    else:
+        expression = bool_all(visitor.visit(code))
     free_variables = find_variables(code)
     return sbb.TestData(
         name="code", free_variables=free_variables, expression=expression
@@ -168,6 +175,10 @@ def bool_any(exprs: List[Expression]) -> Expression:
         raise RuntimeError("Taking any of no exprs")
 
 
+def bool_true() -> Expression:
+    return z3.BoolVal(True)
+
+
 def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
     assert isinstance(request, sbb.Request)
     # TODO: I think this is right?
@@ -181,6 +192,9 @@ def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
 def ssa_lines_to_expression(
     target_line: int, lines: Set[int], module: sbb.Module
 ) -> sbb.TestData:
+    from .test_utils import write_dot
+
+    write_dot(module, "showdot.dot")
     request = filter_lines(target_line, lines, module)
 
     repaired_request: sbb.Request = pipe(

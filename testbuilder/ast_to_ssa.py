@@ -1,6 +1,7 @@
 import ast
 from functools import reduce, singledispatch
 from typing import (
+    Type,
     Any,
     List,
     MutableMapping as MMapping,
@@ -17,6 +18,7 @@ from . import nodetree as n, ssa_basic_blocks as sbb
 from .expression_builder import VarMapping
 from .variable_manager import VariableManager
 from .visitor import GenericVisitor, SimpleVisitor
+from .return_checker import contains_return
 
 StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
@@ -102,16 +104,24 @@ class AstToSSABasicBlocks(SimpleVisitor):
             else:
                 returns.append(block)
 
+        if contains_return(node.orelse):
+            true_branch: Type[sbb.TrueBranch] = sbb.ForcedTrueBranch
+        else:
+            true_branch = sbb.TrueBranch
         true_block = tree.map_target(
-            lambda parent: sbb.TrueBranch(
+            lambda parent: true_branch(
                 number=self.next_id(),
                 conditional=condition,
                 parent=parent,
                 line=node.lineno,
             )
         )
+        if contains_return(node.body):
+            false_branch: Type[sbb.FalseBranch] = sbb.ForcedFalseBranch
+        else:
+            false_branch = sbb.FalseBranch
         false_block = tree.map_target(
-            lambda parent: sbb.FalseBranch(
+            lambda parent: false_branch(
                 number=self.next_id(),
                 conditional=condition,
                 parent=parent,

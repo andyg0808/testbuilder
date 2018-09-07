@@ -122,6 +122,19 @@ def twothings(a, b):
     )
 
 
+def test_multiple_functions():
+    check_expression(
+        """
+def first_func(a):
+    return a * 5
+
+def second_func(b):
+    return b + 8
+        """,
+        "ret == pyname_b + 8",
+    )
+
+
 def test_multiple_lines():
     check_expression(
         """
@@ -463,6 +476,22 @@ def test(i):
     )
 
 
+def test_slice_on_condition():
+    check_expression(
+        """
+def test(i):
+    i += 1
+    if i < 8:
+        i += 4
+    else:
+        i += 1
+    return i
+        """,
+        "pyname_i_1 == pyname_i + 1",
+        line=2,
+    )
+
+
 def test_sliced_dependent_conditional():
     check_expression(
         """
@@ -483,9 +512,7 @@ def test(i):
         j = 1
     return 2
     """,
-        # TODO: make this work
-        # "Not(pyname_i < 5) and ret == 2",
-        "ret == 2",
+        "Not(pyname_i < 5) and ret == 2",
     )
 
 
@@ -497,13 +524,7 @@ def test(i):
         j = 1
     return i
     """,
-        # TODO: We used to have these as just `ret==pyname_i`, but it seems
-        # reasonable that, in order to get to the end line, we don't
-        # want to choose a value which might infinite loop in the
-        # `while`, so we should force the `while` condition to be
-        # false.
-        # "Not(pyname_i < 5) and ret == pyname_i",
-        "ret == pyname_i",
+        "Not(pyname_i < 5) and ret == pyname_i",
     )
 
 
@@ -518,7 +539,7 @@ def test(i):
         j -= 1
     return i
     """,
-        "ret == pyname_i",
+        "Not(pyname_j > 0) and ret == pyname_i",
     )
 
 
@@ -578,10 +599,11 @@ def test(i):
 
 @pytest.mark.skip()
 def test_avoid_infinite_loop():
-    # We can't actually check for termination in all cases (thanks halting
-    # problem!), but it would be nice if we could at least avoid running loops
-    # which our checker can't confirm exit. To do this, we probably need to
-    # stop slicing code.
+    # We can't actually check for termination in all cases (thanks
+    # halting problem!), but it would be nice if we could at least
+    # avoid running loops which our checker can't confirm exit. We
+    # probably will need to track dependencies through loop
+    # conditionals for this.
     check_expression(
         """
 def test(i):
@@ -590,7 +612,7 @@ def test(i):
         j += 1
     return i
     """,
-        "Not(i > 1) and ret == pyname_i",
+        "pyname_j == pyname_i and Not(pyname_j > 1) and ret == pyname_i",
     )
 
 

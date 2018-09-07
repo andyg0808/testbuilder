@@ -11,6 +11,7 @@ from typing import (
     Iterator,
     List,
     MutableMapping as MMapping,
+    Optional,
     Sequence,
     Type,
     TypeVar,
@@ -58,8 +59,8 @@ class VisitError(NotImplementedError):
 class SimpleVisitor(Generic[B]):
     T = TypeVar("T")
 
-    def __call__(self, *args: Any) -> B:
-        return self.visit(*args)
+    def __call__(self, v: Any, *args: Any) -> B:
+        return self.visit(v, *args)
 
     def visit(self, v: Any, *args: Any) -> B:
         func = self.__find_function(v.__class__)
@@ -133,6 +134,26 @@ class GenericVisitor(SimpleVisitor[A]):
         ...
 
 
+class SearchVisitor(GenericVisitor[Optional[A]]):
+    def generic_visit(self, v: Any, *args: Any) -> Optional[A]:
+        try:
+            fields = dataclasses.fields(v)
+        except TypeError:
+            return None
+        for f in fields:
+            data = getattr(v, f.name)
+            if isinstance(data, Sequence):
+                for d in data:
+                    res = self.visit(d, *args)
+                    if res is not None:
+                        return res
+            else:
+                res = self.visit(data, *args)
+                if res is not None:
+                    return res
+        return None
+
+
 class GatherVisitor(GenericVisitor[List[A]]):
     def generic_visit(self, v: Any, *args: Any) -> List[A]:
         def arg_visit(v: Any) -> List[A]:
@@ -179,12 +200,25 @@ class UpdateVisitor(GenericVisitor):
         self.visited_nodes: MMapping[int, Any] = {}
 
     def visit(self, v: A, *args: Any) -> A:
+        # Use already-visited object if it exists.
+        # This makes handling trees with joins well-behaved.
+        if self.id(v) in self.visited_nodes:
+            return self.get_updated(v)
         visited = super().visit(v, *args)
+        self.visited_nodes[self.id(v)] = visited
         return cast(A, visited)
 
+    def get_updated(self, original: A) -> A:
+        return cast(A, self.visited_nodes[self.id(original)])
+
+    def id(self, obj: Any) -> Any:
+        """
+        Returns a unique identifier for a node. Can be overridden to
+        modify the notion of equivalence.
+        """
+        return id(obj)
+
     def generic_visit(self, v: A, *args: Any) -> A:
-        if id(v) in self.visited_nodes:
-            return cast(A, self.visited_nodes[id(v)])
         try:
             fields = dataclasses.fields(v)
         except TypeError as err:
@@ -194,6 +228,8 @@ class UpdateVisitor(GenericVisitor):
             return v
         results: MMapping[str, Any] = {}
         for f in fields:
+            if f.name.startswith("_"):
+                continue
             data = getattr(v, f.name)
             res: Any
             if isinstance(data, list):
@@ -201,6 +237,4 @@ class UpdateVisitor(GenericVisitor):
             else:
                 res = self.visit(data, *args)
             results[f.name] = res
-        newnode = cast(A, v.__class__(**results))
-        self.visited_nodes[id(v)] = newnode
-        return newnode
+        return cast(A, v.__class__(**results))

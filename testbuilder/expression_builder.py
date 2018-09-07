@@ -60,19 +60,14 @@ def bool_and(*exprs: Expression) -> Expression:
 
 
 def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
-    block_tree = build_tree(code)
+    # block_tree = build_tree(code)
     dep_tree = take_slice(line, code)
-    # print("dep_tree", dep_tree, "end")
     if not dep_tree:
         return None
-    tree = block_tree.inflate(dep_tree)
-    # from .test_utils import show_dot
-
-    # print("tree", tree)
-    # show_dot(tree.entrance.dot())
+    # tree = block_tree.inflate(dep_tree)
     variables = dep_tree.get_slice_variables()
     eb = ExpressionBuilder(depth, dep_tree.lineno, dep_tree.lines())
-    return eb.get_expression(variables, tree)
+    return eb.get_expression(variables, code)
 
 
 class ExpressionBuilder:
@@ -82,27 +77,25 @@ class ExpressionBuilder:
         self.target_line = target_line
 
     def get_expression(
-        self, variables: Iterable[Variable], flowgraph: BlockTree
+        self, variables: Iterable[Variable], code: ast.AST
     ) -> Expression:
         # Sets variables to the default value, to treat them as having been defined
         # before the blocks begin. Mostly important for handling function
         # arguments.
         mutation_counts = {v.code: VAR_START_VALUE for v in variables}
-        return self.convert_tree(flowgraph, mutation_counts)
+        return self.convert_tree(code, mutation_counts)
 
-    def convert_tree(self, tree: BlockTree, variables: VarMapping) -> Expression:
-        assert tree.target
+    def convert_tree(self, code: ast.AST, variables: VarMapping) -> Expression:
+        # assert tree.target
         # print("target", tree.target, tree.target.number)
-        expr_list = self._convert_target_tree(tree.target, None, copy(variables), None)
-        expected = _combine_conditions(expr_list)
-        actual = self._modern_convert_tree(copy(variables), tree)
+        # expr_list = self._convert_target_tree(tree.target, None, copy(variables), None)
+        # expected = _combine_conditions(expr_list)
+        actual = self._modern_convert_tree(copy(variables), code)
         print("Actual expression:", actual)
-        print("Expression from old code:", expected)
+        # print("Expression from old code:", expected)
         return actual
 
-    def _modern_convert_tree(
-        self, variables: VarMapping, tree: BlockTree
-    ) -> Expression:
+    def _modern_convert_tree(self, variables: VarMapping, code: ast.AST) -> Expression:
         from .ast_to_ssa import ast_to_ssa
 
         from .ssa_to_expression import ssa_lines_to_expression
@@ -118,9 +111,7 @@ class ExpressionBuilder:
         from .utils import pipe_print
 
         variables = {}
-        testdata: TestData = pipe(
-            tree.code, _ast_to_ssa, pipe_print, _ssa_to_expression
-        )
+        testdata: TestData = pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)
         return testdata.expression
 
     def _convert_target_tree(
