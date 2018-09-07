@@ -74,8 +74,13 @@ class FunctionSubstitute(UpdateVisitor):
         self.call_id += 1
         return self.call_id
 
-    def visit_Call(self, call: n.Call, call_info: n.Prefix) -> n.Result:
-        return n.Result(func=call_info.func, number=call_info.number)
+    def visit_Call(self, call: n.Call, call_info: Optional[n.Prefix]=None) -> n.expr:
+        # If a call_info is passed, we want to substitute the
+        # call. Otherwise, leave it alone.
+        if call_info:
+            return n.Result(func=call_info.func, number=call_info.number)
+        else:
+            return self.generic_visit(call)
 
 
 class Reparent(UpdateVisitor):
