@@ -1,4 +1,4 @@
-from typing import Generator, List, Optional
+from typing import Any, Generator, List, Optional
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .ast_builder import VAR_START_VALUE
@@ -11,7 +11,12 @@ class FunctionSubstitute(UpdateVisitor):
         super().__init__()
         self.call_id = 0
 
-    def visit_Code(self, node: sbb.Code, start_line: int = 0) -> sbb.BasicBlock:
+    def visit_Request(self, request: sbb.Request) -> sbb.Request:
+        return self.generic_visit(request, module=request.module)
+
+    def visit_Code(
+        self, node: sbb.Code, start_line: int = 0, **kwargs: Any
+    ) -> sbb.BasicBlock:
         lines = list(enumerate(node.code[start_line:]))
         for num, line in reversed(lines):
             calls = find_calls(line)
@@ -21,7 +26,9 @@ class FunctionSubstitute(UpdateVisitor):
         # If there are no function calls here, move on to the parent node.
         return self.generic_visit(node)
 
-    def split_code(self, node: sbb.Code, num: int, call: n.Call) -> sbb.BasicBlock:
+    def split_code(
+        self, node: sbb.Code, num: int, call: n.Call, **kwargs: Any
+    ) -> sbb.BasicBlock:
         def build_block(
             lines: List[n.stmt], first_line: int, parent: sbb.BasicBlock
         ) -> sbb.Code:
@@ -73,7 +80,9 @@ class FunctionSubstitute(UpdateVisitor):
         self.call_id += 1
         return self.call_id
 
-    def visit_Call(self, call: n.Call, call_info: Optional[n.Prefix] = None) -> n.expr:
+    def visit_Call(
+        self, call: n.Call, call_info: Optional[n.Prefix] = None, **kwargs: Any
+    ) -> n.expr:
         # If a call_info is passed, we want to substitute the
         # call. Otherwise, leave it alone.
         if call_info:

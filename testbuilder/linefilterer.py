@@ -132,8 +132,8 @@ class Filter(GenericVisitor[Coroutine]):
         self.target_line = target_line
         self.dep_finder = DepFinder()
 
-    def __call__(self, block: Any, *args: Any) -> Coroutine:
-        return self.visit(block, None, TargetManager(), *args)
+    def __call__(self, v: Any, *args: Any, **kwargs: Any) -> Coroutine:
+        return self.visit(v, None, TargetManager(), *args, **kwargs)
 
     def visit_Code(
         self, code: sbb.Code, stop: StopBlock, targets: TargetManager
@@ -233,7 +233,7 @@ class Filter(GenericVisitor[Coroutine]):
         targets.merge(TargetManager(set(deps)))
         return (yield from self.visit_block(controller, stop, targets))
 
-    def generic_visit(self, v: sbb.BasicBlock, *args: Any) -> Coroutine:
+    def generic_visit(self, v: sbb.BasicBlock, *args: Any, **kwargs: Any) -> Coroutine:
         assert isinstance(v, sbb.BasicBlock)
         return (yield from self.visit_block(v, *args))
 

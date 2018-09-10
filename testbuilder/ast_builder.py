@@ -77,7 +77,11 @@ class AstBuilder(GenericVisitor):
         idx = self.variables.get(node.id, VAR_START_VALUE)
         return n.Name(node.id, idx)
 
-    def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
+    def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
+        # Can't name the parameter `node` because it would cause
+        # problems if a keyword argument of `node` was
+        # provided. Concretely, `mypy` complains if I do so.
+        node = v
         # print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
             return node

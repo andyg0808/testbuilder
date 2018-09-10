@@ -373,8 +373,8 @@ class StatementVisitor(GenericVisitor):
         expr = self.expr_visitor(node)
         return n.Expr(line=node.lineno, value=expr)
 
-    def generic_visit(self, node: ast.AST, *args: Any) -> Any:
-        return self.expr_visitor(node)
+    def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> Any:
+        return self.expr_visitor(v)
 
 
 class AstBuilder(GenericVisitor):
@@ -412,7 +412,8 @@ class AstBuilder(GenericVisitor):
         idx = self.variables.get(node.id)
         return n.Name(node.id, idx)
 
-    def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
+    def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
+        node = v
         # print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
             return node

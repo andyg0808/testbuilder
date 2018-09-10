@@ -1,4 +1,3 @@
-import dataclasses
 import inspect
 import re
 import traceback
@@ -21,6 +20,8 @@ from typing import (
 
 from logbook import Logger
 from toolz import mapcat
+
+import dataclasses
 
 log = Logger("visitor")
 
@@ -59,12 +60,12 @@ class VisitError(NotImplementedError):
 class SimpleVisitor(Generic[B]):
     T = TypeVar("T")
 
-    def __call__(self, v: Any, *args: Any) -> B:
-        return self.visit(v, *args)
+    def __call__(self, v: Any, *args: Any, **kwargs: Any) -> B:
+        return self.visit(v, *args, **kwargs)
 
-    def visit(self, v: Any, *args: Any) -> B:
+    def visit(self, v: Any, *args: Any, **kwargs: Any) -> B:
         func = self.__find_function(v.__class__)
-        return func(v, *args)
+        return func(v, *args, **kwargs)
 
     def __find_function(self, start_class: Type) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
@@ -114,9 +115,9 @@ class SimpleVisitor(Generic[B]):
 
 
 class GenericVisitor(SimpleVisitor[A]):
-    def visit(self, v: Any, *args: Any) -> A:
+    def visit(self, v: Any, *args: Any, **kwargs: Any) -> A:
         try:
-            return super().visit(v, *args)
+            return super().visit(v, *args, **kwargs)
         except VisitError:
             # If we get a VisitError, fall through to using the
             # `generic_visit` function. Trying to call `generic_visit`
@@ -126,16 +127,15 @@ class GenericVisitor(SimpleVisitor[A]):
             # this line (because `generic_visit` is the correct action
             # to take when a specialized function is missing).
             pass
-        return self.generic_visit(v, *args)
-
+        return self.generic_visit(v, *args, **kwargs)
 
     @abstractmethod
-    def generic_visit(self, v: Any, *args: Any) -> A:
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> A:
         ...
 
 
 class SearchVisitor(GenericVisitor[Optional[A]]):
-    def generic_visit(self, v: Any, *args: Any) -> Optional[A]:
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Optional[A]:
         try:
             fields = dataclasses.fields(v)
         except TypeError:
@@ -144,20 +144,20 @@ class SearchVisitor(GenericVisitor[Optional[A]]):
             data = getattr(v, f.name)
             if isinstance(data, Sequence):
                 for d in data:
-                    res = self.visit(d, *args)
+                    res = self.visit(d, *args, **kwargs)
                     if res is not None:
                         return res
             else:
-                res = self.visit(data, *args)
+                res = self.visit(data, *args, **kwargs)
                 if res is not None:
                     return res
         return None
 
 
 class GatherVisitor(GenericVisitor[List[A]]):
-    def generic_visit(self, v: Any, *args: Any) -> List[A]:
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> List[A]:
         def arg_visit(v: Any) -> List[A]:
-            return self.visit(v, *args)
+            return self.visit(v, *args, **kwargs)
 
         try:
             fields = dataclasses.fields(v)
@@ -177,9 +177,9 @@ class GatherVisitor(GenericVisitor[List[A]]):
 
 
 class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
-    def generic_visit(self, v: Any, *args: Any) -> Generator[A, B, None]:
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Generator[A, B, None]:
         def arg_visit(v: Any) -> Generator[A, B, None]:
-            return self.visit(v, *args)
+            return self.visit(v, *args, **kwargs)
 
         try:
             fields = dataclasses.fields(v)
@@ -199,12 +199,12 @@ class UpdateVisitor(GenericVisitor):
     def __init__(self) -> None:
         self.visited_nodes: MMapping[int, Any] = {}
 
-    def visit(self, v: A, *args: Any) -> A:
+    def visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         # Use already-visited object if it exists.
         # This makes handling trees with joins well-behaved.
         if self.id(v) in self.visited_nodes:
             return self.get_updated(v)
-        visited = super().visit(v, *args)
+        visited = super().visit(v, *args, **kwargs)
         self.visited_nodes[self.id(v)] = visited
         return cast(A, visited)
 
@@ -218,7 +218,7 @@ class UpdateVisitor(GenericVisitor):
         """
         return id(obj)
 
-    def generic_visit(self, v: A, *args: Any) -> A:
+    def generic_visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         try:
             fields = dataclasses.fields(v)
         except TypeError as err:
@@ -233,8 +233,8 @@ class UpdateVisitor(GenericVisitor):
             data = getattr(v, f.name)
             res: Any
             if isinstance(data, list):
-                res = [self.visit(x, *args) for x in data]
+                res = [self.visit(x, *args, **kwargs) for x in data]
             else:
-                res = self.visit(data, *args)
+                res = self.visit(data, *args, **kwargs)
             results[f.name] = res
         return cast(A, v.__class__(**results))
