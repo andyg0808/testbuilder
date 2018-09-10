@@ -1,16 +1,21 @@
 #!/usr/bin/tclsh
+package require cmdline 1.3.3
+set available_options {{print "Print the output from each test executed"}}
+set options [::cmdline::getoptions ::argv $available_options]
 
 set tests [glob "cli_tests/*/*.exp"]
 puts "1..[llength $tests]"
 foreach test $tests {
   set result {}
   try {
-    exec expect $test
+    set output [exec expect $test]
+    if [dict get $options print] {
+      puts $output
+    }
     puts "ok([file tail $test])"
-  } trap {} {output state} {
+  } trap {} {ignore state} {
     puts "Caught error:"
     puts $output
     exit 2
   }
-  #>@ stdout 2>@ stderr
 }
