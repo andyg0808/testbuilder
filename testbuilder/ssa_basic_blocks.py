@@ -91,11 +91,13 @@ class StartBlock(BasicBlock):
 @dataclass
 class Controlled(BasicBlock):
     conditional: n.expr
+    line: int
 
 
 @dataclass
 class TrueBranch(Controlled, Parented):
-    line: int
+    pass
+
 
 @dataclass
 class ForcedTrueBranch(TrueBranch):
@@ -104,7 +106,8 @@ class ForcedTrueBranch(TrueBranch):
 
 @dataclass
 class FalseBranch(Controlled, Parented):
-    line: int
+    pass
+
 
 @dataclass
 class ForcedFalseBranch(FalseBranch):
