@@ -3,6 +3,8 @@
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
 
+RUN = fastbuild
+
 MYPY = mypy --strict --check-untyped-defs testbuilder/generate_proto.py
 export MYPYPATH=./stubs
 
@@ -37,7 +39,7 @@ run:
 	expect run.exp
 
 watch:
-	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) fastbuild
+	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
 test:
 	./test.sh
 
