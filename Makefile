@@ -35,6 +35,10 @@ fastbuild:
 	$(PYTEST) | rainbow.py --colorize
 	./runtests
 
+livetest:
+	$(MYPY)
+	./runtests -print
+
 run:
 	expect run.exp
 
