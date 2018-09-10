@@ -14,9 +14,6 @@ from .build_tree import RETURNBLOCK, TreeBuilder, TreeWalker, build_tree
 from .slicing import Conditional, take_slice
 from .test_utils import write_dot
 
-StreamHandler(sys.stdout).push_application()
-
-
 Example = Union[int, Set[int]]
 ExampleMap = Mapping[int, Example]
 

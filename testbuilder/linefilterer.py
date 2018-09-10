@@ -14,7 +14,7 @@ from typing import (
     cast,
 )
 
-from logbook import Logger, StderrHandler
+from logbook import Logger
 
 import dataclasses
 
@@ -28,10 +28,6 @@ Coroutine = Generator[None, sbb.BasicBlock, sbb.BasicBlock]
 
 log = Logger("linefilterer")
 
-
-StderrHandler(
-    level="INFO", filter=lambda r, h: r.channel == "linefilterer"
-).push_application()
 
 A = TypeVar("A", bound=sbb.BasicBlock)
 B = TypeVar("B", bound=sbb.BasicBlock)

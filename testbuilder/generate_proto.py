@@ -27,7 +27,6 @@ from .renderer import prompt_and_render_test
 from .slicing import FuncStmt, Statement, split_statements
 from .solver import Solution, solve
 
-StreamHandler(stderr).push_application()
 logger = Logger("generator")
 
 

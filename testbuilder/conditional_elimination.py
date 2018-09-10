@@ -1,14 +1,11 @@
 from typing import Sequence
 
-from logbook import Logger, StderrHandler
+from logbook import Logger
 
 from . import ssa_basic_blocks as sbb
 from .visitor import UpdateVisitor
 
 log = Logger("conditional_elimination")
-StderrHandler(
-    level="INFO", filter=lambda r, h: r.channel == "conditional_elimination"
-).push_application()
 
 
 class ConditionalElimination(UpdateVisitor):

@@ -13,7 +13,6 @@ from .renderer import render_test
 from .slicing import Dependency, Slicer
 from .solver import Solution, solve
 
-StreamHandler(stderr).push_application()
 logger = Logger("generator")
 
 
