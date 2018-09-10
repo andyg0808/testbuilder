@@ -184,7 +184,7 @@ def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestDat
     request = filter_lines(target_line, module)
 
     repaired_request: sbb.Request = pipe(
-        request, repair, PhiFilterer(), FunctionSubstitute(module)
+        request, repair, PhiFilterer(), FunctionSubstitute()
     )
     write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)

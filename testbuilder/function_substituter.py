@@ -6,8 +6,7 @@ from .visitor import CoroutineVisitor, UpdateVisitor
 
 
 class FunctionSubstitute(UpdateVisitor):
-    def __init__(self, module: sbb.Module) -> None:
-        self.module = module
+    def __init__(self) -> None:
         super().__init__()
         self.call_id = 0
 
@@ -22,9 +21,9 @@ class FunctionSubstitute(UpdateVisitor):
             calls = find_calls(line)
             if calls:
                 assert len(calls) == 1
-                return self.split_code(node, num + start_line, calls[0])
+                return self.split_code(node, num + start_line, calls[0], **kwargs)
         # If there are no function calls here, move on to the parent node.
-        return self.generic_visit(node)
+        return self.generic_visit(node, **kwargs)
 
     def split_code(
         self, node: sbb.Code, num: int, call: n.Call, **kwargs: Any
@@ -44,20 +43,20 @@ class FunctionSubstitute(UpdateVisitor):
         call_info = n.Prefix(func=name.id, number=self.next_id())
 
         parent = node.parent
-        func = self.module.functions.get(call_info.func, None)
+        func = kwargs["module"].functions.get(call_info.func, None)
         if not func:
-            return self.visit(node, num + 1)
+            return self.visit(node, num + 1, **kwargs)
 
         argument_bindings = bind_arguments(call_info, call, func, num)
         first_lines = node.code[:num] + argument_bindings
 
         if first_lines:
             parent = build_block(first_lines, node.first_line, parent)
-        parent = self.visit(parent)
+        parent = self.visit(parent, **kwargs)
 
         parent = self.fetch_function(call_info, call, func, parent)
 
-        return_binding = [self.visit(node.code[num], call_info)]
+        return_binding = [self.visit(node.code[num], call_info, **kwargs)]
         last_lines = return_binding + node.code[num + 1 :]
         parent = build_block(last_lines, node.first_line + num + 1, parent)
         return parent
@@ -88,7 +87,7 @@ class FunctionSubstitute(UpdateVisitor):
         if call_info:
             return n.Result(func=call_info.func, number=call_info.number)
         else:
-            return self.generic_visit(call)
+            return self.generic_visit(call, **kwargs)
 
 
 class Reparent(UpdateVisitor):
