@@ -24,6 +24,17 @@ StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
 
 
+def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
+    varmanager = VariableManager(variables)
+    t = AstToSSABasicBlocks(depth, varmanager)
+    if not isinstance(node, ast.Module):
+        assert isinstance(node, ast.stmt)
+        node = ast.Module(body=[node])
+    res = t.visit(node)
+    assert isinstance(res, sbb.Module)
+    return res
+
+
 class AstToSSABasicBlocks(SimpleVisitor):
     def __init__(self, depth: int, variables: VariableManager) -> None:
         self.block_id = 0
@@ -331,17 +342,6 @@ def unify_all_variables(
         variables[key] = max_value
 
     return (variables, renamings)
-
-
-def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
-    varmanager = VariableManager(variables)
-    t = AstToSSABasicBlocks(depth, varmanager)
-    if not isinstance(node, ast.Module):
-        assert isinstance(node, ast.stmt)
-        node = ast.Module(body=[node])
-    res = t.visit(node)
-    assert isinstance(res, sbb.Module)
-    return res
 
 
 class StatementVisitor(GenericVisitor):
