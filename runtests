@@ -3,7 +3,12 @@ package require cmdline 1.3.3
 set available_options {{print "Print the output from each test executed"}}
 set options [::cmdline::getoptions ::argv $available_options]
 
-set tests [glob "cli_tests/*/*.exp"]
+if {[llength $::argv] > 0} {
+  set tests $::argv
+} else {
+  set tests [glob "cli_tests/*/*.exp"]
+}
+
 puts "1..[llength $tests]"
 foreach test $tests {
   set result {}
