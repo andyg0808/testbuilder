@@ -9,6 +9,7 @@ from typing import (
     Generic,
     Iterator,
     List,
+    Mapping,
     MutableMapping as MMapping,
     Optional,
     Sequence,
@@ -148,6 +149,11 @@ class SearchVisitor(GenericVisitor[Optional[A]]):
                     res = self.visit(d, *args, **kwargs)
                     if res is not None:
                         return res
+            if isinstance(data, Mapping):
+                for v in data.values():
+                    res = self.visit(v, *args, **kwargs)
+                    if res is not None:
+                        return res
             else:
                 res = self.visit(data, *args, **kwargs)
                 if res is not None:
@@ -172,6 +178,8 @@ class GatherVisitor(GenericVisitor[List[A]]):
             data = getattr(v, f.name)
             if isinstance(data, Sequence):
                 results += mapcat(arg_visit, data)
+            if isinstance(data, Mapping):
+                results += mapcat(arg_visit, list(data.values()))
             else:
                 results += arg_visit(data)
         return results
@@ -190,6 +198,9 @@ class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
             data = getattr(v, f.name)
             if isinstance(data, Sequence):
                 for d in data:
+                    yield from arg_visit(d)
+            elif isinstance(data, Mapping):
+                for d in data.values():
                     yield from arg_visit(d)
             else:
                 yield from arg_visit(data)
@@ -235,6 +246,8 @@ class UpdateVisitor(GenericVisitor):
             res: Any
             if isinstance(data, list):
                 res = [self.visit(x, *args, **kwargs) for x in data]
+            elif isinstance(data, dict):
+                res = {k: self.visit(v, *args, **kwargs) for k, v in data.items()}
             else:
                 res = self.visit(data, *args, **kwargs)
             results[f.name] = res
