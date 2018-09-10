@@ -118,7 +118,8 @@ class GenericVisitor(SimpleVisitor[A]):
     def visit(self, v: Any, *args: Any, **kwargs: Any) -> A:
         try:
             return super().visit(v, *args, **kwargs)
-        except VisitError:
+        except VisitError as err:
+            log.debug("VisitError received; visiting generically [Error is {}]", err)
             # If we get a VisitError, fall through to using the
             # `generic_visit` function. Trying to call `generic_visit`
             # here causes later, genuine VisitErrors to be caused
