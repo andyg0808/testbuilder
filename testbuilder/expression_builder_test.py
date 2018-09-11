@@ -6,9 +6,7 @@ from toolz import pipe
 
 import z3
 
-from .expression_builder import ExpressionBuilder, get_expression
-from .slicing import take_slice
-from .test_utils import write_dot
+from .expression_builder import get_expression
 from .variable_expander import expand_variables
 
 # def test_conditional_index():
