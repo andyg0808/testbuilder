@@ -11,7 +11,8 @@ class FunctionSubstitute(UpdateVisitor):
         self.call_id = 0
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
-        return self.generic_visit(request, module=request.module)
+        code = self.generic_visit(request.code, module=request.module)
+        return sbb.Request(module=request.module, code=code)
 
     def visit_Code(
         self, node: sbb.Code, start_line: int = 0, **kwargs: Any
