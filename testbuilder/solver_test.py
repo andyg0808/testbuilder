@@ -4,6 +4,7 @@ import pytest
 
 import z3
 
+from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
 from .solver import solve
 from .variable_expander import expand_variables
@@ -25,12 +26,17 @@ def compare_dicts(actual, expected):
 
 def check_solve(code, conditions, expected, unroll=1):
     parse = ast.parse(code)
-    code_expression = get_expression(-1, parse, depth=unroll)
+    testdata = get_expression(-1, parse, depth=unroll)
     if conditions:
         condition_expression = expand_variables(conditions)
-        expression = z3.And(code_expression, condition_expression)
+        expression = sbb.TestData(
+            name=testdata.name,
+            source_text=testdata.source_text,
+            free_variables=testdata.free_variables,
+            expression=z3.And(testdata.expression, condition_expression),
+        )
     else:
-        expression = code_expression
+        expression = testdata
     print("expression", expression)
     res = solve(expression)
     if isinstance(expected, spotcheck):

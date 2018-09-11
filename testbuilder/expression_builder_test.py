@@ -46,7 +46,11 @@ def check_expression(
     if isinstance(expected, str):
         expected = expand_variables(expected)
     _get_expression = partial(get_expression, line, depth=depth)
-    expr = pipe(code_string.strip(), ast.parse, _get_expression)
+    test_data = pipe(code_string.strip(), ast.parse, _get_expression)
+    if test_data is None:
+        expr = None
+    else:
+        expr = test_data.expression
     print("expected  ", expected)
     print("expression", expr)
     if simplify:
