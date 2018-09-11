@@ -17,6 +17,3 @@ class LineSplitter(GatherVisitor[int]):
 
     def visit_Stmt(self, node: n.stmt) -> List[int]:
         return [node.line]
-
-    # def visit_Controlled(self, node: sbb.Controlled) -> List[int]:
-    #     return [node.line] + self.generic_visit(node)
