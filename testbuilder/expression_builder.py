@@ -28,6 +28,7 @@ from .basic_block import BasicBlock, BlockTree
 from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Variable, take_slice
+from .ssa_to_expression import Expression, ExprList, bool_and, ssa_lines_to_expression
 from .variable_manager import VarMapping
 
 NULL = z3.DeclareSort("None")
@@ -35,29 +36,6 @@ NULL = z3.DeclareSort("None")
 
 StopBlock = Optional[BasicBlock]
 
-Expression = z3.ExprRef
-ExprList = List[Expression]
-
-
-def _simplify_logical(
-    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
-) -> Expression:
-    if len(exprs) > 1:
-        return function(*exprs)
-    else:
-        return exprs[0]
-
-
-def bool_not(expr: Expression) -> Expression:
-    return z3.Not(expr)
-
-
-def bool_or(*exprs: Expression) -> Expression:
-    return _simplify_logical(exprs, z3.Or)
-
-
-def bool_and(*exprs: Expression) -> Expression:
-    return _simplify_logical(exprs, z3.And)
 
 
 def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
@@ -93,21 +71,6 @@ class ExpressionBuilder:
 
         testdata: TestData = pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)
         return testdata.expression
-
-
-def to_boolean(expr: Expression) -> Expression:
-    if z3.is_int(expr):
-        return expr == z3.IntVal(0)
-    elif z3.is_bool(expr):
-        return expr
-    else:
-        raise UnknownConversionException(
-            f"Can't convert {expr.sort().name()} to boolean"
-        )
-
-
-class UnknownConversionException(RuntimeError):
-    pass
 
 
 def _is_required(

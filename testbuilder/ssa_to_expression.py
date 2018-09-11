@@ -1,12 +1,11 @@
 from functools import singledispatch
-from typing import List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from toolz import mapcat, pipe
 
 import z3
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
-from .expression_builder import ExprList, bool_and, bool_not, bool_or, to_boolean
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .linefilterer import filter_lines
@@ -17,6 +16,7 @@ from .visitor import GatherVisitor, SimpleVisitor
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
+ExprList = List[Expression]
 
 
 class SSAVisitor(SimpleVisitor[ExprList]):
@@ -188,3 +188,39 @@ def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestDat
     )
     write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)
+
+
+def bool_not(expr: Expression) -> Expression:
+    return z3.Not(expr)
+
+
+def bool_or(*exprs: Expression) -> Expression:
+    return _simplify_logical(exprs, z3.Or)
+
+
+def bool_and(*exprs: Expression) -> Expression:
+    return _simplify_logical(exprs, z3.And)
+
+
+def to_boolean(expr: Expression) -> Expression:
+    if z3.is_int(expr):
+        return expr == z3.IntVal(0)
+    elif z3.is_bool(expr):
+        return expr
+    else:
+        raise UnknownConversionException(
+            f"Can't convert {expr.sort().name()} to boolean"
+        )
+
+
+def _simplify_logical(
+    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
+) -> Expression:
+    if len(exprs) > 1:
+        return function(*exprs)
+    else:
+        return exprs[0]
+
+
+class UnknownConversionException(RuntimeError):
+    pass
