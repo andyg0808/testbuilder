@@ -37,7 +37,7 @@ fastbuild:
 
 livetest:
 	$(MYPY)
-	./runtests -print
+	./runtests
 
 run:
 	expect run.exp
