@@ -1,7 +1,4 @@
 #!/usr/bin/tclsh
-package require cmdline 1.3.3
-set available_options {{print "Print the output from each test executed"}}
-set options [::cmdline::getoptions ::argv $available_options]
 
 if {[llength $::argv] > 0} {
   set tests $::argv
@@ -13,12 +10,9 @@ puts "1..[llength $tests]"
 foreach test $tests {
   set result {}
   try {
-    set output [exec expect $test]
-    if [dict get $options print] {
-      puts $output
-    }
+    exec expect $test
     puts "ok([file tail $test])"
-  } trap {} {ignore state} {
+  } trap {} {output state} {
     puts "Caught error:"
     puts $output
     exit 2
