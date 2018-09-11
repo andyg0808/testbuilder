@@ -346,16 +346,10 @@ def test_check_empty_tree():
 def create_tree(code: str, write_tree: str = "", line=-1):
     parsed = ast.parse(code.strip())
     tree = build_tree(parsed)
-    if write_tree != "":
-        # print("writing tree!")
-        write_dot(tree.dot(), write_tree)
-        write_dot(tree.build_tree()[0].dot(), write_tree)
-    # print("done writing")
     s = take_slice(line, parsed)
     if not s:
         warn("No such slice exists")
         return None
-    # print("before", s.walk_tree())
     return tree.inflate(s)
 
 
