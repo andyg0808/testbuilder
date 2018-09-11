@@ -1,80 +1,70 @@
-from ast import AST, FunctionDef, parse
-from functools import partial, reduce
+from ast import AST, parse
+from functools import partial
 from pathlib import Path
-from sys import stderr
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    TypeVar,
-    cast,
-)
+from typing import Any, List, Optional
 
-from logbook import Logger, StreamHandler  # type: ignore
-from toolz import compose, pipe
+from logbook import Logger
+from toolz import pipe
 
-from dataclasses import dataclass
-
-from .build_tree import build_tree
-from .expression_builder import Expression, ExpressionBuilder
-from .function_walker import split_functions
-from .iter_monad import chain, liftIter, optional_to_iter, returnIter
+from . import ssa_basic_blocks as sbb
+from .ast_to_ssa import ast_to_ssa
+from .function_substituter import FunctionSubstitute
+from .iter_monad import liftIter
+from .line_splitter import LineSplitter
+from .phifilter import PhiFilterer
 from .renderer import prompt_and_render_test
-from .slicing import FuncStmt, Statement, split_statements
 from .solver import Solution, solve
+from .ssa_repair import repair
+from .ssa_to_expression import filter_lines, ssa_to_expression
 
 logger = Logger("generator")
 
 
 def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[str]:
-    def build_test_case(funcstmt: FuncStmt) -> str:
-        _filter_inputs = partial(filter_inputs, funcstmt.function)
-        _render_test = partial(
-            prompt_and_render_test,
-            source,
-            funcstmt.function.name,
-            io,
-            prompt,
-            text,
-            funcstmt.function,
+    def generate_test(module: sbb.Module, target_line: int) -> str:
+        request = filter_lines(target_line, module)
+        if isinstance(request.code, sbb.BlockTree):
+            logger.error(
+                f"Couldn't generate a test for line {target_line};"
+                " it is not in a function"
+            )
+            return ""
+        function = request.code
+        _filter_inputs = partial(filter_inputs, function)
+
+        expr: sbb.TestData = pipe(
+            request, repair, PhiFilterer(), FunctionSubstitute(), ssa_to_expression
         )
-        solution: Optional[Solution] = pipe(funcstmt, get_expression, solve)
+        solution: Optional[Solution] = solve(expr)
         if not solution:
             logger.error(
-                f"Couldn't generate a test for line {funcstmt.statement.lineno};"
+                f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
             return ""
+        _render_test = partial(
+            prompt_and_render_test, source, function.name, io, prompt, text, expr
+        )
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
 
     def parse_file(text: str) -> AST:
         return parse(text, str(source))
 
-    return pipe(
-        returnIter(text),
-        liftIter(parse_file),
-        chain(split_statements, split_functions),
-        liftIter(build_test_case),
-        list,
-    )
+    _ast_to_ssa = partial(ast_to_ssa, 10, {})
+
+    module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
+    _generate_test = partial(generate_test, module)
+
+    from .test_utils import write_dot
+
+    write_dot(module, "generated.dot")
+    print("lines", LineSplitter()(module))
+    return pipe(module, LineSplitter(), liftIter(_generate_test), list)
 
 
-def filter_inputs(function: FunctionDef, inputs: Solution) -> Solution:
+def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
     args = {}
-    for arg in function.args.args:
-        name = arg.arg
+    for name in function.args:
         args[name] = inputs[name]
     return args
-
-
-def get_expression_at_depth(depth: int, funcstmt: FuncStmt) -> Expression:
-    builder = ExpressionBuilder(depth, funcstmt.statement.lineno)
-    return builder.get_expression(funcstmt.function)
-
-
-get_expression = partial(get_expression_at_depth, 2)
