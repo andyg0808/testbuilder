@@ -2,6 +2,7 @@ import re
 from typing import Any, Mapping, Optional
 
 import z3
+from typeassert import assertify
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 
@@ -9,6 +10,7 @@ Solution = Mapping[str, Any]
 
 
 def solve(expr: z3.ExprRef) -> Optional[Solution]:
+@assertify
     solver = z3.Solver()
     solver.add(expr)
     res = solver.check()
