@@ -89,7 +89,7 @@ class Discovery(SearchVisitor[sbb.BasicBlock]):
     def __init__(self, target_line: int) -> None:
         super().__init__()
         self.target_line = target_line
-        print("searching for line", target_line)
+        log.info("Searching for line {}...", target_line)
 
     def visit_Positioned(self, block: sbb.Positioned) -> Optional[sbb.BasicBlock]:
         if self.target_line in block.lines:
