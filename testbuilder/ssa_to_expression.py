@@ -1,6 +1,7 @@
 from functools import singledispatch
 from typing import Callable, List, Optional, Tuple
 
+from astor import to_source  # type: ignore
 from toolz import mapcat, pipe
 
 import z3
@@ -110,7 +111,10 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
         expression = bool_all(visitor.visit(node.blocks))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
-        name=node.name, free_variables=free_variables, expression=expression
+        name=node.name,
+        free_variables=free_variables,
+        expression=expression,
+        source_text=to_source(node.original),
     )
 
 
@@ -122,7 +126,10 @@ def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
         expression = bool_all(visitor.visit(code))
     free_variables = find_variables(code)
     return sbb.TestData(
-        name="code", free_variables=free_variables, expression=expression
+        name="code",
+        free_variables=free_variables,
+        expression=expression,
+        source_text="<source missing>",
     )
 
 

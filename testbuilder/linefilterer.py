@@ -66,6 +66,7 @@ class ComputedLineFilterer(UpdateVisitor):
                 name=function.name,
                 args=function.args,
                 blocks=blocktree,
+                original=function.original,
             )
         pass
 

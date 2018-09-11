@@ -4,15 +4,17 @@ from typing import Any, Mapping, Optional
 import z3
 from typeassert import assertify
 
+from . import ssa_basic_blocks as sbb
+
 VAR_NAME = re.compile(r"pyname_(.*)")
 
 Solution = Mapping[str, Any]
 
 
-def solve(expr: z3.ExprRef) -> Optional[Solution]:
 @assertify
+def solve(data: sbb.TestData) -> Optional[Solution]:
     solver = z3.Solver()
-    solver.add(expr)
+    solver.add(data.expression)
     res = solver.check()
     if res == z3.unsat:
         return None

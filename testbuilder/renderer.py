@@ -1,8 +1,7 @@
-from ast import FunctionDef
 from pathlib import Path
 from typing import Any, Mapping
 
-from astor import to_source  # type: ignore
+from .ssa_basic_blocks import TestData
 
 
 def prompt_and_render_test(
@@ -11,12 +10,12 @@ def prompt_and_render_test(
     io: Any,
     prompt: str,
     text: str,
-    func: FunctionDef,
+    test: TestData,
     args: Mapping[str, Any],
 ) -> str:
     print("=================================================")
     # print(text)
-    print(to_source(func))
+    print(test.source_text)
     if prompt == "":
         print(f"What is the expected output of {name} from these arguments? {args}")
     else:

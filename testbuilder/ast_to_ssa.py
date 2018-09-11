@@ -70,6 +70,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
             name=node.name,
             args=args,
             blocks=blocktree,
+            original=node,
         )
 
     def body_visit(self, stmts: StmtList) -> sbb.BlockTree:

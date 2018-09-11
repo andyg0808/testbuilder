@@ -6,8 +6,6 @@ import ast
 from copy import copy
 from functools import partial, reduce
 from typing import (
-    Callable,
-    Iterable,
     List,
     Mapping,
     MutableMapping as MMapping,
@@ -20,15 +18,14 @@ from typing import (
 from toolz import pipe
 
 import z3
-from typeassert import assertify
 
-from . import basic_block
-from .ast_builder import make_ast
-from .basic_block import BasicBlock, BlockTree
-from .build_tree import RETURNBLOCK, build_tree
-from .converter import VAR_START_VALUE, convert, get_variable
-from .slicing import Variable, take_slice
+from .ast_to_ssa import ast_to_ssa
+from .basic_block import BasicBlock
+from .converter import get_variable
+from .slicing import take_slice
+from .ssa_basic_blocks import TestData
 from .ssa_to_expression import Expression, ExprList, bool_and, ssa_lines_to_expression
+from .utils import pipe_print
 from .variable_manager import VarMapping
 
 NULL = z3.DeclareSort("None")
@@ -37,8 +34,7 @@ NULL = z3.DeclareSort("None")
 StopBlock = Optional[BasicBlock]
 
 
-
-def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[Expression]:
+def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[TestData]:
     dep_tree = take_slice(line, code)
     if not dep_tree:
         return None
@@ -51,26 +47,20 @@ class ExpressionBuilder:
         self.depth = depth
         self.target_line = target_line
 
-    def get_expression(self, code: ast.AST) -> Expression:
+    def get_expression(self, code: ast.AST) -> TestData:
         return self.convert_tree(code, {})
 
-    def convert_tree(self, code: ast.AST, variables: VarMapping) -> Expression:
+    def convert_tree(self, code: ast.AST, variables: VarMapping) -> TestData:
         actual = self._modern_convert_tree(copy(variables), code)
         return actual
 
-    def _modern_convert_tree(self, variables: VarMapping, code: ast.AST) -> Expression:
-        from .ast_to_ssa import ast_to_ssa
-
-        from .ssa_to_expression import ssa_lines_to_expression
-        from .ssa_basic_blocks import TestData
+    def _modern_convert_tree(self, variables: VarMapping, code: ast.AST) -> TestData:
 
         _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
         _ssa_to_expression = partial(ssa_lines_to_expression, self.target_line)
 
-        from .utils import pipe_print
-
         testdata: TestData = pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)
-        return testdata.expression
+        return testdata
 
 
 def _is_required(

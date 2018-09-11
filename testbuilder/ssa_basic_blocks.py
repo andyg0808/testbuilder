@@ -1,25 +1,11 @@
-from abc import abstractmethod
-from functools import partial, reduce, singledispatch
-from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    TypeVar,
-    Union,
-    cast,
-)
+import ast
+from functools import reduce, singledispatch
+from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
 from dataclasses import dataclass, field
 
 from . import nodetree as n
-from .slicing import Dependency
 from .visitor import GatherVisitor
 
 Expression = z3.ExprRef
@@ -219,6 +205,7 @@ class FunctionDef(Positioned):
     name: str
     args: List[str]
     blocks: BlockTree
+    original: ast.FunctionDef
 
 
 @dataclass
@@ -245,7 +232,7 @@ class TestData:
     name: str
     # statements: Dependency
     # lines: Set[int]
-    # function_text: str
+    source_text: str
     # function: Optional[FunctionDef] = None
     free_variables: List[Variable]
     expression: Expression
