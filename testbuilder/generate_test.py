@@ -68,14 +68,6 @@ def test_minimize():
     assert tests == expected
 
 
-def test_that_test_is_correct():
-    a = 1
-    b = 2
-    actual = min(a, b)
-    expected = 1
-    assert actual == expected
-
-
 @given(functions, integers(), integers())
 def test_generate_basic(op, a, b):
     assume(b != 0)
