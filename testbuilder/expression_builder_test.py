@@ -842,6 +842,35 @@ def call_func(i):
     )
 
 
+@pytest.mark.xfail
+def test_deep_call():
+    check_expression(
+        """
+def bottom(i):
+    return i * 2
+
+def middle(i):
+    p = bottom(i) + 2
+    return p
+
+def top(i):
+    q = middle(i)
+    q += 23
+    return q * 23
+        """,
+        """
+        And(function_middle_1_pyname_i == pyname_i,
+        function_bottom_1_pyname_i == function_middle_1_pyname_i,
+        function_bottom_1_return == function_bottom_1_pyname_i * 2,
+        function_middle_1_pyname_p == function_bottom_1_return + 2,
+        function_middle_1_return == function_middle_1_pyname_p,
+        pyname_q == function_middle_1_return,
+        pyname_q_1 == pyname_q + 23
+        ret == pyname_q_1 * 23)
+""",
+    )
+
+
 def test_conditional_functions():
     # TODO: Extract the initial line of each of the innermost `And`s
     # into the outer `And`.
