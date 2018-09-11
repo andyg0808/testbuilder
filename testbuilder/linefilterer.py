@@ -100,6 +100,15 @@ class Discovery(SearchVisitor[sbb.BasicBlock]):
         else:
             return None
 
+    def visit_Controlled(self, block: sbb.Controlled) -> Optional[sbb.BasicBlock]:
+        if self.target_line == block.line:
+            assert isinstance(block, sbb.BasicBlock)
+            return block
+        elif isinstance(block, sbb.Parented):
+            return self.visit(block.parent)
+        else:
+            return None
+
 
 SSAName = Tuple[str, int]
 
