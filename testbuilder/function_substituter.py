@@ -57,9 +57,13 @@ class FunctionSubstitute(UpdateVisitor):
 
         parent = self.fetch_function(call_info, call, func, parent)
 
-        return_binding = [self.visit(node.code[num], call_info, **kwargs)]
-        last_lines = return_binding + node.code[num + 1 :]
-        parent = build_block(last_lines, node.first_line + num + 1, parent)
+        return_binding = self.visit(node.code[num], call_info, **kwargs)
+        if return_binding:
+            last_lines = [return_binding] + node.code[num + 1 :]
+        else:
+            last_lines = node.code[num + 1 :]
+        if last_lines:
+            parent = build_block(last_lines, node.first_line + num + 1, parent)
         return parent
 
     def fetch_function(
@@ -79,6 +83,16 @@ class FunctionSubstitute(UpdateVisitor):
     def next_id(self) -> int:
         self.call_id += 1
         return self.call_id
+
+    def visit_Expr(
+        self, expr: n.Expr, call_info: Optional[n.Prefix] = None, **kwargs: Any
+    ) -> Optional[n.Expr]:
+        if not call_info:
+            return self.generic_visit(expr, **kwargs)
+        if isinstance(expr.value, n.Call):
+            # Discard call sites which are for side-effects only
+            return None
+        return self.generic_visit(expr, call_info, **kwargs)
 
     def visit_Call(
         self, call: n.Call, call_info: Optional[n.Prefix] = None, **kwargs: Any
