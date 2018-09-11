@@ -1,8 +1,9 @@
 from copy import copy
-from typing import List, Optional
+from typing import List, MutableMapping as MMapping, Optional
 
 from .ast_builder import VAR_START_VALUE
-from .expression_builder import VarMapping
+
+VarMapping = MMapping[str, int]
 
 
 class VariableManager:

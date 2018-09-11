@@ -15,9 +15,8 @@ from typing import (
 import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .expression_builder import VarMapping
 from .return_checker import contains_return
-from .variable_manager import VariableManager
+from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
 
 StmtList = List[ast.stmt]

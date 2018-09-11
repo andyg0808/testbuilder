@@ -28,11 +28,11 @@ from .basic_block import BasicBlock, BlockTree
 from .build_tree import RETURNBLOCK, build_tree
 from .converter import VAR_START_VALUE, convert, get_variable
 from .slicing import Variable, take_slice
+from .variable_manager import VarMapping
 
 NULL = z3.DeclareSort("None")
 
 
-VarMapping = MMapping[str, int]
 StopBlock = Optional[BasicBlock]
 
 Expression = z3.ExprRef
