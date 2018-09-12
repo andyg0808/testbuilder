@@ -8,5 +8,4 @@ def anotherJunkyF27364(lkjafskjdsskj):
     JunkyFunction(lkjafskjdsskj)
     JunkyFunction(12341)
     UGYYG = JunkyFunction(42)
-    JunkyFunction(UGYYG)
     return 22
