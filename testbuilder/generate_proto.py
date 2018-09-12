@@ -71,5 +71,9 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
 def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
     args = {}
     for name in function.args:
-        args[name] = inputs[name]
+        args[name] = inputs.get(name, default_value(name))
     return args
+
+
+def default_value(name: str) -> Any:
+    return 1234567890
