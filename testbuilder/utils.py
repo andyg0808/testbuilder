@@ -2,7 +2,8 @@ import ast
 import inspect
 import sys
 from pprint import pprint
-from typing import Any
+from typing import Any, TypeVar
+from .test_utils import write_dot
 
 from termcolor import cprint
 
@@ -43,3 +44,15 @@ def pipe_print(value: Any, message: str = "") -> Any:
     pprint(value)
     print("End pipe print")
     return value
+
+
+A = TypeVar("A")
+
+
+class WriteDot:
+    def __init__(self, filename: str) -> None:
+        self.filename = filename
+
+    def __call__(self, thing: A) -> A:
+        write_dot(thing, self.filename)
+        return thing
