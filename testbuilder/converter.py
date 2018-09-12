@@ -34,8 +34,10 @@ def get_variable_name(node: n.Name) -> str:
     else:
         return name + "_" + str(node.set_count)
 
+
 def get_prefix(prefix: n.Prefix) -> str:
     return f"function_{prefix.func}_{prefix.number}"
+
 
 def get_result(prefix: n.Prefix) -> str:
     return get_prefix(prefix) + "_return"
@@ -132,6 +134,7 @@ def visit_Name(node: n.Name) -> Expression:
         return z3.String(variable)
     else:
         return z3.Int(variable)
+
 
 @visit_expr.register(n.PrefixedName)
 def visit_PrefixedName(node: n.PrefixedName) -> Expression:
