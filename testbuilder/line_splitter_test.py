@@ -23,3 +23,15 @@ def abc():
     """,
         [2],
     )
+
+
+def test_splitting_with_ignored_code():
+    check_lines(
+        """
+def abc():
+    42
+    "werkjhg"
+    abs(23)
+        """,
+        [4],
+    )
