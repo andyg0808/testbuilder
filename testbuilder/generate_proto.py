@@ -12,10 +12,12 @@ from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .line_splitter import LineSplitter
 from .phifilter import PhiFilterer
-from .renderer import prompt_and_render_test
+from .renderer import prompt_and_render_tests
 from .solver import Solution, solve
 from .ssa_repair import repair
+from .expr_stripper import ExprStripper
 from .ssa_to_expression import filter_lines, ssa_to_expression
+from .utils import WriteDot
 
 logger = Logger("generator")
 
@@ -33,7 +35,13 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
         _filter_inputs = partial(filter_inputs, function)
 
         expr: sbb.TestData = pipe(
-            request, repair, PhiFilterer(), FunctionSubstitute(), ssa_to_expression
+            request,
+            repair,
+            PhiFilterer(),
+            FunctionSubstitute(),
+            ExprStripper(),
+            WriteDot("generate.dot"),
+            ssa_to_expression,
         )
         solution: Optional[Solution] = solve(expr)
         if not solution:
@@ -56,9 +64,6 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
     _generate_test = partial(generate_test, module)
 
-    from .test_utils import write_dot
-
-    write_dot(module, "generated.dot")
     print("lines", LineSplitter()(module))
     return pipe(module, LineSplitter(), liftIter(_generate_test), list)
 
