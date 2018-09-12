@@ -3,6 +3,7 @@ import re
 import traceback
 from abc import abstractmethod
 from typing import (
+    get_type_hints,
     Any,
     Callable,
     Generator,
@@ -73,6 +74,7 @@ class SimpleVisitor(Generic[B]):
         suggestion = None
         if start_class in cache:
             return cast(Callable[..., B], cache[start_class])
+        log.trace("Finding functions in {}", type(self))
         for cls in inspect.getmro(start_class):
             func = self.__scan_functions(cls)
             if func is not None:
@@ -81,7 +83,6 @@ class SimpleVisitor(Generic[B]):
                 return func
             elif suggestion is None:
                 suggestions = getattr(self, "__suggestions", {})
-                log.debug("suggestions", suggestions)
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
             raise VisitError(start_class, suggestion)
@@ -96,6 +97,7 @@ class SimpleVisitor(Generic[B]):
             # See https://stackoverflow.com/a/1911287/
             for name, method in inspect.getmembers(self, inspect.ismethod):
                 signature = inspect.signature(method)
+                annotations = get_type_hints(method)
                 if len(signature.parameters) < 1:
                     if SuggestionRegex.match(name):
                         log.warn(f"Found {name} with too few parameters")
@@ -103,12 +105,14 @@ class SimpleVisitor(Generic[B]):
                 parameters = list(signature.parameters.values())
                 param = parameters[0]
                 if NameRegex.match(name):
-                    typecache[param.annotation] = method
+                    annotation = annotations[param.name]
+                    log.debug("Found visitor {} for {}", name, annotation)
+                    typecache[annotation] = method
                 elif SuggestionRegex.match(name):
-                    log.debug("found suggestion", name)
-                    suggestions[param.annotation] = name
+                    log.debug("Found suggestion {}", name)
+                    suggestions[annotations[param.name]] = name
                 else:
-                    log.debug("not suggesting", name)
+                    log.debug("Ignoring {}", name)
 
             setattr(self, "__type_cache", typecache)
             setattr(self, "__suggestions", suggestions)
