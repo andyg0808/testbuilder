@@ -150,7 +150,6 @@ class CallFinder(CoroutineVisitor[n.Call, None]):
 
 class VariablePrefix(UpdateVisitor):
     def visit_Name(self, name: n.Name, prefix: n.Prefix) -> n.PrefixedName:
-        print("Found name", name)
         return n.PrefixedName(
             id=name.id, set_count=name.set_count, func=prefix.func, number=prefix.number
         )

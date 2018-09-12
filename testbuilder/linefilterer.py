@@ -78,7 +78,6 @@ class ComputedLineFilterer(UpdateVisitor):
         filtered: sbb.BasicBlock = result(filterer(target), blocktree.start)
         tree: sbb.BasicBlock = ConditionalElimination()(filtered)
         # print("Visited nodes", [type(node) for node in filterer.visited_nodes.values()])
-        print("filtered", tree)
         start_block = blocktree.start
         return sbb.BlockTree(
             start=start_block,
