@@ -108,7 +108,10 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
     if node.blocks.empty():
         expression = bool_true()
     else:
-        expression = bool_all(visitor.visit(node.blocks))
+        expressions = visitor.visit(node.blocks)
+        for expr in expressions:
+            assert z3.is_bool(expr), f"{expr} is not boolean"
+        expression = bool_all(expressions)
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
         name=node.name,
