@@ -84,6 +84,11 @@ def test_div():
     check_expression("i / 3", "pyname_i / 3")
 
 
+@pytest.mark.skip
+def test_is_not():
+    check_expression("i is not j", "id(pyname_i) != id(pyname_j)")
+
+
 def test_constant():
     check_expression(
         """
