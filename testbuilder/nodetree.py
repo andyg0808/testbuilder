@@ -123,7 +123,7 @@ class UnaryOp(expr):
 
 @dataclass
 class Set(stmt):
-    target: "Name"
+    target: Name
     e: expr
 
 
