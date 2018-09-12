@@ -107,6 +107,63 @@ def test_min():
     assert function == expected
 
 
+def test_generate_uninteresting_function():
+    code = """
+def boring(fishy):
+    24
+    fishy
+    # This line should throw a NameError, so we want to at least run
+    # the code in our test.
+    garbage
+    """
+    expected = [
+        # Eventually, we want to generate a test that just runs the
+        # code with appropriate inputs if we can't find any lines to
+        # test. But for now, we'll just not generate any tests.
+        #         """
+        # from minmax import maximize
+        # def test_maximize():
+        #     fishy = 0
+        #     boring(fishy)
+        #     """
+    ]
+    io = StringIO("")
+    tests = generate_tests(Path("boring.py"), code, io)
+    assert tests == expected
+
+
+def test_uninteresting_function_call():
+    code = """
+def boring(fishy):
+    fishy
+    return 36
+
+def caller(fishy):
+    return boring(fishy)
+    """
+    expected = {
+        """
+from boring import boring
+def test_boring():
+    fishy = 1234567890
+    actual = boring(fishy)
+    expected = 36
+    assert actual == expected
+    """,
+        """
+from boring import caller
+def test_caller():
+    fishy = 0
+    actual = caller(fishy)
+    expected = 36
+    assert actual == expected
+    """,
+    }
+    io = StringIO("36\n36\n")
+    tests = generate_tests(Path("boring.py"), code, io)
+    assert set(tests) == expected
+
+
 # @given(function_names, integers(), integers())
 # def test_run_test(testname, n, k):
 #    assume(n != k)
