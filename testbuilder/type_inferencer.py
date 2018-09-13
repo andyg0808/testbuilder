@@ -12,6 +12,10 @@ from .type_store import TypeStore
 from .vartypes import AnyType, Type, Types
 from .visitor import SimpleVisitor
 
+# We want to do the "right thing". What does that look like?
+# First, the "right thing" never creates TypeErrors. So any 
+# variable which is unrestricted needs to be restricted in order to prevent them.
+# Second, the "right thing" uses as many types as possible. So if a function correctly handles arguments of any type, all types will be allowed.
 
 @dataclass
 class ModuleTypes:
