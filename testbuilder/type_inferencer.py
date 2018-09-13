@@ -68,7 +68,7 @@ class TypeInferencer(SimpleVisitor[TypeStore]):
         return store.set(name, t.result)
 
     def visit_Expr(self, node: n.Expr, store: TypeStore) -> TypeStore:
-        t = self.visit_expr(node.value, store)
+        self.visit_expr(node.value, store)
         return store
 
 
