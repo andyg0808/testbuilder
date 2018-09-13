@@ -939,6 +939,24 @@ def test(i, j):
     )
 
 
+def test_boolean_parameter():
+    check_expression(
+        """
+def test(b):
+    if b:
+        ret = 4
+    else:
+        ret = 5
+    return ret
+        """,
+        """
+        And(    bpyname_b  and pyname_ret == 4 or\
+            Not(bpyname_b) and pyname_ret == 5,
+            ret == pyname_ret)
+""",
+    )
+
+
 @pytest.mark.skip
 def test_function_recursion():
     check_expression(
