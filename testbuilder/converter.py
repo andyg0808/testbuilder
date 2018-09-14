@@ -3,16 +3,22 @@ Converts an expression from Python AST into a z3 expression. The structural
 aspects of converting Python are handled by the code in expression_builder.
 """
 import operator
+import re
 from functools import singledispatch
-from typing import Any, Callable, Mapping, TypeVar, cast
+from typing import Any, Callable, Mapping, Type, TypeVar, cast
 
 import z3
 
 from . import nodetree as n
 
 Expression = z3.ExprRef
+OpFunc = Callable[..., Expression]
+TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
+TypeConstructor = Callable[[Any], Expression]
+
 
 Constants: Mapping[Any, Expression] = {True: z3.BoolVal(True), False: z3.BoolVal(False)}
+Typelist: Mapping[str, TypeConstructor] = {"b": z3.Bool, "i": z3.Int, "s": z3.String}
 
 VAR_START_VALUE = 0
 
@@ -43,7 +49,14 @@ def get_result(prefix: n.Prefix) -> str:
     return get_prefix(prefix) + "_return"
 
 
-OpFunc = Callable[..., Expression]
+def get_type(name: str, set_count: int) -> TypeConstructor:
+    match = TypeRegex.match(name)
+    if match and match.group(1):
+        # There was a type given for the variable. Use that.
+        return Typelist[match.group(1).lower()]
+    else:
+        # It's not got a type. Assume it's an integer.
+        return z3.Int
 
 
 @singledispatch
@@ -130,10 +143,8 @@ def visit_NameConstant(node: n.NameConstant) -> Expression:
 @visit_expr.register(n.Name)
 def visit_Name(node: n.Name) -> Expression:
     variable = get_variable(node.id, node.set_count)
-    if node.id == "s":
-        return z3.String(variable)
-    else:
-        return z3.Int(variable)
+    constructor = get_type(node.id, node.set_count)
+    return constructor(variable)
 
 
 @visit_expr.register(n.PrefixedName)

@@ -112,30 +112,30 @@ def print_all(count):
 def test_empty_string():
     check_solve(
         """
-def print_all(s):
-    if s == '':
+def print_all(s_empty):
+    if s_empty == '':
         ret = 1
     else:
         ret = 2
     return ret
     """,
         "ret == 1",
-        {"ret": 1, "s": ""},
+        {"ret": 1, "s_empty": ""},
     )
 
 
 def test_string_test_case():
     check_solve(
         """
-def print_all(s):
-    if s == 'a':
+def print_all(s_thing):
+    if s_thing == 'a':
         ret = 1
     else:
         ret = 2
     return ret
     """,
         "ret == 1",
-        {"ret": 1, "s": "a"},
+        {"ret": 1, "s_thing": "a"},
     )
 
 

@@ -763,16 +763,16 @@ def test():
 def test_string_equality():
     check_expression(
         """
-def test(s: str):
-    if s == "win":
+def test(S_text: str):
+    if S_text == "win":
         res = 1
     else:
         res = 0
     return res
     """,
         """
-    (spyname_s == "win" and pyname_res == 1 or \
-    Not(spyname_s == "win") and pyname_res == 0) and \
+    (spyname_S_text == "win" and pyname_res == 1 or \
+    Not(spyname_S_text == "win") and pyname_res == 0) and \
     ret == pyname_res
     """,
     )
@@ -942,16 +942,16 @@ def test(i, j):
 def test_boolean_parameter():
     check_expression(
         """
-def test(b):
-    if b:
+def test(b_doit):
+    if b_doit:
         ret = 4
     else:
         ret = 5
     return ret
         """,
         """
-        And(    bpyname_b  and pyname_ret == 4 or\
-            Not(bpyname_b) and pyname_ret == 5,
+        And(    bpyname_b_doit  and pyname_ret == 4 or\
+            Not(bpyname_b_doit) and pyname_ret == 5,
             ret == pyname_ret)
 """,
     )
