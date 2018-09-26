@@ -2,9 +2,9 @@ from functools import singledispatch
 from typing import Callable, List, Optional, Tuple
 
 from astor import to_source  # type: ignore
-from toolz import mapcat, pipe
 
 import z3
+from toolz import mapcat, pipe
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
