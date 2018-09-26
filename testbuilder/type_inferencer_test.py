@@ -1,6 +1,7 @@
 import ast
 from functools import partial
 
+import pytest
 from toolz import pipe
 
 from .ast_to_ssa import ast_to_ssa
@@ -15,5 +16,6 @@ def check_expression(code, type, depth=10):
     assert code_type == type
 
 
+@pytest.mark.skip
 def test_int():
     check_expression("2", Type.int)

@@ -13,9 +13,10 @@ from .vartypes import AnyType, Type, Types
 from .visitor import SimpleVisitor
 
 # We want to do the "right thing". What does that look like?
-# First, the "right thing" never creates TypeErrors. So any 
+# First, the "right thing" never creates TypeErrors. So any
 # variable which is unrestricted needs to be restricted in order to prevent them.
 # Second, the "right thing" uses as many types as possible. So if a function correctly handles arguments of any type, all types will be allowed.
+
 
 @dataclass
 class ModuleTypes:
@@ -63,27 +64,29 @@ class TypeInferencer(SimpleVisitor[TypeStore]):
         return TypeStore({}, {})
 
     def visit_Set(self, node: n.Set, store: TypeStore) -> TypeStore:
-        t = self.visit_expr(node.e, store)
+        t, store = self.visit_expr(node.e, store)
         name = node.target
-        return store.set(name, t.result)
+        return store.set(name, t)
 
     def visit_Expr(self, node: n.Expr, store: TypeStore) -> TypeStore:
         self.visit_expr(node.value, store)
         return store
 
 
-class ExpressionInferencer(SimpleVisitor[TypeStore]):
+class ExpressionInferencer(SimpleVisitor[Tuple[Types, TypeStore]]):
     def __init__(self) -> None:
         self.visit_op = OpInferencer()
 
     def visit_Name(self, node: n.Name, store: TypeStore) -> Tuple[Types, TypeStore]:
-        mytype = store.get(node)
-        return InferredType(result=mytype)
+        return (store.get(node), store)
+
+    def visit_Int(self, node: n.Int, store: TypeStore) -> Tuple[Types, TypeStore]:
+        return ({Type.int}, store)
 
     def visit_BinOp(self, node: n.BinOp, store: TypeStore) -> Tuple[Types, TypeStore]:
         inf_type = self.visit_op(node.op)
-        left_type = self.visit(node.left, store)
-        right_type = self.visit(node.right, store)
+        left_type, store = self.visit(node.left, store)
+        right_type, store = self.visit(node.right, store)
         if not left_type & inf_type.inputs[0]:
             raise TypeInferenceError()
         if not right_type & inf_type.inputs[1]:

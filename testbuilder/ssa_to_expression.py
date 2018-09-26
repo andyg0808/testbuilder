@@ -24,7 +24,7 @@ ExprList = List[Expression]
 class SSAVisitor(SimpleVisitor[ExprList]):
     def __init__(self, module: sbb.Module) -> None:
         self.module = module
-        self.type_listing = TypeInferencer().visit(module)
+        # self.type_listing = TypeInferencer().visit(module)
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
