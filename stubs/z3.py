@@ -1,13 +1,39 @@
-from typing import Any, List
-
-
-class SortRef:
-    def name(self) -> str:
-        ...
+from typing import Any, List, Tuple
 
 
 class AstRef:
     pass
+
+
+class SortRef(AstRef):
+    def name(self) -> str:
+        ...
+
+
+class DatatypeSortRef(SortRef):
+    ...
+
+
+class Datatype:
+    def __init__(self, name: str) -> None:
+        ...
+
+    def declare(self, name: str, *args: Tuple[str, SortRef]) -> None:
+        ...
+
+    def create(self) -> DatatypeSortRef:
+        ...
+
+
+class ArithSortRef(SortRef):
+    ...
+
+
+IntSort = ArithSortRef
+
+
+class BoolSort(SortRef):
+    ...
 
 
 class ExprRef(AstRef):
@@ -16,6 +42,15 @@ class ExprRef(AstRef):
 
     def sort(self) -> SortRef:
         ...
+
+
+class DatatypeRef(ExprRef):
+    def decl(self) -> FuncDeclRef:
+        ...
+
+
+def Const(name: str, sort: SortRef) -> ExprRef:
+    ...
 
 
 class CheckSatResult:
@@ -77,6 +112,9 @@ class Int(ExprRef):
     def __init__(self, name: str) -> None:
         ...
 
+    def __mul__(self, other: Int) -> Int:
+        ...
+
 
 class IntVal(Int):
     def __init__(self, value: int) -> None:
@@ -122,6 +160,10 @@ def is_string(value: Any) -> bool:
 
 
 def eq(a: AstRef, b: AstRef) -> bool:
+    ...
+
+
+def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
     ...
 
 
