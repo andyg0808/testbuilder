@@ -5,7 +5,14 @@ from typing import Any
 
 import z3  # type: ignore
 
-EVAL_GLOBALS = {"z3": z3, "true": z3.BoolVal(True), "false": z3.BoolVal(False)}
+from .z3_types import make_any
+
+EVAL_GLOBALS = {
+    "z3": z3,
+    "true": z3.BoolVal(True),
+    "false": z3.BoolVal(False),
+    "Any": make_any,
+}
 EVAL_LOCALS = dict(getmembers(z3))
 # It seems `d` is defined as NoneType, and we would really like it to be
 # available for general use. Delete all variables from z3 of length 1:

@@ -2,6 +2,8 @@
 Converts an expression from Python AST into a z3 expression. The structural
 aspects of converting Python are handled by the code in expression_builder.
 """
+from __future__ import annotations
+
 import operator
 import re
 from functools import singledispatch
@@ -10,15 +12,20 @@ from typing import Any, Callable, Mapping, Type, TypeVar, cast
 import z3
 
 from . import nodetree as n
+from .z3_types import Any as AnyType, AnyT, Expression, make_any
 
-Expression = z3.ExprRef
 OpFunc = Callable[..., Expression]
 TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
-TypeConstructor = Callable[[Any], Expression]
+TypeConstructor = Callable[[str], Expression]
 
 
 Constants: Mapping[Any, Expression] = {True: z3.BoolVal(True), False: z3.BoolVal(False)}
-Typelist: Mapping[str, TypeConstructor] = {"b": z3.Bool, "i": z3.Int, "s": z3.String}
+Typelist: Mapping[str, TypeConstructor] = {
+    "b": z3.Bool,
+    "i": z3.Int,
+    "s": z3.String,
+    "a": make_any,
+}
 
 VAR_START_VALUE = 0
 
