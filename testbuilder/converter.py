@@ -20,6 +20,48 @@ TypeConstructor = Callable[[str], Expression]
 
 
 Constants: Mapping[Any, Expression] = {True: z3.BoolVal(True), False: z3.BoolVal(False)}
+# We need to store all the separate possible values, along with what
+# their types are?
+
+# We're then going to take a pair of these and define the correct
+# operations pairwise across the cartesian product of the types
+
+# We replace each statement with a modified version which will
+# ultimately write its result into an appropriate variable. If all
+# results are a single type, they will end up in some kind of
+# container (either a single-type Any variable, or a variable of the
+# specific type we're interested in). If they are of various types,
+# they will be conglomerated into a single Any variable with multiple
+# values.
+
+# These Any type variables need to be represented for our purposes by
+# a data structure which allows us access to all the separate values
+# of each type. This allows us to have a better approximation of the
+# type system, rather than needing to handle every Any type as though
+# it could actually have _any_ type in it. For variables which we
+# _don't_ have any type restrictions on, we have to handle every
+# possible type case. However, we can ignore some type cases, in which
+# case, they will not be legal to assign to that variable, because the
+# values ending up in the TypeUnion structure will dictate the
+# constraints put on the value of the variable represented by the
+# TypeUnion structure.
+
+# The TypeUnion structure will need to track the per-type conditions
+# on variables which are part of the expression it contains. For
+# example, if we have a TypeUnion with an Int and a Bool value, and
+# the same variable is used in both, we need to add two separate
+# constraints to the resulting expression: first, if we take the Int
+# path, the input variable needs to contain an Int, and second, if we
+# take the Bool path, the input variable needs to contain a Bool.
+
+# These TypeUnion values will need to be used during the symbolic
+# execution of each value. Since the only statement contexts using
+# expressions are Exprs and TrueBranch/FalseBranches, we can add the
+# appropriate expressions into a larger expression which is output
+# there. (I.e., the result is expected to be a boolean, not an
+# expression with some other type of result.)
+
+#
 Typelist: Mapping[str, TypeConstructor] = {
     "b": z3.Bool,
     "i": z3.Int,
