@@ -43,6 +43,12 @@ class ExprRef(AstRef):
     def sort(self) -> SortRef:
         ...
 
+    def decl(self) -> FuncDeclRef:
+        ...
+
+    def arg(self, idx: int) -> ExprRef:
+        ...
+
 
 class DatatypeRef(ExprRef):
     def decl(self) -> FuncDeclRef:
@@ -113,6 +119,9 @@ class Int(ExprRef):
         ...
 
     def __mul__(self, other: Int) -> Int:
+        ...
+
+    def __add__(self, other: Int) -> Int:
         ...
 
 
