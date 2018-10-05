@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from functools import singledispatch
-from typing import cast
+from typing import cast, MutableMapping as MMapping, Optional, TypeVar
+from .visitor import SimpleVisitor
 
 import z3
 
@@ -43,6 +45,36 @@ AnyDatatype.declare("Int", ("i", z3.IntSort()))
 AnyDatatype.declare("Bool", ("b", z3.BoolSort()))
 Any: AnySort = cast(AnySort, AnyDatatype.create())
 
+@dataclass
+class TypeUnion:
+    expressions: MMapping[z3.SortRef, Expression]
+    constraint: MMapping[z3.SortRef, Expression] = field(default_factory=dict)
+
+    def add(self, sort: z3.DatatypeSortRef, expr: Expression) -> None:
+        self.expressions[sort] = expr
+
+    def get(self, sort: z3.DatatypeSortRef) -> Optional[Expression]:
+        return self.expressions.get(sort, None)
+
+    @staticmethod
+    def union(sort: z3.DatatypeSortRef, expr: Expression) -> TypeUnion:
+        return TypeUnion({sort: expr})
+
+    @staticmethod
+    def Int(val: z3.Int) -> TypeUnion:
+        return TypeUnion({z3.IntSort(): val})
+
+    @staticmethod
+    def Str(val: z3.StringVal) -> TypeUnion:
+        return TypeUnion({z3.StringSort(): val})
+
+    def to_expr(self) -> Expression:
+        values = []
+        for key, value in self.expressions.items():
+            if key in self.constraint:
+                value = z3.And(value, self.constraint[key])
+                values.append(value)
+        return z3.Or(*values)
 
 def make_any(name: str) -> Expression:
     return z3.Const(name, Any)
