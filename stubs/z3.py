@@ -30,6 +30,8 @@ class ArithSortRef(SortRef):
 
 
 IntSort = ArithSortRef
+SeqSortRef = ArithSortRef
+StringSort = SeqSortRef
 
 
 class BoolSort(SortRef):
