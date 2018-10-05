@@ -46,3 +46,11 @@ Any: AnySort = cast(AnySort, AnyDatatype.create())
 
 def make_any(name: str) -> Expression:
     return z3.Const(name, Any)
+
+
+def unwrap(val: Expression) -> Expression:
+    if val.sort() == Any:
+        if val.decl() in [Any.Bool, Any.Int]:
+            # Extract the value from the wrapper
+            return val.arg(0)
+    return val
