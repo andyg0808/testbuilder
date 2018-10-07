@@ -7,19 +7,33 @@ from __future__ import annotations
 import operator
 import re
 from functools import singledispatch
-from typing import Any, Callable, Mapping, Type, TypeVar, cast
+from typing import Any, Callable, Mapping, Type, TypeVar, cast, Union
 
 import z3
 
 from . import nodetree as n
-from .z3_types import Any as AnyType, AnyT, Expression, make_any
+from .z3_types import (
+    magic_tag as magic,
+    Magic,
+    Any as AnyType,
+    AnyT,
+    Expression,
+    make_any,
+    TypeUnion,
+    TypeRegistrar,
+)
 
-OpFunc = Callable[..., Expression]
+OpFunc = Callable[..., TypeUnion]
 TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
 TypeConstructor = Callable[[str], Expression]
 
 
-Constants: Mapping[Any, Expression] = {True: z3.BoolVal(True), False: z3.BoolVal(False)}
+Constants: Mapping[Any, TypeUnion] = {
+    True: TypeUnion.wrap(z3.BoolVal(True)),
+    False: TypeUnion.wrap(z3.BoolVal(False)),
+}
+
+Registrar = TypeRegistrar(AnyType)
 # We need to store all the separate possible values, along with what
 # their types are?
 
@@ -109,7 +123,7 @@ def get_type(name: str, set_count: int) -> TypeConstructor:
 
 
 @singledispatch
-def visit_expr(node: n.expr) -> Expression:
+def visit_expr(node: n.expr) -> TypeUnion:
     raise RuntimeError(f"Unimplemented handler for {type(node)}")
 
 
@@ -128,19 +142,33 @@ def visit_oper(node: n.Operator) -> OpFunc:
 
 
 @visit_expr.register(n.Int)
-def visit_Int(node: n.Int) -> z3.Int:
-    return z3.IntVal(node.v)
+def visit_Int(node: n.Int) -> TypeUnion:
+    return TypeUnion.wrap(z3.IntVal(node.v))
 
 
 @visit_expr.register(n.Str)
-def visit_Str(node: n.Str) -> z3.StringVal:
-    return z3.StringVal(node.s)
+def visit_Str(node: n.Str) -> TypeUnion:
+    return TypeUnion.wrap(z3.StringVal(node.s))
 
 
 @visit_expr.register(n.BinOp)
-def visit_BinOp(node: n.BinOp) -> Expression:
+def visit_BinOp(node: n.BinOp) -> TypeUnion:
     op = visit_oper(node.op)
     return op(visit_expr(node.left), visit_expr(node.right))
+
+
+IntSort = z3.IntSort()
+StringSort = z3.StringSort()
+
+
+@visit_oper.register(n.Add)
+def visit_Add(node: n.Add) -> OpFunc:
+    class AddMagic(Magic):
+        @magic(IntSort, IntSort)
+        def addInt(self, left: z3.Int, right: z3.Int) -> z3.Int:
+            return left + right
+
+    return AddMagic()
 
 
 @visit_oper.register(n.Mult)
@@ -169,51 +197,64 @@ def visit_USub(node: n.USub) -> OpFunc:
 
 
 @visit_expr.register(n.UnaryOp)
-def visit_UnaryOp(node: n.UnaryOp) -> Expression:
+def visit_UnaryOp(node: n.UnaryOp) -> TypeUnion:
     op = visit_oper(node.op)
     operand = visit_expr(node.operand)
     return op(operand)
 
 
 @visit_expr.register(n.Return)
-def visit_Return(node: n.Return) -> Expression:
+def visit_Return(node: n.Return) -> TypeUnion:
     if node.value:
         expr = visit_expr(node.value)
-        return z3.Int("ret") == expr
+        return Registrar.assign(("ret"), expr)
     else:
-        return z3.BoolVal(True)
+        return TypeUnion.wrap(z3.BoolVal(True))
 
 
 @visit_expr.register(n.NameConstant)
-def visit_NameConstant(node: n.NameConstant) -> Expression:
+def visit_NameConstant(node: n.NameConstant) -> TypeUnion:
     return Constants[node.value]
 
 
 @visit_expr.register(n.Name)
-def visit_Name(node: n.Name) -> Expression:
+def visit_Name(node: n.Name) -> TypeUnion:
     variable = get_variable(node.id, node.set_count)
-    constructor = get_type(node.id, node.set_count)
-    return constructor(variable)
+    # constructor = get_type(node.id, node.set_count)
+    # Add cache support here
+    return Registrar.AllTypes(variable)
 
 
 @visit_expr.register(n.PrefixedName)
-def visit_PrefixedName(node: n.PrefixedName) -> Expression:
+def visit_PrefixedName(node: n.PrefixedName) -> TypeUnion:
     prefix = get_prefix(node)
     variable = get_variable(node.id, node.set_count)
-    return z3.Int(prefix + "_" + variable)
+    return Registrar.AllTypes(prefix + "_" + variable)
 
 
 @visit_expr.register(n.Result)
-def visit_Result(node: n.Result) -> Expression:
+def visit_Result(node: n.Result) -> TypeUnion:
     variable = get_result(node)
-    return z3.Int(variable)
+    return Registrar.AllTypes(variable)
 
 
 @visit_expr.register(n.Set)
-def visit_Set(node: n.Set) -> Expression:
-    var = visit_expr(node.target)
+def visit_Set(node: n.Set) -> TypeUnion:
+    # We know `target` is a Name
+    target = node.target
+    var = make_any(get_variable(target.id, target.set_count))
     value = visit_expr(node.e)
-    return var == value
+    return Registrar.assign(var, value)
+
+
+# Options:
+# * Map == between the z3 variable and the values (which have to be wrapped)
+# * Map == between each element of the unwrapped z3 variable and the values
+
+# Not options:
+# * Can't do If(cond, case1, If(cond2, case2, ...)) # because final
+#   else has no good return value
+#
 
 
 E = TypeVar("E", bound=n.expr)
@@ -221,29 +262,36 @@ B = TypeVar("B")
 
 
 @visit_expr.register(n.Expr)
-def visit_Expr(node: n.Expr[E]) -> Expression:
+def visit_Expr(node: n.Expr[E]) -> TypeUnion:
     v = visit_expr(node.value)
     assert v is not None
     return v
 
 
 @visit_expr.register(n.Call)
-def visit_Call(node: n.Call) -> z3.BoolVal:
+def visit_Call(node: n.Call) -> TypeUnion:
     # Temporarily treat functions as true
-    return z3.BoolVal(True)
+    return TypeUnion.wrap(z3.BoolVal(True))
 
 
 @visit_expr.register(n.ReturnResult)
-def visit_ReturnResult(node: n.ReturnResult) -> Expression:
-    var = z3.Int(get_result(node))
+def visit_ReturnResult(node: n.ReturnResult) -> TypeUnion:
+    var = make_any(get_result(node))
     if node.value:
         expr = visit_expr(node.value)
-        return var == expr
+        return Registrar.assign(var, expr)
     else:
-        return var == z3.BoolVal(True)
+        return Registrar.assign(var, expr)
 
 
-def convert(tree: n.Node) -> Expression:
+def convert(tree: n.Node) -> TypeUnion:
     expr = visit_expr(tree)
     assert expr is not None
     return expr
+
+
+def to_boolean(value: TypeUnion) -> z3.Bool:
+    if value.is_bool():
+        return value.to_expr()
+    else:
+        return Registrar.to_boolean(value).to_expr()

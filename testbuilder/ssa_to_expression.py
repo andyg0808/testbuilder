@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 from astor import to_source  # type: ignore
 
@@ -12,9 +12,12 @@ from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
+from .converter import to_boolean
 from .test_utils import write_dot
+from .z3_types import TypeUnion
 from .type_inferencer import TypeInferencer
 from .visitor import GatherVisitor, SimpleVisitor
+from .z3_types import bool_or, bool_and, bool_not
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -48,7 +51,14 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
-        return [converter.visit_expr(node)]
+        return [converter.visit_expr(node).to_expr()]
+
+    def visit_Return(self, node: n.Return) -> ExprList:
+        if node.value:
+            expr = converter.visit_expr(node.value)
+            return [z3.Int("ret") == expr]
+        else:
+            return [z3.BoolVal(True)]
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
@@ -200,39 +210,3 @@ def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestDat
     )
     write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)
-
-
-def bool_not(expr: Expression) -> Expression:
-    return z3.Not(expr)
-
-
-def bool_or(*exprs: Expression) -> Expression:
-    return _simplify_logical(exprs, z3.Or)
-
-
-def bool_and(*exprs: Expression) -> Expression:
-    return _simplify_logical(exprs, z3.And)
-
-
-def to_boolean(expr: Expression) -> Expression:
-    if z3.is_int(expr):
-        return expr == z3.IntVal(0)
-    elif z3.is_bool(expr):
-        return expr
-    else:
-        raise UnknownConversionException(
-            f"Can't convert {expr.sort().name()} to boolean"
-        )
-
-
-def _simplify_logical(
-    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
-) -> Expression:
-    if len(exprs) > 1:
-        return function(*exprs)
-    else:
-        return exprs[0]
-
-
-class UnknownConversionException(RuntimeError):
-    pass

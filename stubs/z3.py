@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Callable, Generic, TypeVar
 
 
 class AstRef:
@@ -10,8 +10,21 @@ class SortRef(AstRef):
         ...
 
 
-class DatatypeSortRef(SortRef):
-    ...
+T = TypeVar("T", bound=DatatypeRef)
+
+
+class DatatypeSortRef(SortRef, Generic[T]):
+    def num_constructors(self) -> int:
+        ...
+
+    def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
+        ...
+
+    def constructor(self, i: int) -> Callable[[ExprRef], T]:
+        ...
+
+    def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
+        ...
 
 
 class Datatype:
@@ -39,7 +52,7 @@ class BoolSort(SortRef):
 
 
 class ExprRef(AstRef):
-    def __eq__(self, other: Any) -> "ExprRef":  # type: ignore
+    def __eq__(self, other: Any) -> "Bool":  # type: ignore
         ...
 
     def sort(self) -> SortRef:
@@ -141,20 +154,20 @@ class String(SeqRef):
         ...
 
 
-class StringVal(SeqRef):
+class StringVal(String):
     def __init__(self, value: str) -> None:
         ...
 
 
-def And(*values: ExprRef) -> ExprRef:
+def And(*values: ExprRef) -> Bool:
     ...
 
 
-def Or(*values: ExprRef) -> ExprRef:
+def Or(*values: ExprRef) -> Bool:
     ...
 
 
-def Not(value: ExprRef) -> ExprRef:
+def Not(value: ExprRef) -> Bool:
     ...
 
 

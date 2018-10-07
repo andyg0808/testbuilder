@@ -6,9 +6,19 @@ import z3
 from .ast_builder import make_ast
 from .converter import convert
 from .variable_expander import expand_variables
+from .z3_types import Any as AnyType, make_any
+
+Bool = z3.BoolSort()
+Int = z3.IntSort()
 
 
-def conversion_assert(expected, code_string: Optional[str] = None, variables=None):
+def conversion_assert(
+    expected,
+    code_string: Optional[str] = None,
+    variables=None,
+    expected_type=None,
+    expected_constraint=None,
+):
     if not variables:
         variables = {}
     if isinstance(expected, str):
@@ -23,7 +33,9 @@ def conversion_assert(expected, code_string: Optional[str] = None, variables=Non
         # Code that's just an expression should be something we are really wanting to test
         code = code.value
     tree = make_ast(variables, code)
-    result = convert(tree)
+    if expected_constraint is not None:
+        expected_constraint = expand_variables(expected_constraint)
+    result = convert(tree).unwrap(expected_type, expected_constraint)
     print("expected", expected)
     print("actual", result)
     assert z3.eq(expected, result)
@@ -35,6 +47,8 @@ def test_int():
 
 
 def test_string():
+    # conversion_assert('String("abc")', '"abc"')
+    # conversion_assert('String("def") + String("hjk")', '"def" + "hjk"')
     conversion_assert('"abc"')
     conversion_assert('"def" + "hjk"')
 
@@ -107,15 +121,21 @@ def test_negative():
 
 
 def test_return():
-    conversion_assert("ret == 2", "return 2")
+    print("expansion", type(expand_variables("ret == Any.Int(2)")))
+    conversion_assert("ret == Any.Int(2)", "return 2")
 
 
 def test_variable():
-    conversion_assert(z3.Int("pyname_a"), "a")
+    conversion_assert(
+        AnyType.i(make_any("pyname_a")),
+        "a",
+        expected_type=Int,
+        expected_constraint="Any.is_Int(pyname_a)",
+    )
 
 
 def test_assignment():
-    conversion_assert("pyname_a == 1", "a = 1")
+    conversion_assert("pyname_a == Any.Int(1)", "a = 1")
 
 
 def test_mutation():
@@ -125,17 +145,44 @@ def test_mutation():
     # Second write: pyname_a_1; variables: 1
     # Second read: pyname_a_1; variables: 1
     # Third write: pyname_a_2; variables: 2
-    conversion_assert("pyname_a == 1", "a = 1")
-    conversion_assert("pyname_a_1 == pyname_a + 1", "a = a + 1", {"a": 0})
-    conversion_assert("pyname_a_2 == pyname_a_1 + 1", "a = a + 1", {"a": 1})
-    conversion_assert("pyname_a_3 == pyname_a_2 + 1", "a = a + 1", {"a": 2})
+    conversion_assert("pyname_a == Any.Int(1)", "a = 1")
+    conversion_assert(
+        "And(pyname_a_1 == Any.Int(Any.i(pyname_a) + 1), Any.is_Int(pyname_a))",
+        "a = a + 1",
+        {"a": 0},
+    )
+    conversion_assert(
+        "And(pyname_a_2 == Any.Int(Any.i(pyname_a_1) + 1), Any.is_Int(pyname_a_1))",
+        "a = a + 1",
+        {"a": 1},
+    )
+    conversion_assert(
+        "And(pyname_a_3 == Any.Int(Any.i(pyname_a_2) + 1), Any.is_Int(pyname_a_2))",
+        "a = a + 1",
+        {"a": 2},
+    )
 
 
 def test_augmutation():
-    conversion_assert("pyname_a_1 == pyname_a + 1", "a += 1", {"a": 0})
-    conversion_assert("pyname_a_2 == pyname_a_1 + 1", "a += 1", {"a": 1})
+    # print(
+    #     "expansion",
+    #     expand_variables(
+    #         "And(pyname_a_1 == Any.Int(Any.i(pyname_a) + 1), Any.is_Int(pyname_a))"
+    #     ),
+    # )
+    # print("done expression")
+    conversion_assert(
+        "And(pyname_a_1 == Any.Int(Any.i(pyname_a) + 1), Any.is_Int(pyname_a))",
+        "a += 1",
+        {"a": 0},
+    )
+    conversion_assert(
+        "And(pyname_a_2 == Any.Int(Any.i(pyname_a_1) + 1), Any.is_Int(pyname_a_1))",
+        "a += 1",
+        {"a": 1},
+    )
 
 
 def test_booleans():
-    conversion_assert("true", "True")
-    conversion_assert("false", "False")
+    conversion_assert("true", "True", expected_type=Bool)
+    conversion_assert("false", "False", expected_type=Bool)
