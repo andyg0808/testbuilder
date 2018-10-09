@@ -1,7 +1,7 @@
 from typing import Any, Generator, List, Optional
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .ast_builder import VAR_START_VALUE
+from .variable_manager import VAR_START_VALUE
 from .visitor import CoroutineVisitor, UpdateVisitor
 
 

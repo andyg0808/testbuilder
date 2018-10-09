@@ -1,9 +1,8 @@
 from copy import copy
 from typing import List, MutableMapping as MMapping, Optional
 
-from .ast_builder import VAR_START_VALUE
-
 VarMapping = MMapping[str, int]
+VAR_START_VALUE = 0
 
 
 class VariableManager:

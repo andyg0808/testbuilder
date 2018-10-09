@@ -83,8 +83,6 @@ Typelist: Mapping[str, TypeConstructor] = {
     "a": make_any,
 }
 
-VAR_START_VALUE = 0
-
 
 def get_variable(name: str, idx: int) -> str:
     name = "pyname_" + name
