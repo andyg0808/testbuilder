@@ -7,14 +7,14 @@ from __future__ import annotations
 import operator
 import re
 from functools import singledispatch
-from typing import Any, Callable, Mapping, Type, TypeVar, cast, Union
+from typing import Any, Callable, Mapping, Type, TypeVar, cast, Union, Optional
 
 import z3
 
 from . import nodetree as n
 from .z3_types import (
-    magic_tag as magic,
-    Magic,
+    more_magic_tag as magic,
+    MoreMagic as Magic,
     Any as AnyType,
     AnyT,
     Expression,
@@ -157,6 +157,7 @@ def visit_BinOp(node: n.BinOp) -> TypeUnion:
 
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
+BoolSort = z3.BoolSort()
 
 
 @visit_oper.register(n.Add)
@@ -166,46 +167,94 @@ def visit_Add(node: n.Add) -> OpFunc:
         def addInt(self, left: z3.Int, right: z3.Int) -> z3.Int:
             return left + right
 
+        @magic(StringSort, StringSort)
+        def addString(self, left: z3.String, right: z3.String) -> z3.String:
+            return z3.Concat(left, right)
+
     return AddMagic()
+
+
+@visit_oper.register(n.Sub)
+def visit_Sub(node: n.Sub) -> OpFunc:
+    return Magic.m(IntSort, IntSort)(operator.sub)
 
 
 @visit_oper.register(n.Mult)
 def visit_Mult(node: n.Mult) -> OpFunc:
-    return operator.mul
+    return Magic.m(IntSort, IntSort)(operator.mul)
 
 
 @visit_oper.register(n.Div)
 def visit_Div(node: n.Div) -> OpFunc:
-    return operator.truediv
+    return Magic.m(IntSort, IntSort)(operator.truediv)
 
 
 @visit_oper.register(n.LtE)
 def visit_LtE(node: n.LtE) -> OpFunc:
-    return operator.le
+    return Magic.m(IntSort, IntSort)(operator.le)
 
 
 @visit_oper.register(n.GtE)
 def visit_GtE(node: n.GtE) -> OpFunc:
-    return operator.ge
+    return Magic.m(IntSort, IntSort)(operator.ge)
+
+
+@visit_oper.register(n.Or)
+def visit_Or(node: n.Or) -> OpFunc:
+    return Magic.m(BoolSort, BoolSort)(z3.Or)
+
+
+@visit_oper.register(n.And)
+def visit_And(node: n.And) -> OpFunc:
+    return Magic.m(BoolSort, BoolSort)(z3.And)
+
+
+@visit_oper.register(n.Eq)
+def visit_Eq(node: n.Eq) -> OpFunc:
+    return Magic.m(object, object)(operator.eq)
+
+
+@visit_oper.register(n.Lt)
+def visit_Lt(node: n.Lt) -> OpFunc:
+    return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
+
+
+@visit_oper.register(n.Gt)
+def visit_Gt(node: n.Gt) -> OpFunc:
+    return Magic.m(IntSort, IntSort)(operator.gt)
 
 
 @visit_oper.register(n.USub)
 def visit_USub(node: n.USub) -> OpFunc:
-    return operator.neg
+    return Magic.m(IntSort)(lambda x: -x)
+
+
+T = TypeVar("T")
+
+
+def safify(
+    exception: Type[BaseException], op: Callable[..., T]
+) -> Callable[..., Optional[T]]:
+    def _safify(*args: Any, **kwargs: Any) -> Optional[T]:
+        try:
+            return op(*args, **kwargs)
+        except exception as e:
+            return None
+
+    return _safify
 
 
 @visit_expr.register(n.UnaryOp)
 def visit_UnaryOp(node: n.UnaryOp) -> TypeUnion:
     op = visit_oper(node.op)
-    operand = visit_expr(node.operand)
-    return op(operand)
+    return op(visit_expr(node.operand))
 
 
 @visit_expr.register(n.Return)
 def visit_Return(node: n.Return) -> TypeUnion:
     if node.value:
         expr = visit_expr(node.value)
-        return Registrar.assign(("ret"), expr)
+        return Registrar.assign(make_any("ret"), expr)
     else:
         return TypeUnion.wrap(z3.BoolVal(True))
 

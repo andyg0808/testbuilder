@@ -3,10 +3,12 @@ from __future__ import annotations
 import inspect
 from dataclasses import dataclass, field
 from functools import singledispatch
-from itertools import groupby
+from itertools import groupby, product, repeat
 from typing import (
     Set,
     Generic,
+    Union,
+    Type,
     Sequence,
     Iterator,
     cast,
@@ -22,6 +24,7 @@ from .visitor import SimpleVisitor
 from typeassert import assertify
 
 import z3
+from z3 import DatatypeRef
 
 Expression = z3.ExprRef
 
@@ -49,10 +52,17 @@ class AnySort(z3.DatatypeSortRef):
     def is_Bool(self, v: Expression) -> z3.Bool:
         ...
 
+    def s(self, v: AnyT) -> z3.String:
+        ...
+
+    def is_String(self, v: Expression) -> z3.Bool:
+        ...
+
 
 AnyDatatype = z3.Datatype("Any")
 AnyDatatype.declare("Int", ("i", z3.IntSort()))
 AnyDatatype.declare("Bool", ("b", z3.BoolSort()))
+AnyDatatype.declare("String", ("s", z3.StringSort()))
 Any: AnySort = cast(AnySort, AnyDatatype.create())
 
 T = TypeVar("T")
@@ -82,7 +92,7 @@ E = TypeVar("E", bound=Expression)
 @dataclass
 class ConstrainedExpression(Generic[E]):
     expr: E
-    constraint: Optional[z3.Bool]
+    constraint: Optional[z3.Bool] = None
 
     def constrained(self) -> bool:
         return self.constraint is not None
@@ -93,7 +103,8 @@ class ConstrainedExpression(Generic[E]):
                 "Cannot to_expr a ConstrainedExpression with constraints"
                 " which doesn't have a boolean expr"
             )
-            return bool_and(self.expr, self.constraint)
+            expr = cast(z3.Bool, self.expr)
+            return bool_and(expr, self.constraint)
         else:
             return self.expr
 
@@ -127,7 +138,9 @@ class TypeUnion:
         assert (
             self.is_bool()
         ), "Cannot convert non-boolean TypeUnion to boolean expression"
-        boolexprs = [x.to_expr() for x in self.expressions]
+        boolexprs: List[z3.Bool] = [
+            cast(z3.Bool, x.to_expr()) for x in self.expressions
+        ]
         return bool_or(*boolexprs)
 
     def unwrap(
@@ -140,10 +153,11 @@ class TypeUnion:
             assert (
                 len(self.sorts) <= 1
             ), f"Cannot unwrap TypeUnion with more than one type; this has {self.sorts}"
-            assert len(self.expressions) == 1, (
-                f"Cannot unwrap TypeUnion without exactly one "
-                "value; this has {self.expressions}"
+            assert len(self.expressions) < 2, (
+                "Cannot unwrap TypeUnion without exactly one "
+                f"value; this has {self.expressions}"
             )
+            assert len(self.expressions) > 0, "Cannot unwrap empty TypeUnion"
 
             cexpr = self.expressions[0]
         else:
@@ -162,10 +176,39 @@ class TypeUnion:
                 cexpr.constraint is None
             ), f"Expression {cexpr} has a constraint; cannot unwrap"
         else:
+            assert (
+                cexpr.constraint is not None
+            ), f"Expected {cexpr} to have constraint {constraint}, not none"
             assert z3.eq(
                 constraint, cexpr.constraint
             ), f"Expression {cexpr} does not have expected constraint {constraint}"
         return cexpr.expr
+
+    def map(self, oper: Callable[[Expression], Optional[Expression]]) -> TypeUnion:
+        expressions = []
+        sorts = set()
+        for cexpr in self.expressions:
+            res = oper(cexpr.expr)
+            if res is not None:
+                cres = CExpr(expr=res, constraint=cexpr.constraint)
+                expressions.append(cres)
+                sorts.add(res.sort())
+        return TypeUnion(expressions, sorts)
+
+    # def cross(
+    #     self, oper: Callable[..., Optional[Expression]], *others: TypeUnion
+    # ) -> TypeUnion:
+    #     expressions = []
+    #     sorts = set()
+    #     for cexprs in zip(*others):
+    #         res = oper(*(ce.expr for ce in cexprs))
+    #         if res is not None:
+    #             cres = CExpr(
+    #                 expr=res, constraint=bool_and(*(ce.constraint for ce in cexprs))
+    #             )
+    #             expressions.append(cres)
+    #             sorts.add(res.sort())
+    #     return TypeUnion(expressions, sorts)
 
     # def unwrap(self) -> Expression:
     #     assert (
@@ -304,10 +347,12 @@ class TypeRegistrar:
             return self.anytype.Int(val)  # type: ignore
         if val.sort() == z3.StringSort():
             return self.anytype.String(val)  # type: ignore
+        if val.sort() == z3.BoolSort():
+            return self.anytype.Bool(val)  # type: ignore
         raise RuntimeError("Unknown type being wrapped")
 
     @assertify
-    def assign(self, target: AnyT, value: TypeUnion) -> TypeUnion:
+    def assign(self, target: DatatypeRef, value: TypeUnion) -> TypeUnion:
         exprs = []
         for expr in value.expressions:
             # constraints = value.constraints.get(sort, None)
@@ -345,80 +390,154 @@ def unwrap(val: Expression) -> Expression:
     return val
 
 
-MagicFunc = Callable[[E, E], Expression]
-MagicTag = Tuple[z3.SortRef, z3.SortRef]
+# MagicFunc = Callable[[Any, E, E], Expression]
+# MagicTag = Tuple[z3.SortRef, z3.SortRef]
 
 
-def magic_tag(left: z3.SortRef, right: z3.SortRef) -> Callable[[MagicFunc], MagicFunc]:
-    def _magic(func: MagicFunc) -> MagicFunc:
-        setattr(func, "__magic", (left, right))
+# def magic_tag(left: z3.SortRef, right: z3.SortRef) -> Callable[[MagicFunc], MagicFunc]:
+#     def _magic(func: MagicFunc) -> MagicFunc:
+#         setattr(func, "__magic", (left, right))
+#         return func
+
+#     return _magic
+
+
+# class Magic:
+#     def __init__(self) -> None:
+#         self.funcref: MMapping[MagicTag, MagicFunc] = {}
+#         for _, method in inspect.getmembers(self, inspect.ismethod):
+#             magic = getattr(method, "__magic", None)
+#             if magic is not None:
+#                 self.funcref[magic] = method
+
+#     def __call__(self, left: TypeUnion, right: TypeUnion) -> TypeUnion:
+#         exprs = []
+#         sorts = set()
+#         for lexpr in left.expressions:
+#             for rexpr in right.expressions:
+#                 # Would need cartesian product of potential expressions
+#                 # here; might want to do a couple assignments first.
+#                 res = self.__call_on_exprs(lexpr, rexpr)
+#                 if res is None:
+#                     continue
+#                 exprs.append(res)
+#                 sorts.add(res.expr.sort())
+#         return TypeUnion(exprs, sorts)
+
+#     def __call_on_exprs(self, left: CExpr, right: CExpr) -> CExpr:
+#         func = self.__select(left.expr.sort(), right.expr.sort())
+#         if func is None:
+#             return None
+#         res = func(left.expr, right.expr)
+#         constraints = []
+#         if left.constraint is not None:
+#             constraints.append(left.constraint)
+#         if right.constraint is not None:
+#             constraints.append(right.constraint)
+#         return CExpr(expr=res, constraint=bool_and(*constraints))
+
+#     def __select(
+#         self, lsort: z3.SortRef, rsort: z3.SortRef
+#     ) -> Optional[Callable[[Expression, Expression], Expression]]:
+#         return self.funcref.get((lsort, rsort), None)
+
+
+MoreMagicFunc = Callable[..., T]
+
+
+def more_magic_tag(*types: z3.SortRef) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
+    def _magic(func: MoreMagicFunc) -> MoreMagicFunc:
+        setattr(func, "__magic", tuple(types))
         return func
 
     return _magic
 
 
-class Magic:
+MoreMagicTag = Tuple
+
+
+class MoreMagic:
     def __init__(self) -> None:
-        self.funcref: MMapping[MagicTag, MagicFunc] = {}
+        self.funcref: MMapping[MoreMagicTag, MoreMagicFunc] = {}
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
             if magic is not None:
                 self.funcref[magic] = method
 
-    def __call__(self, left: TypeUnion, right: TypeUnion) -> TypeUnion:
+    @staticmethod
+    def m(*types: Union[z3.SortRef, Type]) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
+        res = MoreMagic()
+        return res.magic(*types)
+
+    def magic(
+        self, *types: Union[z3.SortRef, Type]
+    ) -> Callable[[MoreMagicFunc], MoreMagic]:
+        def _magic(func: MoreMagicFunc) -> MoreMagic:
+            self.funcref[tuple(types)] = func
+            return self
+
+        return _magic
+
+    def __call__(self, *args: TypeUnion) -> TypeUnion:
+        print(f"Called {self.__class__} on {args}")
         exprs = []
         sorts = set()
-        for lexpr in left.expressions:
-            for rexpr in right.expressions:
-                # Would need cartesian product of potential expressions
-                # here; might want to do a couple assignments first.
-                res = self.__call_on_exprs(lexpr, rexpr)
-                if res is None:
-                    continue
-                exprs.append(res)
-                sorts.add(res.expr.sort())
+        for arg_tuple in product(*(arg.expressions for arg in args)):
+            res = self.__call_on_exprs(arg_tuple)
+            if res is None:
+                continue
+            exprs.append(res)
+            sorts.add(res.expr.sort())
         return TypeUnion(exprs, sorts)
 
-    def __call_on_exprs(self, left: CExpr, right: CExpr) -> CExpr:
-        func = self.__select(left.expr.sort(), right.expr.sort())
+    def __call_on_exprs(self, args: Tuple) -> Optional[CExpr]:
+        print(f"calling {args}")
+        func = self.__select(tuple(arg.expr.sort() for arg in args))
         if func is None:
             return None
-        res = func(left.expr, right.expr)
-        constraints = []
-        if left.constraint is not None:
-            constraints.append(left.constraint)
-        if right.constraint is not None:
-            constraints.append(right.constraint)
-        return CExpr(expr=res, constraint=bool_and(*constraints))
+        res = func(*(arg.expr for arg in args))
+        constraints = [arg.constraint for arg in args if arg.constraint is not None]
+        if len(constraints) > 0:
+            return CExpr(expr=res, constraint=bool_and(*constraints))
+        else:
+            return CExpr(expr=res)
 
     def __select(
-        self, lsort: z3.SortRef, rsort: z3.SortRef
+        self, args: Tuple
     ) -> Optional[Callable[[Expression, Expression], Expression]]:
-        return self.funcref.get((lsort, rsort), None)
+        print(f"selecting using {args}")
 
-    def addInt(self, left: z3.Int, right: z3.Int) -> z3.Int:
-        pass
+        def sort_compare(arg_sort: z3.SortRef, func_key: z3.SortRef) -> bool:
+            if isinstance(func_key, z3.SortRef):
+                return func_key == arg_sort or func_key.subsort(arg_sort)
+            elif isinstance(func_key, type):
+                return isinstance(arg_sort, func_key)
 
-    def addString(self, left: z3.String, right: z3.String) -> z3.String:
-        pass
+        for key, func in self.funcref.items():
+            print("Matching {key} {args}")
+            if all(sort_compare(*tu) for tu in zip(args, key)):
+                return func
+        return None
 
 
-def bool_not(expr: Expression) -> Expression:
+def bool_not(expr: z3.Bool) -> z3.Bool:
     return z3.Not(expr)
 
 
-def bool_or(*exprs: Expression) -> Expression:
+def bool_or(*exprs: z3.Bool) -> z3.Bool:
     return _simplify_logical(exprs, z3.Or)
 
 
-def bool_and(*exprs: Expression) -> Expression:
+def bool_and(*exprs: z3.Bool) -> z3.Bool:
     return _simplify_logical(exprs, z3.And)
 
 
 def _simplify_logical(
-    exprs: Tuple[Expression, ...], function: Callable[..., Expression]
-) -> Expression:
+    exprs: Tuple[z3.Bool, ...], function: Callable[..., z3.Bool]
+) -> z3.Bool:
     if len(exprs) > 1:
         return function(*exprs)
-    else:
+    elif len(exprs) == 1:
         return exprs[0]
+    else:
+        raise RuntimeError("Need at least one expression to combine")
