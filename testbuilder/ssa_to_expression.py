@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union, cast
 
 from astor import to_source  # type: ignore
 
@@ -46,19 +46,20 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             return self.visit(node.parents[0], stop)
         exprs = []
         for parent in node.parents:
-            exprs.append(bool_all(self.visit(parent, stop)))
+            parent_exprs = cast(List[z3.Bool], self.visit(parent, stop))
+            exprs.append(bool_all(parent_exprs))
 
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
         return [converter.visit_expr(node).to_expr()]
 
-    def visit_Return(self, node: n.Return) -> ExprList:
-        if node.value:
-            expr = converter.visit_expr(node.value)
-            return [z3.Int("ret") == expr]
-        else:
-            return [z3.BoolVal(True)]
+    # def visit_Return(self, node: n.Return) -> ExprList:
+    #     if node.value:
+    #         expr = converter.visit_expr(node.value)
+    #         return [z3.Int("ret") == expr]
+    #     else:
+    #         return [z3.BoolVal(True)]
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
@@ -123,7 +124,7 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
         expressions = visitor.visit(node.blocks)
         for expr in expressions:
             assert z3.is_bool(expr), f"{expr} is not boolean"
-        expression = bool_all(expressions)
+        expression = bool_all(cast(List[z3.Bool], expressions))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
         name=node.name,
@@ -138,7 +139,7 @@ def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
     if code.empty():
         expression = bool_true()
     else:
-        expression = bool_all(visitor.visit(code))
+        expression = bool_all(cast(List[z3.Bool], visitor.visit(code)))
     free_variables = find_variables(code)
     return sbb.TestData(
         name="code",
@@ -163,8 +164,8 @@ def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
 
 
-def bool_all(exprs: List[Expression]) -> Expression:
-    exprs = list(exprs)
+def bool_all(exprs: List[z3.Bool]) -> z3.Bool:
+    # exprs = list(exprs)
     if len(exprs) > 1:
         return bool_and(*exprs)
     elif len(exprs) == 1:
@@ -173,12 +174,12 @@ def bool_all(exprs: List[Expression]) -> Expression:
         raise RuntimeError("Taking all of no exprs")
 
 
-def bool_any(exprs: List[Expression]) -> Expression:
+def bool_any(exprs: List[z3.Bool]) -> z3.Bool:
     """
     Allow any path in exprs to be taken. If only one path is present,
     it is required. No exprs results in an exception.
     """
-    exprs = list(exprs)
+    # exprs = list(exprs)
     if len(exprs) > 1:
         return bool_or(*exprs)
     elif len(exprs) == 1:
