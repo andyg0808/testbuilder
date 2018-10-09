@@ -390,14 +390,22 @@ class AstBuilder(GenericVisitor):
 
     def visit_Compare(self, node: ast.Compare) -> n.BinOp:
         left = self.visit(node.left)
-        ops = map(self.visit, node.ops)
-        comparators = map(self.visit, node.comparators)
+        ops = [self.visit(x) for x in node.ops]
+        comparators = [self.visit(x) for x in node.comparators]
 
-        def combine(left: n.expr, zipped: Tuple[n.expr, n.expr]) -> n.expr:
-            op, right = zipped
-            return n.BinOp(left, cast(n.Operator, op), right)
+        lefts = [left] + comparators[:-1]
+        rights = comparators
+        assert len(lefts) == len(rights) == len(ops)
+        binops = []
+        for args in zip(lefts, ops, rights):
+            binops.append(n.BinOp(*args))
 
-        return cast(n.BinOp, reduce(combine, zip(ops, comparators), left))
+        def all_pairs(l: n.BinOp, r: n.BinOp) -> n.BinOp:
+            return n.BinOp(l, n.And(), r)
+
+        res = reduce(all_pairs, binops)
+        print(f"converting {ast.dump(node)} to {res}")
+        return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
         op = self.visit(node.op)
