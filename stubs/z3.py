@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, List, Tuple, Callable, Generic, TypeVar
 
 
@@ -7,6 +8,12 @@ class AstRef:
 
 class SortRef(AstRef):
     def name(self) -> str:
+        ...
+
+    def subsort(self, other: SortRef) -> bool:
+        ...
+
+    def __eq__(self, other: object) -> bool:
         ...
 
 
@@ -188,6 +195,10 @@ def eq(a: AstRef, b: AstRef) -> bool:
 
 
 def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
+    ...
+
+
+def Concat(left: String, right: String) -> String:
     ...
 
 
