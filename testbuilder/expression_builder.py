@@ -116,8 +116,10 @@ def unify_all_variables(
 
         Returns:
             A tuple of a new variable mapping and a list of additional
-            expressions to add to each of the expression lists associated with
-            the variable_lists passed in. The list of additional expressions is in the same order as the lists in variable_lists
+            expressions to add to each of the expression lists
+            associated with the variable_lists passed in. The list of
+            additional expressions is in the same order as the lists
+            in variable_lists
         """
     if not variable_lists:
         return ({}, [])
@@ -127,7 +129,9 @@ def unify_all_variables(
     variables = {}
     first = variable_lists[0]
     for key in sorted(keys):
-        # Handle the special case where all the variable lists have the same value. We don't want to waste time on fancy things then.
+        # Handle the special case where all the variable lists have
+        # the same value. We don't want to waste time on fancy things
+        # then.
         if key in first:
             expected = first[key]
             if all(lambda x: key in x and x[key] == expected for x in variable_lists):
