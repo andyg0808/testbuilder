@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2b57257d87379f63e5d356b6c20a589d3ffcc57d5361d1d1852908b0112b42fd"
+            "sha256": "d29177ae2f983f40d720b2d7c4782d00981916680ffb427e7861d85b429832ef"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -150,8 +150,9 @@
             "version": "==0.9.0"
         },
         "typeassert": {
+            "editable": true,
             "git": "ssh://git@gitlab.com/andyg0808/typeassert.git",
-            "ref": "7d4f2a2d41935541c8e38e900c90248ea04c40e3"
+            "ref": "0fd645a5e92a414574334d9d1705258a30e6889a"
         },
         "typing": {
             "hashes": [
@@ -337,12 +338,12 @@
         },
         "hypothesis": {
             "hashes": [
-                "sha256:0b69b5733e17d42aa52cb53fbbf184241e42d6dbb17601a95a193ac6cc400ecb",
-                "sha256:5ee18595c50e8ad983f6f871c9c06eae514b4415649da9a097dd5bd7a2f9dfda",
-                "sha256:7a1f395dcc92b1ea955f8e73e7be0f9fcf674c76979f3f1f8b281946b9842bb8"
+                "sha256:271d694293f045fcab79a6e06807103a3af68593de36afb3016de6f5b8cade63",
+                "sha256:3c43b15fbb9be204e1b5d7673f4d4d2518c6f5dceff457556e124e99ecb868ee",
+                "sha256:c052000ce24b8b7bf1801c115f90a50d86a0340a0676827705728eaeebd9c34a"
             ],
             "index": "pypi",
-            "version": "==3.74.2"
+            "version": "==3.74.3"
         },
         "idna": {
             "hashes": [
