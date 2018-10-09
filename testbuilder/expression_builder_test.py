@@ -69,19 +69,29 @@ def test_basic_call():
 
 
 def test_multiplication():
-    check_expression("i * 2", "pyname_i * 2")
+    check_expression(
+        "return i * 2", "ret == Any.Int(Any.i(pyname_i) * 2) and Any.is_Int(pyname_i)"
+    )
 
 
 def test_gte():
-    check_expression("i >= 4", "pyname_i >= 4")
+    check_expression(
+        "return i >= 4",
+        "ret == Any.Bool(Any.i(pyname_i) >= 4) and Any.is_Int(pyname_i)",
+    )
 
 
 def test_lte():
-    check_expression("i <= 4", "pyname_i <= 4")
+    check_expression(
+        "return i <= 4",
+        "ret == Any.Bool(Any.i(pyname_i) <= 4) and Any.is_Int(pyname_i)",
+    )
 
 
 def test_div():
-    check_expression("i / 3", "pyname_i / 3")
+    check_expression(
+        "return i / 3", "ret == Any.Int(Any.i(pyname_i) / 3) and Any.is_Int(pyname_i)"
+    )
 
 
 @pytest.mark.skip
@@ -95,7 +105,7 @@ def test_constant():
 def one():
     return 1
     """,
-        "ret == 1",
+        "ret == Any.Int(1)",
     )
 
 
@@ -105,17 +115,22 @@ def test_constant_expression():
 def three():
     return 1 + 2
     """,
-        "ret == 1 + 2",
+        "ret == Any.Int(1 + 2)",
     )
 
 
 def test_variable_expression():
+    # TODO: Would be nice if this was clever and didn't break Any up until needed
     check_expression(
         """
 def athing(a):
     return a
     """,
-        "ret == pyname_a",
+        """
+ret == Any.Int(Any.i(pyname_a)) and Any.is_Int(pyname_a) or \
+ret == Any.Bool(Any.b(pyname_a)) and Any.is_Bool(pyname_a) or \
+ret == Any.String(Any.s(pyname_a)) and Any.is_String(pyname_a)
+""",
     )
 
 
@@ -125,7 +140,12 @@ def test_variable_use():
 def twothings(a, b):
     return a + b
     """,
-        "ret == pyname_a + pyname_b",
+        """
+ret == Any.Int(Any.i(pyname_a) + Any.i(pyname_b)) and \
+ (Any.is_Int(pyname_a) and Any.is_Int(pyname_b)) or \
+ret == Any.String(z3.Concat(Any.s(pyname_a), Any.s(pyname_b))) and \
+ (Any.is_String(pyname_a) and Any.is_String(pyname_b))
+""",
     )
 
 
@@ -138,7 +158,7 @@ def first_func(a):
 def second_func(b):
     return b + 8
         """,
-        "ret == pyname_b + 8",
+        "ret == Any.Int(Any.i(pyname_b) + 8) and Any.is_Int(pyname_b)",
     )
 
 
@@ -148,7 +168,10 @@ def test_multiple_lines():
 a = 1
 return a + 1
     """,
-        "pyname_a == 1 and ret == pyname_a + 1",
+        """
+pyname_a == Any.Int(1)\
+ and (ret == Any.Int(Any.i(pyname_a) + 1) and Any.is_Int(pyname_a))
+""",
     )
 
 
@@ -164,7 +187,9 @@ def multiple_deps(a, b):
     d = b
     return c + d
     """,
-        "pyname_c == pyname_a and pyname_d == pyname_b and ret == pyname_c + pyname_d",
+        """
+pyname_c == pyname_a and pyname_d == pyname_b and ret == pyname_c + pyname_d
+""",
     )
 
 
