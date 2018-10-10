@@ -108,7 +108,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [bool_not(to_boolean(converter.visit_expr(node.conditional)))]
+        return code + [to_boolean(converter.visit_expr(node.conditional), invert=True)]
 
 
 @singledispatch

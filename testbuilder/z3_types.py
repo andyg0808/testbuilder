@@ -93,13 +93,15 @@ class ConstrainedExpression(Generic[E]):
     def constrained(self) -> bool:
         return self.constraint is not None
 
-    def to_expr(self) -> Expression:
+    def to_expr(self, invert: bool = False) -> Expression:
         if self.constraint is not None:
             assert self.expr.sort() == z3.BoolSort(), (
                 "Cannot to_expr a ConstrainedExpression with constraints"
                 " which doesn't have a boolean expr"
             )
             expr = cast(z3.Bool, self.expr)
+            if invert:
+                expr = bool_not(expr)
             return bool_and(expr, self.constraint)
         else:
             return self.expr
@@ -130,12 +132,12 @@ class TypeUnion:
     def is_bool(self) -> bool:
         return self.sorts == {z3.BoolSort()}
 
-    def to_expr(self) -> z3.Bool:
+    def to_expr(self, invert: bool = False) -> z3.Bool:
         assert (
             self.is_bool()
         ), "Cannot convert non-boolean TypeUnion to boolean expression"
         boolexprs: List[z3.Bool] = [
-            cast(z3.Bool, x.to_expr()) for x in self.expressions
+            cast(z3.Bool, x.to_expr(invert)) for x in self.expressions
         ]
         return bool_or(*boolexprs)
 

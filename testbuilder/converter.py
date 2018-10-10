@@ -337,8 +337,8 @@ def convert(tree: n.Node) -> TypeUnion:
     return expr
 
 
-def to_boolean(value: TypeUnion) -> z3.Bool:
+def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
     if value.is_bool():
-        return value.to_expr()
+        return value.to_expr(invert)
     else:
-        return Registrar.to_boolean(value).to_expr()
+        return Registrar.to_boolean(value).to_expr(invert)
