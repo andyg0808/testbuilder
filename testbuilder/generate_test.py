@@ -36,7 +36,7 @@ def test_maximize():
     """,
         """
 from minmax import maximize
-def test_maximize():
+def test_maximize_2():
     a = 0
     b = 0
     actual = maximize(a, b)
@@ -54,7 +54,7 @@ def test_minimize():
     """,
         """
 from minmax import minimize
-def test_minimize():
+def test_minimize_2():
     a = 0
     b = 0
     actual = minimize(a, b)

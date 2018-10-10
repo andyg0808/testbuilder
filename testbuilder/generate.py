@@ -1,7 +1,7 @@
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from logbook import Logger
 from toolz import pipe
@@ -23,7 +23,8 @@ logger = Logger("generator")
 
 
 def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[str]:
-    def generate_test(module: sbb.Module, target_line: int) -> str:
+    def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
+        test_number, target_line = target_info
         request = filter_lines(target_line, module)
         if isinstance(request.code, sbb.BlockTree):
             logger.error(
@@ -51,7 +52,14 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
             )
             return ""
         _render_test = partial(
-            prompt_and_render_test, source, function.name, io, prompt, text, expr
+            prompt_and_render_test,
+            source,
+            function.name,
+            io,
+            prompt,
+            text,
+            expr,
+            test_number,
         )
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
@@ -65,7 +73,7 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
     _generate_test = partial(generate_test, module)
 
     print("lines", LineSplitter()(module))
-    return pipe(module, LineSplitter(), liftIter(_generate_test), list)
+    return pipe(module, LineSplitter(), enumerate, liftIter(_generate_test), list)
 
 
 def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
