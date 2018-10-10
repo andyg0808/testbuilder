@@ -38,7 +38,7 @@ def solve(data: sbb.TestData) -> Optional[Solution]:
             pyvalue = value.as_string()
             pyvalue = pyvalue[1:-1]
         else:
-            raise TypeError(f"Couldn't find adapter for {type(pyvalue)}")
+            raise TypeError(f"Couldn't find adapter for {type(value)}")
 
         standardized[store_key] = pyvalue
 
