@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 from itertools import product
 from typing import (
+    Any as PyAny,
     Callable,
     Generic,
     List,
@@ -78,9 +79,6 @@ def to_boolean(expr: Expression) -> z3.Bool:
 class UnknownConversionException(RuntimeError):
     pass
 
-
-# ConstraintMap = MMapping[z3.SortRef, z3.Bool]
-# ExpressionMap = MMapping[z3.SortRef, Expression]
 
 E = TypeVar("E", bound=Expression)
 
@@ -192,6 +190,38 @@ class TypeUnion:
                 expressions.append(cres)
                 sorts.add(res.sort())
         return TypeUnion(expressions, sorts)
+
+
+@dataclass(frozen=True)
+class AnyTypeUnion(TypeUnion):
+    registrar: TypeRegistrar
+
+    def _get_any(self) -> AnyT:
+        def getatr(name: str) -> PyAny:
+            return object.__getattribute__(self, name)
+
+        assert getatr("sorts") == {Any}
+        assert len(getatr("expressions")) == 1
+        cexpr = getatr("expressions")[0]
+        assert cexpr.constraint is None
+        expr = cexpr.expr
+        assert expr.sort() == Any
+        return cast(AnyT, expr)
+
+    def expand(self) -> TypeUnion:
+        def getatr(name: str) -> PyAny:
+            return object.__getattribute__(self, name)
+
+        expr = getatr("_get_any")()
+        name = expr.decl().name()
+        return cast(TypeUnion, getatr("registrar").expand(name))
+
+    def __getattribute__(self, name: str) -> PyAny:
+        if name.startswith("_") or name == "registrar":
+            return object.__getattribute__(self, name)
+        expanded = object.__getattribute__(self, "expand")()
+        print("Getting", name, "on", expanded)
+        return getattr(expanded, name)
 
     # def cross(
     #     self, oper: Callable[..., Optional[Expression]], *others: TypeUnion
@@ -310,7 +340,11 @@ class TypeUnion:
 class TypeRegistrar:
     anytype: AnySort
 
-    def AllTypes(self, name: str) -> TypeUnion:
+    def AllTypes(self, name: str) -> AnyTypeUnion:
+        expr = make_any(name)
+        return AnyTypeUnion(expressions=[CExpr(expr=expr)], sorts={Any}, registrar=self)
+
+    def expand(self, name: str) -> TypeUnion:
         var = make_any(name)
         exprs = []
         sorts: SortSet = set()
@@ -351,6 +385,9 @@ class TypeRegistrar:
 
     @assertify
     def assign(self, target: DatatypeRef, value: TypeUnion) -> TypeUnion:
+        if isinstance(value, AnyTypeUnion):
+            # Special-case for TypeUnions which are just unconstrained variables
+            return TypeUnion.wrap(target == value._get_any())
         exprs = []
         for expr in value.expressions:
             # constraints = value.constraints.get(sort, None)
@@ -486,6 +523,14 @@ class MoreMagic:
                 continue
             exprs.append(res)
             sorts.add(res.expr.sort())
+        if len(exprs) == 0 and any(isinstance(arg, AnyTypeUnion) for arg in args):
+            newargs = []
+            for arg in args:
+                if isinstance(arg, AnyTypeUnion):
+                    newargs.append(arg.expand())
+                else:
+                    newargs.append(arg)
+                self(*newargs)
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(self, args: Tuple) -> Optional[CExpr]:
