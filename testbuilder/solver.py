@@ -37,6 +37,8 @@ def solve(data: sbb.TestData) -> Optional[Solution]:
         elif z3.is_string(value):
             pyvalue = value.as_string()
             pyvalue = pyvalue[1:-1]
+        elif z3.is_bool(value):
+            pyvalue = bool(value)
         else:
             raise TypeError(f"Couldn't find adapter for {type(value)}")
 
