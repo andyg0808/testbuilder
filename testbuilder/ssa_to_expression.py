@@ -2,22 +2,21 @@ from functools import singledispatch
 from typing import Callable, List, Optional, Tuple, Union, cast
 
 from astor import to_source  # type: ignore
-
-import z3
 from toolz import mapcat, pipe
 
+import z3
+
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
+from .converter import to_boolean
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
-from .converter import to_boolean
 from .test_utils import write_dot
-from .z3_types import TypeUnion
 from .type_inferencer import TypeInferencer
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import bool_or, bool_and, bool_not
+from .z3_types import TypeUnion, bool_and, bool_not, bool_or
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]

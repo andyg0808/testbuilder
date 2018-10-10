@@ -7,20 +7,21 @@ from __future__ import annotations
 import operator
 import re
 from functools import singledispatch
-from typing import Any, Callable, Mapping, Type, TypeVar, cast, Union, Optional
+from typing import Any, Callable, Mapping, Optional, Type, TypeVar, Union, cast
 
 import z3
 
 from . import nodetree as n
 from .z3_types import (
-    more_magic_tag as magic,
-    MoreMagic as Magic,
     Any as AnyType,
     AnyT,
+    ConstrainedExpression as CExpr,
     Expression,
-    make_any,
-    TypeUnion,
+    MoreMagic as Magic,
     TypeRegistrar,
+    TypeUnion,
+    make_any,
+    more_magic_tag as magic,
 )
 
 OpFunc = Callable[..., TypeUnion]
