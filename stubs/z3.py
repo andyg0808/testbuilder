@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Any, List, Tuple, Callable, Generic, TypeVar
+
+from typing import Any, Callable, Generic, List, Tuple, TypeVar
 
 
 class AstRef:
@@ -69,6 +70,9 @@ class ExprRef(AstRef):
         ...
 
     def arg(self, idx: int) -> ExprRef:
+        ...
+
+    def num_args(self) -> int:
         ...
 
 
