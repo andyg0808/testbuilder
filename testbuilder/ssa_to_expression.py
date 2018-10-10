@@ -178,7 +178,7 @@ def bool_any(exprs: List[z3.Bool]) -> z3.Bool:
     Allow any path in exprs to be taken. If only one path is present,
     it is required. No exprs results in an exception.
     """
-    # exprs = list(exprs)
+    exprs = list(exprs)
     if len(exprs) > 1:
         return bool_or(*exprs)
     elif len(exprs) == 1:
