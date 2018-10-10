@@ -1,29 +1,25 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass, field
-from functools import singledispatch
-from itertools import groupby, product, repeat
+from itertools import product
 from typing import (
-    Set,
+    Callable,
     Generic,
-    Union,
-    Type,
-    Sequence,
-    Iterator,
-    cast,
+    List,
     MutableMapping as MMapping,
     Optional,
-    TypeVar,
-    List,
-    Callable,
+    Set,
     Tuple,
-    Any as PyAny,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
-from .visitor import SimpleVisitor
+
 from typeassert import assertify
 
 import z3
+from dataclasses import dataclass
 from z3 import DatatypeRef
 
 Expression = z3.ExprRef
@@ -514,7 +510,7 @@ class MoreMagic:
                 return isinstance(arg_sort, func_key)
 
         for key, func in self.funcref.items():
-            print("Matching {key} {args}")
+            print(f"Matching {key} {args}")
             if all(sort_compare(*tu) for tu in zip(args, key)):
                 return func
         return None
