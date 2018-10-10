@@ -421,7 +421,10 @@ def unwrap(val: Expression) -> Expression:
     value stored in them.
     """
     if val.sort() == Any:
-        return val.arg(0)
+        if val.num_args() == 1:
+            return val.arg(0)
+        else:
+            raise RuntimeError("Unexpected constructor for unwrapping")
     return val
 
 
