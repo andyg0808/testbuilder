@@ -5,7 +5,7 @@ SHELL=/bin/bash -o pipefail
 
 RUN = fastbuild
 
-MYPY = mypy --strict --check-untyped-defs testbuilder/generate_proto.py
+MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
 export MYPYPATH=./stubs
 
 # Run pytest
