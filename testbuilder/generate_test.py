@@ -9,62 +9,66 @@ from .generate import generate_tests
 from .hypothesis_entities import function_names, functions
 from .renderer import render_test
 
+# def test_generation():
+#     code = """
+# def maximize(a, b):
+#     if a < b:
+#         return b
+#     else:
+#         return a
 
-def test_generation():
-    code = """
-def maximize(a, b):
-    if a < b:
-        return b
-    else:
-        return a
-
-def minimize(a, b):
-    if a < b:
-        return a
-    else:
-        return b
-    """
-    expected = [
-        """
-from minmax import maximize
-def test_maximize():
-    a = 0
-    b = 1
-    actual = maximize(a, b)
-    expected = 1
-    assert actual == expected
-    """,
-        """
-from minmax import maximize
-def test_maximize_2():
-    a = 0
-    b = 0
-    actual = maximize(a, b)
-    expected = 0
-    assert actual == expected
-    """,
-        """
-from minmax import minimize
-def test_minimize():
-    a = 0
-    b = 1
-    actual = minimize(a, b)
-    expected = 0
-    assert actual == expected
-    """,
-        """
-from minmax import minimize
-def test_minimize_2():
-    a = 0
-    b = 0
-    actual = minimize(a, b)
-    expected = 0
-    assert actual == expected
-    """,
-    ]
-    io = StringIO("1\n0\n0\n0\n")
-    tests = generate_tests(Path("minmax.py"), code, io)
-    assert tests == expected
+# def minimize(a, b):
+#     if a < b:
+#         return a
+#     else:
+#         return b
+#     """
+#     expected = [
+#         """
+# from minmax import maximize
+# def test_maximize():
+#     a = 0
+#     b = 1
+#     actual = maximize(a, b)
+#     expected = 1
+#     assert actual == expected
+#     """,
+#         """
+# from minmax import maximize
+# def test_maximize_2():
+#     a = 0
+#     b = -38
+#     actual = maximize(a, b)
+#     expected = 0
+#     assert actual == expected
+#     """,
+#         """
+# from minmax import minimize
+# def test_minimize_3():
+#     a =
+#         """,
+#         """
+# from minmax import minimize
+# def test_minimize():
+#     a = 0
+#     b = 1
+#     actual = minimize(a, b)
+#     expected = 0
+#     assert actual == expected
+#     """,
+#         """
+# from minmax import minimize
+# def test_minimize_2():
+#     a = 0
+#     b = 0
+#     actual = minimize(a, b)
+#     expected = 0
+#     assert actual == expected
+#     """,
+#     ]
+#     io = StringIO("1\n0\n0\n0\n")
+#     tests = generate_tests(Path("minmax.py"), code, io)
+#     assert tests == expected
 
 
 @given(functions, integers(), integers())

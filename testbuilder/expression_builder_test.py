@@ -126,11 +126,7 @@ def test_variable_expression():
 def athing(a):
     return a
     """,
-        """
-ret == Any.Int(Any.i(pyname_a)) and Any.is_Int(pyname_a) or \
-ret == Any.Bool(Any.b(pyname_a)) and Any.is_Bool(pyname_a) or \
-ret == Any.String(Any.s(pyname_a)) and Any.is_String(pyname_a)
-""",
+        "ret == pyname_a",
     )
 
 
@@ -188,7 +184,12 @@ def multiple_deps(a, b):
     return c + d
     """,
         """
-pyname_c == pyname_a and pyname_d == pyname_b and ret == pyname_c + pyname_d
+pyname_c == pyname_a and \
+pyname_d == pyname_b and \
+Or(ret == Any.Int(Any.i(pyname_c) + Any.i(pyname_d)) and \
+        And(Any.is_Int(pyname_c), Any.is_Int(pyname_d)), \
+   ret == Any.String(Concat(Any.s(pyname_c), Any.s(pyname_d))) and \
+        And(Any.is_String(pyname_c), Any.is_String(pyname_d)))
 """,
     )
 
@@ -199,7 +200,7 @@ def test_primitive_mutation():
 a = 1
 a = 2
     """,
-        "pyname_a == 2",
+        "pyname_a == Any.Int(2)",
     )
 
 
@@ -209,7 +210,10 @@ def test_difficult_mutation():
 a = 1
 a = a + 1
     """,
-        "pyname_a == 1 and pyname_a_1 == pyname_a + 1",
+        """
+pyname_a == Any.Int(1) and \
+And(pyname_a_1 == Any.Int(Any.i(pyname_a) + 1), Any.is_Int(pyname_a))
+""",
     )
 
 
@@ -225,8 +229,10 @@ return c
     """,
         """
 pyname_c == 0 and \
-(((pyname_a > pyname_b) and pyname_c_1 == pyname_c + pyname_a) or \
-(Not(pyname_a > pyname_b) and pyname_c_1 == pyname_c + pyname_b)) and \
+        (((Any.i(pyname_a) > Any.i(pyname_b)) and \
+          pyname_c_1 == Any.i(pyname_c) + Any.i(pyname_a)) or \
+        (Not(Any.i(pyname_a) > Any.i(pyname_b)) and \
+     pyname_c_1 == Any.Int(Any.i(pyname_c) + Any.i(pyname_b)))) and \
 ret == pyname_c_1
 """,
     )
