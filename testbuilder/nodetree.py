@@ -104,7 +104,7 @@ class UnaryOperator(Node):
     pass
 
 
-class USub(Operator):
+class USub(UnaryOperator):
     pass
 
 
