@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from dataclasses import dataclass
 from itertools import product
 from typing import (
     Any as PyAny,
@@ -17,10 +18,8 @@ from typing import (
     cast,
 )
 
-from typeassert import assertify
-
 import z3
-from dataclasses import dataclass
+from typeassert import assertify
 from z3 import DatatypeRef
 
 Expression = z3.ExprRef
@@ -138,6 +137,9 @@ class TypeUnion:
             cast(z3.Bool, x.to_expr(invert)) for x in self.expressions
         ]
         return bool_or(*boolexprs)
+
+    def implications(self) -> z3.Bool:
+        return bool_or(*(x.constraint for x in self.expressions if x.constrained()))
 
     def unwrap(
         self,

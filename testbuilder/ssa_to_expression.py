@@ -2,9 +2,9 @@ from functools import singledispatch
 from typing import Callable, List, Optional, Tuple, Union, cast
 
 from astor import to_source  # type: ignore
-from toolz import mapcat, pipe
 
 import z3
+from toolz import mapcat, pipe
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .converter import to_boolean
@@ -51,7 +51,15 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
-        return [converter.visit_expr(node).to_expr()]
+        union = converter.visit_expr(node)
+        if union.is_bool():
+            return [union.to_expr()]
+        else:
+            # The union is not a boolean; the only supported case this
+            # could happen would be a bare expression, and the only
+            # side-effectful expression is yield, which is
+            # unsupported.
+            return union.implications()
 
     # def visit_Return(self, node: n.Return) -> ExprList:
     #     if node.value:
