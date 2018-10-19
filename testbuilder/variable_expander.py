@@ -175,7 +175,11 @@ class ExpansionTester(ast.NodeVisitor):
             eval(expr, EVAL_GLOBALS, EVAL_LOCALS)
         except z3.z3types.Z3Exception as e:
             raise RuntimeError(
-                f"Expansion test failed while expanding\n{to_source(node)}"
+                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
+            ) from e
+        except TypeError as e:
+            raise RuntimeError(
+                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
             ) from e
         return True
 
