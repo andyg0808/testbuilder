@@ -44,48 +44,16 @@ Typelist: Mapping[str, TypeConstructor] = {
     "a": make_any,
 }
 
-
-def get_variable(name: str, idx: int) -> str:
-    name = "pyname_" + name
-
-    if idx == 0:
-        return name
-    else:
-        return name + "_" + str(idx)
-
-
-def get_variable_name(node: n.Name) -> str:
-    name = "pyname_" + node.id
-
-    if node.set_count == 0:
-        return name
-    else:
-        return name + "_" + str(node.set_count)
-
-
-def get_prefix(prefix: n.Prefix) -> str:
-    return f"function_{prefix.func}_{prefix.number}"
-
-
-def get_result(prefix: n.Prefix) -> str:
-    return get_prefix(prefix) + "_return"
-
-
-def get_type(name: str, set_count: int) -> TypeConstructor:
-    match = TypeRegex.match(name)
-    if match and match.group(1):
-        # There was a type given for the variable. Use that.
-        return Typelist[match.group(1).lower()]
-    else:
-        # It's not got a type. Assume it's an integer.
-        return z3.Int
+IntSort = z3.IntSort()
+StringSort = z3.StringSort()
+BoolSort = z3.BoolSort()
 
 
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
-
     def __init__(self) -> None:
         super().__init__()
         self.visit_oper = OperatorConverter()
+
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
 
@@ -197,11 +165,6 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(IntSort)(lambda x: -x)
 
 
-IntSort = z3.IntSort()
-StringSort = z3.StringSort()
-BoolSort = z3.BoolSort()
-
-
 # T = TypeVar("T")
 
 
@@ -240,3 +203,39 @@ def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
         return value.to_expr(invert)
     else:
         return Registrar.to_boolean(value).to_expr(invert)
+
+
+def get_variable(name: str, idx: int) -> str:
+    name = "pyname_" + name
+
+    if idx == 0:
+        return name
+    else:
+        return name + "_" + str(idx)
+
+
+def get_variable_name(node: n.Name) -> str:
+    name = "pyname_" + node.id
+
+    if node.set_count == 0:
+        return name
+    else:
+        return name + "_" + str(node.set_count)
+
+
+def get_prefix(prefix: n.Prefix) -> str:
+    return f"function_{prefix.func}_{prefix.number}"
+
+
+def get_result(prefix: n.Prefix) -> str:
+    return get_prefix(prefix) + "_return"
+
+
+def get_type(name: str, set_count: int) -> TypeConstructor:
+    match = TypeRegex.match(name)
+    if match and match.group(1):
+        # There was a type given for the variable. Use that.
+        return Typelist[match.group(1).lower()]
+    else:
+        # It's not got a type. Assume it's an integer.
+        return z3.Int
