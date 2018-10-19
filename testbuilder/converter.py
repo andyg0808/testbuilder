@@ -202,19 +202,19 @@ StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
 
 
-T = TypeVar("T")
+# T = TypeVar("T")
 
 
-def safify(
-    exception: Type[BaseException], op: Callable[..., T]
-) -> Callable[..., Optional[T]]:
-    def _safify(*args: Any, **kwargs: Any) -> Optional[T]:
-        try:
-            return op(*args, **kwargs)
-        except exception as e:
-            return None
+# def safify(
+#     exception: Type[BaseException], op: Callable[..., T]
+# ) -> Callable[..., Optional[T]]:
+#     def _safify(*args: Any, **kwargs: Any) -> Optional[T]:
+#         try:
+#             return op(*args, **kwargs)
+#         except exception as e:
+#             return None
 
-    return _safify
+#     return _safify
 
 
 # Options:
@@ -227,8 +227,8 @@ def safify(
 #
 
 
-E = TypeVar("E", bound=n.expr)
-B = TypeVar("B")
+# E = TypeVar("E", bound=n.expr)
+# B = TypeVar("B")
 
 
 def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
