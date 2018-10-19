@@ -197,25 +197,6 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(IntSort)(lambda x: -x)
 
 
-@singledispatch
-def visit_expr(node: n.expr) -> TypeUnion:
-    raise RuntimeError(f"Unimplemented handler for {type(node)}")
-
-
-@singledispatch
-def visit_oper(node: n.Operator) -> OpFunc:
-    name = type(node).__name__
-    op = getattr(operator, name.lower(), None)
-    if op is not None:
-        return cast(OpFunc, op)
-    else:
-        op = getattr(z3, name, None)
-        if op is not None:
-            return op
-        else:
-            raise RuntimeError(f"Unknown node type {type(node)}")
-
-
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
@@ -248,12 +229,6 @@ def safify(
 
 E = TypeVar("E", bound=n.expr)
 B = TypeVar("B")
-
-
-def convert(tree: n.Node) -> TypeUnion:
-    expr = visit_expr(tree)
-    assert expr is not None
-    return expr
 
 
 def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
