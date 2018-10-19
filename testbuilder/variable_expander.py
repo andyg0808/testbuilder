@@ -3,9 +3,11 @@ import re
 from inspect import getmembers
 from typing import Any
 
+from astor import to_source  # type: ignore
+
 import z3  # type: ignore
 
-from .z3_types import make_any, Any as AnyType
+from .z3_types import Any as AnyType, make_any
 
 EVAL_GLOBALS = {
     "z3": z3,
@@ -160,12 +162,31 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             return self.generic_visit(node)
 
 
+class ExpansionTester(ast.NodeVisitor):
+    def generic_visit(self, node: ast.AST) -> bool:
+        super().generic_visit(node)
+        if isinstance(node, ast.stmt) or isinstance(node, ast.expr):
+            if not isinstance(node, ast.Expression):
+                node = ast.copy_location(ast.Expression(node), node)
+            expr = compile(node, filename="<ExpansionTester>", mode="eval")
+        else:
+            return True
+        try:
+            eval(expr, EVAL_GLOBALS, EVAL_LOCALS)
+        except z3.z3types.Z3Exception as e:
+            raise RuntimeError(
+                f"Expansion test failed while expanding\n{to_source(node)}"
+            ) from e
+        return True
+
+
 def expand_variables(code: str) -> Any:
     code_tree = ast.parse(code.strip(), mode="eval")
     visitor = VariableExpansionVisitor()
     expanded_code = visitor.visit(code_tree)
     # print("expanded AST", ast.dump(expanded_code, include_attributes=True))
     print("Processed these variables as literals:", visitor.literals)
+    ExpansionTester().visit(expanded_code)
     return eval(
         compile(expanded_code, filename="<string>", mode="eval"),
         EVAL_GLOBALS,
