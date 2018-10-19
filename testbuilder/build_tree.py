@@ -95,13 +95,9 @@ class TreeWalker(ast.NodeVisitor):
             else:
                 join = self.create_block()
         elif not join:
-            # Both branches of the if had returns. That makes it a return
-            # statement, in effect. Treat it as such.
-
-            # We have to have a junction node for the if statement. This
-            # is technically it.
-            # self.attach(start_block, RETURNBLOCK)
-            # self.types[RETURNBLOCK] = basic_block.Conditional
+            # Both branches of the if had returns. That makes it a
+            # return statement, in effect. Returning True indicates
+            # that all control flow ends at this block.
             return True
         else:
             false_branch = None
@@ -175,12 +171,6 @@ class TreeBuilder:
         self.returns = returns
         self.node_order = node_order
         self.code = code
-        # print("Constructing tree from tree of")
-        # pprint(self.tree)
-        # print("and types")
-        # pprint(self.types)
-        # print("and node_order")
-        # pprint(self.node_order)
 
     def _is_ancestor(
         self, ancestor: BasicBlock, current: BasicBlock, seen: Set[BasicBlock]
@@ -258,8 +248,6 @@ class TreeBuilder:
     def _inflate(self, s: Dependency, blocks: Mapping[int, BasicBlock]) -> BasicBlock:
         self._inflate_deps(s, blocks)
         block = self._fetch_block(s.code, blocks)
-        # print(make_display(id(s.code)), ": ", s)
-        # print("adding ", s, " to ", block, make_display(id(block)))
         if s not in block.code:
             block.append(s)
         if s.required:
@@ -281,19 +269,15 @@ class TreeBuilder:
         if s.required:
             block.required = True
 
-        # print("len of children", len(block.children))
         if type(s) is Conditional:
             self._set_conditionals(block, s)
         else:
             self._set_conditionals(block, s.neg())
 
     def order_blocks(self, blocks: Mapping[int, BasicBlock]) -> None:
-        # print("node order", self.node_order)
         for k, vs in self.node_order.items():
             parents = [blocks[i] if i is not None else None for i in vs]
             blocks[k].parents = parents
-            # print("set block", k, "parents to", parents)
-        pass
 
     def inflate(self, s: Dependency) -> BlockTree:
         blocks = self.build_tree()

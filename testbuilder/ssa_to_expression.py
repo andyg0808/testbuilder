@@ -61,13 +61,6 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             # unsupported.
             return union.implications()
 
-    # def visit_Return(self, node: n.Return) -> ExprList:
-    #     if node.value:
-    #         expr = converter.visit_expr(node.value)
-    #         return [z3.Int("ret") == expr]
-    #     else:
-    #         return [z3.BoolVal(True)]
-
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
 
