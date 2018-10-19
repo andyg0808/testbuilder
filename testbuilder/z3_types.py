@@ -134,6 +134,10 @@ class TypeUnion:
         return self.sorts == {z3.BoolSort()}
 
     def to_expr(self, invert: bool = False) -> z3.Bool:
+        """
+        Creates a boolean expression allowing execution to procede down
+        any of the possible expressions in this TypeUnion
+        """
         assert (
             self.is_bool()
         ), "Cannot convert non-boolean TypeUnion to boolean expression"
