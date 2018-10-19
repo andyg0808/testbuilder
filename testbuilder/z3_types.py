@@ -419,3 +419,31 @@ def _simplify_logical(
         return exprs[0]
     else:
         raise RuntimeError("Need at least one expression to combine")
+
+
+def diff_expression(
+    left: Expression, right: Expression
+) -> Optional[List[Tuple[Expression, Expression]]]:
+    """
+    Returns the portion of an expression which is different between
+    `left` and `right`. Returns `None` if `left` and `right` are
+    `z3.eq`.
+    """
+    if z3.eq(left, right):
+        return None
+
+    if left.num_args() != right.num_args() or left.num_args() == 0:
+        return [(left, right)]
+
+    for l, r in zip(left.children(), right.children()):
+        diff = diff_expression(l, r)
+        if diff is not None:
+            return [(left, right)] + diff
+    raise RuntimeError(
+        "Could not find difference between dissimilar values {left} and {right}"
+    )
+
+
+def print_diff(diff: List[Tuple[Expression, Expression]]) -> None:
+    for left, right in diff:
+        print(f"Difference in\n\n{left}\n{right}\n")

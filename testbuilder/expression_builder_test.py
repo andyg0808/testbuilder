@@ -8,6 +8,7 @@ from toolz import pipe
 
 from .expression_builder import get_expression
 from .variable_expander import expand_variables
+from .z3_types import diff_expression, print_diff
 
 
 def check_expression(
@@ -53,7 +54,10 @@ def check_expression(
     if expected is None:
         assert expr is None
     else:
-        assert z3.eq(expected, expr)
+        diff = diff_expression(expected, expr)
+        if diff != None:
+            print_diff(diff)
+        assert diff == None
 
 
 def test_basic_call():
