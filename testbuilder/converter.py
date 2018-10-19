@@ -339,6 +339,10 @@ def convert(tree: n.Node) -> TypeUnion:
 
 
 def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
+    """
+    Forcibly convert a TypeUnion to a boolean. Will apply truthy
+    standards if needed in order to avoid problems.
+    """
     if value.is_bool():
         return value.to_expr(invert)
     else:

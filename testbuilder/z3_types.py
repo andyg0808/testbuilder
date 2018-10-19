@@ -65,6 +65,10 @@ T = TypeVar("T")
 
 
 def to_boolean(expr: Expression) -> z3.Bool:
+    """
+    Apply Python's truthy standards to make a boolean of an
+    expression.
+    """
     if z3.is_int(expr):
         return expr == z3.IntVal(0)
     elif z3.is_bool(expr):
@@ -402,6 +406,11 @@ class TypeRegistrar:
         return TypeUnion.wrap(bool_or(*exprs))
 
     def to_boolean(self, value: TypeUnion) -> TypeUnion:
+        """
+        Convert all the expressions in this TypeUnion to booleans,
+        applying truthy standards as needed in order to convert
+        non-boolean types.
+        """
         bools: List[z3.Bool] = []
         for cexpr in value.expressions:
             if cexpr.constraint:
