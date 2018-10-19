@@ -11,9 +11,9 @@ from .visitor import GatherVisitor
 
 
 class LineSplitter(GatherVisitor[int]):
-    def visit_Module(self, node: sbb.Module) -> List[int]:
+    def visit(self, node: sbb.BasicBlock) -> List[int]:
         _filter_high = partial(filter, lambda i: i >= 0)
-        return pipe(node, self.generic_visit, set, _filter_high, sorted)
+        return pipe(node, super().visit, set, _filter_high, sorted)
 
     def visit_Stmt(self, node: n.stmt) -> List[int]:
         return [node.line]

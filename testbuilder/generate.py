@@ -1,10 +1,10 @@
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from logbook import Logger
-from toolz import pipe
+from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
@@ -67,13 +67,19 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
     def parse_file(text: str) -> AST:
         return parse(text, str(source))
 
+    def function_splitter(module: sbb.Module) -> List[sbb.BlockTree]:
+        return list(module.functions.values()) + [module.code]
+
     _ast_to_ssa = partial(ast_to_ssa, 10, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
     _generate_test = partial(generate_test, module)
 
+    def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
+        return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
+
     print("lines", LineSplitter()(module))
-    return pipe(module, LineSplitter(), enumerate, liftIter(_generate_test), list)
+    return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)
 
 
 def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
