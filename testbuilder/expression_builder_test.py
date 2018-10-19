@@ -2,18 +2,12 @@ import ast
 from functools import partial
 
 import pytest
-from toolz import pipe
 
 import z3
+from toolz import pipe
 
 from .expression_builder import get_expression
 from .variable_expander import expand_variables
-
-# def test_conditional_index():
-#    assert conditional_diff_index([1,2,3], [1,2,3,4]) == 3
-#    assert conditional_diff_index([1,2,3,4], [1,2,3]) == 3
-#    assert conditional_diff_index([1,1,3,4], [1,2,3]) == 1
-#    assert conditional_diff_index([1,4,5], [1,4,3]) == 2
 
 
 def check_expression(

@@ -5,8 +5,6 @@ from typing import Optional
 import z3
 
 from . import ssa_basic_blocks as sbb
-
-# from .ast_builder import make_ast
 from .ast_to_ssa import ast_to_ssa
 from .converter import ExpressionConverter
 from .ssa_repair import repair
@@ -32,14 +30,6 @@ def conversion_assert(
             code_string = expected
         expected = expand_variables(expected)
     code = ast.parse(code_string)
-    # make_variables = copy(variables)
-    # make_code = code
-    # if isinstance(make_code, ast.Module):
-    #     assert len(make_code.body) == 1
-    #     make_code = make_code.body[0]
-    # if isinstance(make_code, ast.Expr):
-    #     # Code that's just an expression should be something we are really wanting to test
-    #     make_code = make_code.value
     tree = ast_to_ssa(2, variables, code)
     # Make variable assignment counts sensible
     tree = repair(tree)
@@ -51,7 +41,6 @@ def conversion_assert(
     assert isinstance(tree, sbb.Code)
     assert len(tree.code) == 1
     tree = tree.code[0]
-    # print(f"Got code {tree}; would have gotten {make_ast(make_variables, make_code)}")
     if expected_constraint is not None:
         expected_constraint = expand_variables(expected_constraint)
     result = ExpressionConverter()(tree).unwrap(expected_type, expected_constraint)
