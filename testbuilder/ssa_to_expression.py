@@ -113,6 +113,11 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
 @singledispatch
 def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
+    """
+    Convert a node to a TestData description
+
+    Handles both the case of a function and inline code
+    """
     raise RuntimeError(f"process not implemented for {type(node)}")
 
 
