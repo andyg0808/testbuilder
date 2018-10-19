@@ -1,4 +1,5 @@
 import ast
+from copy import copy
 from typing import Optional
 
 import z3
@@ -7,11 +8,10 @@ from . import ssa_basic_blocks as sbb
 
 # from .ast_builder import make_ast
 from .ast_to_ssa import ast_to_ssa
-from .converter import convert
+from .converter import ExpressionConverter
+from .ssa_repair import repair
 from .variable_expander import expand_variables
 from .z3_types import Any as AnyType, make_any
-from .ssa_repair import repair
-from copy import copy
 
 Bool = z3.BoolSort()
 Int = z3.IntSort()
@@ -54,7 +54,7 @@ def conversion_assert(
     # print(f"Got code {tree}; would have gotten {make_ast(make_variables, make_code)}")
     if expected_constraint is not None:
         expected_constraint = expand_variables(expected_constraint)
-    result = convert(tree).unwrap(expected_type, expected_constraint)
+    result = ExpressionConverter()(tree).unwrap(expected_type, expected_constraint)
     print("expected", expected)
     print("actual", result)
     assert z3.eq(expected, result)

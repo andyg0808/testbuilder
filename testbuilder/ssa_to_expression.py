@@ -26,7 +26,7 @@ ExprList = List[Expression]
 class SSAVisitor(SimpleVisitor[ExprList]):
     def __init__(self, module: sbb.Module) -> None:
         self.module = module
-        # self.type_listing = TypeInferencer().visit(module)
+        self.expression = converter.ExpressionConverter()
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -51,7 +51,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
-        union = converter.visit_expr(node)
+        union = self.expression(node)
         if union.is_bool():
             return [union.to_expr()]
         else:
@@ -100,7 +100,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(converter.visit_expr(node.conditional))]
+        return code + [to_boolean(self.expression(node.conditional))]
 
     def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -108,7 +108,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(converter.visit_expr(node.conditional), invert=True)]
+        return code + [to_boolean(self.expression(node.conditional), invert=True)]
 
 
 @singledispatch

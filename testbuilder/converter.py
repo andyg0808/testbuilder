@@ -12,6 +12,7 @@ from typing import Any, Callable, Mapping, Optional, Type, TypeVar, Union, cast
 import z3
 
 from . import nodetree as n
+from .visitor import SimpleVisitor
 from .z3_types import (
     Any as AnyType,
     AnyT,
@@ -80,6 +81,122 @@ def get_type(name: str, set_count: int) -> TypeConstructor:
         return z3.Int
 
 
+class ExpressionConverter(SimpleVisitor[TypeUnion]):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.visit_oper = OperatorConverter()
+    def visit_Int(self, node: n.Int) -> TypeUnion:
+        return TypeUnion.wrap(z3.IntVal(node.v))
+
+    def visit_Str(self, node: n.Str) -> TypeUnion:
+        return TypeUnion.wrap(z3.StringVal(node.s))
+
+    def visit_BinOp(self, node: n.BinOp) -> TypeUnion:
+        op = self.visit_oper(node.op)
+        return op(self.visit(node.left), self.visit(node.right))
+
+    def visit_UnaryOp(self, node: n.UnaryOp) -> TypeUnion:
+        op = self.visit_oper(node.op)
+        return op(self.visit(node.operand))
+
+    def visit_Return(self, node: n.Return) -> TypeUnion:
+        if node.value:
+            expr = self.visit(node.value)
+            return Registrar.assign(make_any("ret"), expr)
+        else:
+            return TypeUnion.wrap(z3.BoolVal(True))
+
+    def visit_NameConstant(self, node: n.NameConstant) -> TypeUnion:
+        return Constants[node.value]
+
+    def visit_Name(self, node: n.Name) -> TypeUnion:
+        variable = get_variable(node.id, node.set_count)
+        # constructor = get_type(node.id, node.set_count)
+        # Add cache support here
+        return Registrar.AllTypes(variable)
+
+    def visit_PrefixedName(self, node: n.PrefixedName) -> TypeUnion:
+        prefix = get_prefix(node)
+        variable = get_variable(node.id, node.set_count)
+        return Registrar.AllTypes(prefix + "_" + variable)
+
+    def visit_Result(self, node: n.Result) -> TypeUnion:
+        variable = get_result(node)
+        return Registrar.AllTypes(variable)
+
+    def visit_Set(self, node: n.Set) -> TypeUnion:
+        # We know `target` is a Name
+        target = node.target
+        var = make_any(get_variable(target.id, target.set_count))
+        value = self.visit(node.e)
+        return Registrar.assign(var, value)
+
+    def visit_Expr(self, node: n.Expr) -> TypeUnion:
+        v = self.visit(node.value)
+        assert v is not None
+        return v
+
+    def visit_Call(self, node: n.Call) -> TypeUnion:
+        # Temporarily treat functions as true
+        return TypeUnion.wrap(z3.BoolVal(True))
+
+    def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
+        var = make_any(get_result(node))
+        if node.value:
+            expr = self.visit(node.value)
+            return Registrar.assign(var, expr)
+        else:
+            return Registrar.assign(var, expr)
+
+
+class OperatorConverter(SimpleVisitor[OpFunc]):
+    def visit_Add(self, node: n.Add) -> OpFunc:
+        class AddMagic(Magic):
+            @magic(IntSort, IntSort)
+            def addInt(self, left: z3.Int, right: z3.Int) -> z3.Int:
+                return left + right
+
+            @magic(StringSort, StringSort)
+            def addString(self, left: z3.String, right: z3.String) -> z3.String:
+                return z3.Concat(left, right)
+
+        return AddMagic()
+
+    def visit_Sub(self, node: n.Sub) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.sub)
+
+    def visit_Mult(self, node: n.Mult) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.mul)
+
+    def visit_Div(self, node: n.Div) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.truediv)
+
+    def visit_LtE(self, node: n.LtE) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.le)
+
+    def visit_GtE(self, node: n.GtE) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.ge)
+
+    def visit_Or(self, node: n.Or) -> OpFunc:
+        return Magic.m(BoolSort, BoolSort)(z3.Or)
+
+    def visit_And(self, node: n.And) -> OpFunc:
+        return Magic.m(BoolSort, BoolSort)(z3.And)
+
+    def visit_Eq(self, node: n.Eq) -> OpFunc:
+        return Magic.m(object, object)(operator.eq)
+
+    def visit_Lt(self, node: n.Lt) -> OpFunc:
+        return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
+
+    def visit_Gt(self, node: n.Gt) -> OpFunc:
+        return Magic.m(IntSort, IntSort)(operator.gt)
+
+    def visit_USub(self, node: n.USub) -> OpFunc:
+        return Magic.m(IntSort)(lambda x: -x)
+
+
 @singledispatch
 def visit_expr(node: n.expr) -> TypeUnion:
     raise RuntimeError(f"Unimplemented handler for {type(node)}")
@@ -99,94 +216,9 @@ def visit_oper(node: n.Operator) -> OpFunc:
             raise RuntimeError(f"Unknown node type {type(node)}")
 
 
-@visit_expr.register(n.Int)
-def visit_Int(node: n.Int) -> TypeUnion:
-    return TypeUnion.wrap(z3.IntVal(node.v))
-
-
-@visit_expr.register(n.Str)
-def visit_Str(node: n.Str) -> TypeUnion:
-    return TypeUnion.wrap(z3.StringVal(node.s))
-
-
-@visit_expr.register(n.BinOp)
-def visit_BinOp(node: n.BinOp) -> TypeUnion:
-    op = visit_oper(node.op)
-    return op(visit_expr(node.left), visit_expr(node.right))
-
-
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
-
-
-@visit_oper.register(n.Add)
-def visit_Add(node: n.Add) -> OpFunc:
-    class AddMagic(Magic):
-        @magic(IntSort, IntSort)
-        def addInt(self, left: z3.Int, right: z3.Int) -> z3.Int:
-            return left + right
-
-        @magic(StringSort, StringSort)
-        def addString(self, left: z3.String, right: z3.String) -> z3.String:
-            return z3.Concat(left, right)
-
-    return AddMagic()
-
-
-@visit_oper.register(n.Sub)
-def visit_Sub(node: n.Sub) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.sub)
-
-
-@visit_oper.register(n.Mult)
-def visit_Mult(node: n.Mult) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.mul)
-
-
-@visit_oper.register(n.Div)
-def visit_Div(node: n.Div) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.truediv)
-
-
-@visit_oper.register(n.LtE)
-def visit_LtE(node: n.LtE) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.le)
-
-
-@visit_oper.register(n.GtE)
-def visit_GtE(node: n.GtE) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.ge)
-
-
-@visit_oper.register(n.Or)
-def visit_Or(node: n.Or) -> OpFunc:
-    return Magic.m(BoolSort, BoolSort)(z3.Or)
-
-
-@visit_oper.register(n.And)
-def visit_And(node: n.And) -> OpFunc:
-    return Magic.m(BoolSort, BoolSort)(z3.And)
-
-
-@visit_oper.register(n.Eq)
-def visit_Eq(node: n.Eq) -> OpFunc:
-    return Magic.m(object, object)(operator.eq)
-
-
-@visit_oper.register(n.Lt)
-def visit_Lt(node: n.Lt) -> OpFunc:
-    return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
-
-
-@visit_oper.register(n.Gt)
-def visit_Gt(node: n.Gt) -> OpFunc:
-    return Magic.m(IntSort, IntSort)(operator.gt)
-
-
-@visit_oper.register(n.USub)
-def visit_USub(node: n.USub) -> OpFunc:
-    return Magic.m(IntSort)(lambda x: -x)
 
 
 T = TypeVar("T")
@@ -204,56 +236,6 @@ def safify(
     return _safify
 
 
-@visit_expr.register(n.UnaryOp)
-def visit_UnaryOp(node: n.UnaryOp) -> TypeUnion:
-    op = visit_oper(node.op)
-    return op(visit_expr(node.operand))
-
-
-@visit_expr.register(n.Return)
-def visit_Return(node: n.Return) -> TypeUnion:
-    if node.value:
-        expr = visit_expr(node.value)
-        return Registrar.assign(make_any("ret"), expr)
-    else:
-        return TypeUnion.wrap(z3.BoolVal(True))
-
-
-@visit_expr.register(n.NameConstant)
-def visit_NameConstant(node: n.NameConstant) -> TypeUnion:
-    return Constants[node.value]
-
-
-@visit_expr.register(n.Name)
-def visit_Name(node: n.Name) -> TypeUnion:
-    variable = get_variable(node.id, node.set_count)
-    # constructor = get_type(node.id, node.set_count)
-    # Add cache support here
-    return Registrar.AllTypes(variable)
-
-
-@visit_expr.register(n.PrefixedName)
-def visit_PrefixedName(node: n.PrefixedName) -> TypeUnion:
-    prefix = get_prefix(node)
-    variable = get_variable(node.id, node.set_count)
-    return Registrar.AllTypes(prefix + "_" + variable)
-
-
-@visit_expr.register(n.Result)
-def visit_Result(node: n.Result) -> TypeUnion:
-    variable = get_result(node)
-    return Registrar.AllTypes(variable)
-
-
-@visit_expr.register(n.Set)
-def visit_Set(node: n.Set) -> TypeUnion:
-    # We know `target` is a Name
-    target = node.target
-    var = make_any(get_variable(target.id, target.set_count))
-    value = visit_expr(node.e)
-    return Registrar.assign(var, value)
-
-
 # Options:
 # * Map == between the z3 variable and the values (which have to be wrapped)
 # * Map == between each element of the unwrapped z3 variable and the values
@@ -266,29 +248,6 @@ def visit_Set(node: n.Set) -> TypeUnion:
 
 E = TypeVar("E", bound=n.expr)
 B = TypeVar("B")
-
-
-@visit_expr.register(n.Expr)
-def visit_Expr(node: n.Expr[E]) -> TypeUnion:
-    v = visit_expr(node.value)
-    assert v is not None
-    return v
-
-
-@visit_expr.register(n.Call)
-def visit_Call(node: n.Call) -> TypeUnion:
-    # Temporarily treat functions as true
-    return TypeUnion.wrap(z3.BoolVal(True))
-
-
-@visit_expr.register(n.ReturnResult)
-def visit_ReturnResult(node: n.ReturnResult) -> TypeUnion:
-    var = make_any(get_result(node))
-    if node.value:
-        expr = visit_expr(node.value)
-        return Registrar.assign(var, expr)
-    else:
-        return Registrar.assign(var, expr)
 
 
 def convert(tree: n.Node) -> TypeUnion:
