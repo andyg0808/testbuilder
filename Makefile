@@ -20,7 +20,7 @@ export MYPYPATH=./stubs
 PYTEST = pytest -x -ra --ff testbuilder
 
 pytest:
-	pipenv run $(PYTEST)
+	pipenv run $(PYTEST) | rainbow.py --colorize
 
 mypy:
 	pipenv run $(MYPY)
