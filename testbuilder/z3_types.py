@@ -136,10 +136,6 @@ class TypeUnion:
         cexpr = CExpr(expr=expr)
         return TypeUnion([cexpr], {expr.sort()})
 
-    @staticmethod
-    def cwrap(expr: CExpr) -> TypeUnion:
-        return TypeUnion([expr], {expr.expr.sort()})
-
     def is_bool(self) -> bool:
         return self.sorts == {z3.BoolSort()}
 
