@@ -249,14 +249,27 @@ class TypeRegistrar:
         expr = make_any(name)
         return AnyTypeUnion(expressions=[CExpr(expr=expr)], sorts={Any}, registrar=self)
 
-    def expand(self, name: str) -> TypeUnion:
+    def expand(self, name: str, types: Set[z3.SortRef] = set()) -> TypeUnion:
+        """
+        Arguments:
+            name: The variable name to expand
+            types: A set of sorts to restrict the variable to. If the
+                set is empty, does not restrict the variable at all.
+        """
         var = make_any(name)
         exprs = []
-        sorts: SortSet = set()
+        sorts: Set[z3.SortRef] = set()
         for i in range(self.anytype.num_constructors()):
-            constraint = self.anytype.recognizer(i)(var)
             expr = self.anytype.accessor(i, 0)(var)
-            cexpr = CExpr(expr=expr, constraint=constraint)
+            # Allow restricting the expansion of the variable
+            if len(types) > 0:
+                if expr.sort() not in types:
+                    continue
+            if len(types) == 1:
+                cexpr = CExpr(expr=expr)
+            else:
+                constraint = self.anytype.recognizer(i)(var)
+                cexpr = CExpr(expr=expr, constraint=constraint)
             exprs.append(cexpr)
             sorts.add(expr.sort())
         return TypeUnion(exprs, sorts)
