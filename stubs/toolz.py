@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, TypeVar
+from typing import Callable, Iterable, Sequence, TypeVar
 
 
 def compose(*funcs: Callable) -> Callable:
@@ -17,5 +17,5 @@ def mapcat(func: Callable[[T], Sequence[U]], seqs: Sequence[T]) -> Sequence[U]:
     ...
 
 
-def concat(seqs: Sequence[Sequence[T]]) -> Sequence[T]:
+def concat(seqs: Iterable[Iterable[T]]) -> Iterable[T]:
     ...
