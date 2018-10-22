@@ -19,8 +19,11 @@ from typing import (
 )
 
 import z3
+from logbook import Logger
 from typeassert import assertify
 from z3 import DatatypeRef
+
+log = Logger("z3_types")
 
 Expression = z3.ExprRef
 
@@ -230,7 +233,7 @@ class AnyTypeUnion(TypeUnion):
         if name.startswith("_") or name == "registrar":
             return object.__getattribute__(self, name)
         expanded = object.__getattribute__(self, "expand")()
-        print("Getting", name, "on", expanded)
+        log.info("Getting", name, "on", expanded)
         return getattr(expanded, name)
 
 
@@ -349,7 +352,7 @@ class MoreMagic:
         return _magic
 
     def __call__(self, *args: TypeUnion) -> TypeUnion:
-        print(f"Called {self.__class__} on {args}")
+        log.info(f"Called {self.__class__} on {args}")
         exprs = []
         sorts = set()
         for arg_tuple in product(*(arg.expressions for arg in args)):
@@ -369,7 +372,7 @@ class MoreMagic:
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(self, args: Tuple) -> Optional[CExpr]:
-        print(f"calling {args}")
+        log.info(f"Trying to run implementation for type-pair {args}")
         func = self.__select(tuple(arg.expr.sort() for arg in args))
         if func is None:
             return None
@@ -383,7 +386,7 @@ class MoreMagic:
     def __select(
         self, args: Tuple
     ) -> Optional[Callable[[Expression, Expression], Expression]]:
-        print(f"selecting using {args}")
+        log.info(f"Selecting implementation using {args}")
 
         def sort_compare(arg_sort: z3.SortRef, func_key: z3.SortRef) -> bool:
             if isinstance(func_key, z3.SortRef):
@@ -392,7 +395,7 @@ class MoreMagic:
                 return isinstance(arg_sort, func_key)
 
         for key, func in self.funcref.items():
-            print(f"Matching {key} {args}")
+            log.info(f"Checking {key} against {args}")
             if all(sort_compare(*tu) for tu in zip(args, key)):
                 return func
         return None
