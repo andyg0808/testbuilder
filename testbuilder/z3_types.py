@@ -102,18 +102,23 @@ class ConstrainedExpression(Generic[E]):
         return len(self.constraints) > 0
 
     def constraint(self) -> z3.Bool:
+        assert self.constrained(), "Cannot get constraint for unconstrained expression"
         return bool_and(*(constraint for name, sort, constraint in self.constraints))
 
     def to_expr(self, invert: bool = False) -> Expression:
-        expr = cast(z3.Bool, self.expr)
+        expr: Expression = self.expr
         if invert:
-            expr = bool_not(expr)
+            assert expr.sort() == z3.BoolSort(), (
+                "Cannot invert a ConstrainedExpression which"
+                " doesn't have a boolean value"
+            )
+            expr = bool_not(cast(z3.Bool, expr))
         if self.constrained():
             assert self.expr.sort() == z3.BoolSort(), (
                 "Cannot to_expr a ConstrainedExpression with constraints"
                 " which doesn't have a boolean expr"
             )
-            return bool_and(expr, self.constraint())
+            return bool_and(cast(z3.Bool, expr), self.constraint())
         else:
             return expr
 
