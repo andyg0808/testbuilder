@@ -394,7 +394,10 @@ class MoreMagic:
         exprs = []
         sorts = set()
         for arg_tuple in product(*(arg.expressions for arg in args)):
-            res = self.__call_on_exprs(arg_tuple)
+            func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
+            if func is None:
+                continue
+            res = self.__call_on_exprs(func, arg_tuple)
             if res is None:
                 continue
             exprs.append(res)
@@ -409,11 +412,11 @@ class MoreMagic:
                 self(*newargs)
         return TypeUnion(exprs, sorts)
 
-    def __call_on_exprs(self, args: Tuple) -> Optional[CExpr]:
+    def __call_on_exprs(
+        self, func: Callable[..., Expression], args: Tuple
+    ) -> Optional[CExpr]:
         log.info(f"Trying to run implementation for type-pair {args}")
-        func = self.__select(tuple(arg.expr.sort() for arg in args))
-        if func is None:
-            return None
+
         res = func(*(arg.expr for arg in args))
         constraints = list(concat(arg.constraints for arg in args))
         if len(constraints) > 0:
