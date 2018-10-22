@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import product
 from typing import (
     Any as PyAny,
@@ -21,6 +21,7 @@ from typing import (
 
 import z3
 from logbook import Logger
+from toolz import concat
 from typeassert import assertify
 from z3 import DatatypeRef
 
@@ -89,11 +90,14 @@ class UnknownConversionException(RuntimeError):
 
 E = TypeVar("E", bound=Expression)
 
+VarConstraint = Tuple[str, z3.SortRef]
+
 
 @dataclass
 class ConstrainedExpression(Generic[E]):
     expr: E
     constraint: Optional[z3.Bool] = None
+    var_constraints: List[VarConstraint] = field(default_factory=list)
 
     def constrained(self) -> bool:
         return self.constraint is not None
@@ -126,8 +130,8 @@ class TypeUnion:
     sorts: SortSet
 
     @staticmethod
-    def wrap(expr: Expression, constraint: Optional[z3.Bool] = None) -> TypeUnion:
-        cexpr = CExpr(expr=expr, constraint=constraint)
+    def wrap(expr: Expression) -> TypeUnion:
+        cexpr = CExpr(expr=expr)
         return TypeUnion([cexpr], {expr.sort()})
 
     @staticmethod
@@ -203,7 +207,11 @@ class TypeUnion:
         for cexpr in self.expressions:
             res = oper(cexpr.expr)
             if res is not None:
-                cres = CExpr(expr=res, constraint=cexpr.constraint)
+                cres = CExpr(
+                    expr=res,
+                    constraint=cexpr.constraint,
+                    var_constraints=cexpr.var_constraints,
+                )
                 expressions.append(cres)
                 sorts.add(res.sort())
         return TypeUnion(expressions, sorts)
@@ -283,7 +291,11 @@ class TypeRegistrar:
                 cexpr = CExpr(expr=expr)
             else:
                 constraint = self.anytype.recognizer(i)(var)
-                cexpr = CExpr(expr=expr, constraint=constraint)
+                cexpr = CExpr(
+                    expr=expr,
+                    constraint=constraint,
+                    var_constraints=[(name, expr.sort())],
+                )
             exprs.append(cexpr)
             sorts.add(expr.sort())
         return TypeUnion(exprs, sorts)
@@ -409,8 +421,15 @@ class MoreMagic:
             return None
         res = func(*(arg.expr for arg in args))
         constraints = [arg.constraint for arg in args if arg.constraint is not None]
+        var_constraints = concat(
+            arg.var_constraints for arg in args if len(arg.var_constraints) > 0
+        )
         if len(constraints) > 0:
-            return CExpr(expr=res, constraint=bool_and(*constraints))
+            return CExpr(
+                expr=res,
+                constraint=bool_and(*constraints),
+                var_constraints=list(var_constraints),
+            )
         else:
             return CExpr(expr=res)
 
