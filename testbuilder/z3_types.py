@@ -115,14 +115,14 @@ class ConstrainedExpression(Generic[E]):
 CExpr = ConstrainedExpression
 
 
-ExpressionMap = MMapping[z3.SortRef, List[ConstrainedExpression]]
+ExpressionMap = MMapping[z3.SortRef, List[CExpr]]
 
 SortSet = Set[z3.SortRef]
 
 
 @dataclass(frozen=True)
 class TypeUnion:
-    expressions: List[ConstrainedExpression[Expression]]
+    expressions: List[CExpr[Expression]]
     sorts: SortSet
 
     @staticmethod
@@ -249,11 +249,6 @@ class TypeRegistrar:
         """
         if restricted is not None:
             union = self.expand(name)
-            # expressions = [e for e in union.expressions if e.expr.sort() in restricted]
-            # if len(restricted) == 1:
-            #     # Drop all the constraints, since there is only one
-            #     # type allowed anyway for this variable
-            #     expressions = [ConstrainedExpression(expr=e.expr) for e in expressions]
             sorts = {
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
             }
