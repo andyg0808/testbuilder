@@ -238,18 +238,17 @@ class TypeRegistrar:
     anytype: AnySort
 
     @assertify
-    def AllTypes(
-        self, name: str, restricted: Optional[SortSet] = None
-    ) -> VariableTypeUnion:
+    def AllTypes(self, name: str, restricted: SortSet = set()) -> VariableTypeUnion:
         """
         Args:
             name: The variable name to create
-            restricted: If included, the name will be treated as
+            restricted: If non-empty, the name will be treated as
                 already restricted to this set of sorts. If there is only
                 one sort in the set, the name will be treated as always
-                having that sort.
+                having that sort. If empty, the name will be
+                unrestricted, as with expand.
         """
-        if restricted is not None:
+        if len(restricted) > 0:
             union = self.expand(name)
             sorts = {
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
