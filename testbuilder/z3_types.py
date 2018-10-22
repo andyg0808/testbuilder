@@ -209,34 +209,24 @@ class TypeUnion:
         return TypeUnion(expressions, sorts)
 
 
+VariableAttributes = ["registrar", "name", "expand", "sorts"]
+
+
 @dataclass(frozen=True)
-class AnyTypeUnion(TypeUnion):
+class VariableTypeUnion(TypeUnion):
+    name: str
     registrar: TypeRegistrar
 
     def _get_any(self) -> AnyT:
-        def getatr(name: str) -> PyAny:
-            return object.__getattribute__(self, name)
-
-        assert getatr("sorts") == {Any}
-        assert len(getatr("expressions")) == 1
-        cexpr = getatr("expressions")[0]
-        assert cexpr.constraint is None
-        expr = cexpr.expr
-        assert expr.sort() == Any
-        return cast(AnyT, expr)
+        return make_any(self.name)
 
     def expand(self) -> TypeUnion:
-        def getatr(name: str) -> PyAny:
-            return object.__getattribute__(self, name)
-
-        expr = getatr("_get_any")()
-        name = expr.decl().name()
-        return cast(TypeUnion, getatr("registrar").expand(name))
+        return self.registrar.expand(self.name, self.sorts)
 
     def __getattribute__(self, name: str) -> PyAny:
-        if name.startswith("_") or name == "registrar":
+        if name.startswith("_") or name in VariableAttributes:
             return object.__getattribute__(self, name)
-        expanded = object.__getattribute__(self, "expand")()
+        expanded = self.expand()
         log.info("Getting", name, "on", expanded)
         return getattr(expanded, name)
 
@@ -285,8 +275,8 @@ class TypeRegistrar:
 
     @assertify
     def assign(self, target: DatatypeRef, value: TypeUnion) -> TypeUnion:
-        if isinstance(value, AnyTypeUnion):
-            # Special-case for TypeUnions which are just unconstrained variables
+        if isinstance(value, VariableTypeUnion):
+            # Special-case for TypeUnions which are already Any variables
             return TypeUnion.wrap(target == value._get_any())
         exprs = []
         for expr in value.expressions:
@@ -378,10 +368,10 @@ class MoreMagic:
                 continue
             exprs.append(res)
             sorts.add(res.expr.sort())
-        if len(exprs) == 0 and any(isinstance(arg, AnyTypeUnion) for arg in args):
+        if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
             newargs = []
             for arg in args:
-                if isinstance(arg, AnyTypeUnion):
+                if isinstance(arg, VariableTypeUnion):
                     newargs.append(arg.expand())
                 else:
                     newargs.append(arg)
