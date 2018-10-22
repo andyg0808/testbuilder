@@ -59,7 +59,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             # could happen would be a bare expression, and the only
             # side-effectful expression is yield, which is
             # unsupported.
-            return union.implications()
+            return [union.implications()]
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
