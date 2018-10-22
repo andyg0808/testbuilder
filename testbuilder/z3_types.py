@@ -235,9 +235,38 @@ class VariableTypeUnion(TypeUnion):
 class TypeRegistrar:
     anytype: AnySort
 
-    def AllTypes(self, name: str) -> AnyTypeUnion:
-        expr = make_any(name)
-        return AnyTypeUnion(expressions=[CExpr(expr=expr)], sorts={Any}, registrar=self)
+    @assertify
+    def AllTypes(
+        self, name: str, restricted: Optional[SortSet] = None
+    ) -> VariableTypeUnion:
+        """
+        Args:
+            name: The variable name to create
+            restricted: If included, the name will be treated as
+                already restricted to this set of sorts. If there is only
+                one sort in the set, the name will be treated as always
+                having that sort.
+        """
+        if restricted is not None:
+            union = self.expand(name)
+            # expressions = [e for e in union.expressions if e.expr.sort() in restricted]
+            # if len(restricted) == 1:
+            #     # Drop all the constraints, since there is only one
+            #     # type allowed anyway for this variable
+            #     expressions = [ConstrainedExpression(expr=e.expr) for e in expressions]
+            sorts = {
+                e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
+            }
+
+            print(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
+            return VariableTypeUnion(
+                expressions=[], sorts=sorts, name=name, registrar=self
+            )
+        else:
+            expr = make_any(name)
+            return VariableTypeUnion(
+                expressions=[], sorts=set(), name=name, registrar=self
+            )
 
     def expand(self, name: str, types: Set[z3.SortRef] = set()) -> TypeUnion:
         """
