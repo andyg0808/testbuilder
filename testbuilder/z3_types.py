@@ -90,28 +90,30 @@ class UnknownConversionException(RuntimeError):
 
 E = TypeVar("E", bound=Expression)
 
-VarConstraint = Tuple[str, z3.SortRef]
+VarConstraint = Tuple[str, z3.SortRef, z3.Bool]
 
 
 @dataclass
 class ConstrainedExpression(Generic[E]):
     expr: E
-    constraint: Optional[z3.Bool] = None
-    var_constraints: List[VarConstraint] = field(default_factory=list)
+    constraints: List[VarConstraint] = field(default_factory=list)
 
     def constrained(self) -> bool:
-        return self.constraint is not None
+        return len(self.constraints) > 0
+
+    def constraint(self) -> z3.Bool:
+        return bool_and(*(constraint for name, sort, constraint in self.constraints))
 
     def to_expr(self, invert: bool = False) -> Expression:
         expr = cast(z3.Bool, self.expr)
         if invert:
             expr = bool_not(expr)
-        if self.constraint is not None:
+        if self.constrained():
             assert self.expr.sort() == z3.BoolSort(), (
                 "Cannot to_expr a ConstrainedExpression with constraints"
                 " which doesn't have a boolean expr"
             )
-            return bool_and(expr, self.constraint)
+            return bool_and(expr, self.constraint())
         else:
             return expr
 
@@ -190,14 +192,14 @@ class TypeUnion:
 
         if constraint is None:
             assert (
-                cexpr.constraint is None
+                not cexpr.constrained()
             ), f"Expression {cexpr} has a constraint; cannot unwrap"
         else:
             assert (
-                cexpr.constraint is not None
+                cexpr.constrained()
             ), f"Expected {cexpr} to have constraint {constraint}, not none"
             assert z3.eq(
-                constraint, cexpr.constraint
+                constraint, cexpr.constraint()
             ), f"Expression {cexpr} does not have expected constraint {constraint}"
         return cexpr.expr
 
@@ -207,11 +209,7 @@ class TypeUnion:
         for cexpr in self.expressions:
             res = oper(cexpr.expr)
             if res is not None:
-                cres = CExpr(
-                    expr=res,
-                    constraint=cexpr.constraint,
-                    var_constraints=cexpr.var_constraints,
-                )
+                cres = CExpr(expr=res, constraints=cexpr.constraints)
                 expressions.append(cres)
                 sorts.add(res.sort())
         return TypeUnion(expressions, sorts)
@@ -291,11 +289,8 @@ class TypeRegistrar:
                 cexpr = CExpr(expr=expr)
             else:
                 constraint = self.anytype.recognizer(i)(var)
-                cexpr = CExpr(
-                    expr=expr,
-                    constraint=constraint,
-                    var_constraints=[(name, expr.sort())],
-                )
+                constraints = [(name, expr.sort(), constraint)]
+                cexpr = CExpr(expr=expr, constraints=constraints)
             exprs.append(cexpr)
             sorts.add(expr.sort())
         return TypeUnion(exprs, sorts)
@@ -318,7 +313,7 @@ class TypeRegistrar:
         for expr in value.expressions:
             assign = target == self.wrap(expr.expr)
             if expr.constraint is not None:
-                exprs.append(bool_and(assign, expr.constraint))
+                exprs.append(bool_and(assign, expr.constraint()))
             else:
                 exprs.append(assign)
 
@@ -333,7 +328,7 @@ class TypeRegistrar:
         bools: List[z3.Bool] = []
         for cexpr in value.expressions:
             if cexpr.constraint:
-                bools.append(bool_and(to_boolean(cexpr.expr), cexpr.constraint))
+                bools.append(bool_and(to_boolean(cexpr.expr), cexpr.constraint()))
             else:
                 bools.append(to_boolean(cexpr.expr))
         return TypeUnion.wrap(bool_or(bools))
@@ -420,16 +415,9 @@ class MoreMagic:
         if func is None:
             return None
         res = func(*(arg.expr for arg in args))
-        constraints = [arg.constraint for arg in args if arg.constraint is not None]
-        var_constraints = concat(
-            arg.var_constraints for arg in args if len(arg.var_constraints) > 0
-        )
+        constraints = list(concat(arg.constraints for arg in args))
         if len(constraints) > 0:
-            return CExpr(
-                expr=res,
-                constraint=bool_and(*constraints),
-                var_constraints=list(var_constraints),
-            )
+            return CExpr(expr=res, constraints=constraints)
         else:
             return CExpr(expr=res)
 
