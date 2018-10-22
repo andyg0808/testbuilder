@@ -307,7 +307,7 @@ class TypeRegistrar:
         exprs = []
         for expr in value.expressions:
             assign = target == self.wrap(expr.expr)
-            if expr.constraint is not None:
+            if expr.constrained():
                 exprs.append(bool_and(assign, expr.constraint()))
             else:
                 exprs.append(assign)
