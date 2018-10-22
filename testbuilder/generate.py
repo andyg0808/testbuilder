@@ -67,8 +67,14 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
     def parse_file(text: str) -> AST:
         return parse(text, str(source))
 
-    def function_splitter(module: sbb.Module) -> List[sbb.BlockTree]:
-        return list(module.functions.values()) + [module.code]
+    def function_splitter(
+        module: sbb.Module
+    ) -> List[Union[sbb.BlockTree, sbb.FunctionDef]]:
+        items: List[Union[sbb.BlockTree, sbb.FunctionDef]] = list(
+            module.functions.values()
+        )
+        items.append(module.code)
+        return items
 
     _ast_to_ssa = partial(ast_to_ssa, 10, {})
 
