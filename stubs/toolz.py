@@ -15,3 +15,7 @@ def pipe(data: T, *funcs: Callable) -> U:
 
 def mapcat(func: Callable[[T], Sequence[U]], seqs: Sequence[T]) -> Sequence[U]:
     ...
+
+
+def concat(seqs: Sequence[Sequence[T]]) -> Sequence[T]:
+    ...

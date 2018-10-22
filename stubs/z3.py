@@ -75,6 +75,9 @@ class ExprRef(AstRef):
     def num_args(self) -> int:
         ...
 
+    def children(self) -> List[ExprRef]:
+        ...
+
 
 class DatatypeRef(ExprRef):
     def decl(self) -> FuncDeclRef:
