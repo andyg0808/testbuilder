@@ -186,7 +186,7 @@ def bool_any(exprs: List[z3.Bool]) -> z3.Bool:
     """
     exprs = list(exprs)
     if len(exprs) > 1:
-        return bool_or(*exprs)
+        return bool_or(exprs)
     elif len(exprs) == 1:
         return exprs[0]
     else:

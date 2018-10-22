@@ -10,6 +10,7 @@ from typing import (
     List,
     MutableMapping as MMapping,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -147,10 +148,13 @@ class TypeUnion:
         boolexprs: List[z3.Bool] = [
             cast(z3.Bool, x.to_expr(invert)) for x in self.expressions
         ]
-        return bool_or(*boolexprs)
+        return bool_or(boolexprs)
 
     def implications(self) -> z3.Bool:
-        return bool_or(*(x.constraint for x in self.expressions if x.constrained()))
+        constraints = [
+            cast(z3.Bool, x.constraint) for x in self.expressions if x.constrained()
+        ]
+        return bool_or(constraints)
 
     def unwrap(
         self,
@@ -279,7 +283,7 @@ class TypeRegistrar:
             else:
                 exprs.append(assign)
 
-        return TypeUnion.wrap(bool_or(*exprs))
+        return TypeUnion.wrap(bool_or(exprs))
 
     def to_boolean(self, value: TypeUnion) -> TypeUnion:
         """
@@ -293,7 +297,7 @@ class TypeRegistrar:
                 bools.append(bool_and(to_boolean(cexpr.expr), cexpr.constraint))
             else:
                 bools.append(to_boolean(cexpr.expr))
-        return TypeUnion.wrap(bool_or(*bools))
+        return TypeUnion.wrap(bool_or(bools))
 
 
 def make_any(name: str) -> AnyT:
@@ -405,7 +409,7 @@ def bool_not(expr: z3.Bool) -> z3.Bool:
     return z3.Not(expr)
 
 
-def bool_or(*exprs: z3.Bool) -> z3.Bool:
+def bool_or(exprs: Sequence[z3.Bool]) -> z3.Bool:
     return _simplify_logical(exprs, z3.Or)
 
 
@@ -414,7 +418,7 @@ def bool_and(*exprs: z3.Bool) -> z3.Bool:
 
 
 def _simplify_logical(
-    exprs: Tuple[z3.Bool, ...], function: Callable[..., z3.Bool]
+    exprs: Sequence[z3.Bool], function: Callable[..., z3.Bool]
 ) -> z3.Bool:
     if len(exprs) > 1:
         return function(*exprs)
