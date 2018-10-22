@@ -421,9 +421,7 @@ class MoreMagic:
         else:
             return CExpr(expr=res)
 
-    def __select(
-        self, args: Tuple
-    ) -> Optional[Callable[[Expression, Expression], Expression]]:
+    def __select(self, args: Tuple) -> Optional[Callable[..., Expression]]:
         log.info(f"Selecting implementation using {args}")
 
         def sort_compare(arg_sort: z3.SortRef, func_key: z3.SortRef) -> bool:
