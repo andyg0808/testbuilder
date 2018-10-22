@@ -391,13 +391,16 @@ class MoreMagic:
 
     def __call__(self, *args: TypeUnion) -> TypeUnion:
         log.info(f"Called {self.__class__} on {args}")
-        exprs = []
-        sorts = set()
+        functions = []
         for arg_tuple in product(*(arg.expressions for arg in args)):
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
             if func is None:
                 continue
-            res = self.__call_on_exprs(func, arg_tuple)
+            functions.append((func, arg_tuple))
+        exprs = []
+        sorts = set()
+        for func, args in functions:
+            res = self.__call_on_exprs(func, args)
             if res is None:
                 continue
             exprs.append(res)
