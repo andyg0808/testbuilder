@@ -43,7 +43,7 @@ class VariableManager:
         self.variables = self.stack.pop()
 
     def refresh(self) -> None:
-        self.variables = self.stack[-1]
+        self.variables = copy(self.stack[-1])
 
     def mapping(self) -> VarMapping:
         return copy(self.variables)
