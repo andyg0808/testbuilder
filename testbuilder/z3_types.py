@@ -7,6 +7,7 @@ from typing import (
     Any as PyAny,
     Callable,
     Generic,
+    Iterable,
     List,
     MutableMapping as MMapping,
     Optional,
@@ -105,7 +106,7 @@ class ConstrainedExpression(Generic[E]):
 
     def constraint(self) -> z3.Bool:
         assert self.constrained(), "Cannot get constraint for unconstrained expression"
-        return bool_and(*(constraint for name, sort, constraint in self.constraints))
+        return bool_and(constraint for name, sort, constraint in self.constraints)
 
     def to_expr(self, invert: bool = False) -> Expression:
         expr: Expression = self.expr
@@ -120,7 +121,7 @@ class ConstrainedExpression(Generic[E]):
                 "Cannot to_expr a ConstrainedExpression with constraints"
                 " which doesn't have a boolean expr"
             )
-            return bool_and(cast(z3.Bool, expr), self.constraint())
+            return bool_and([cast(z3.Bool, expr), self.constraint()])
         else:
             return expr
 
@@ -314,7 +315,7 @@ class TypeRegistrar:
         for expr in value.expressions:
             assign = target == self.wrap(expr.expr)
             if expr.constrained():
-                exprs.append(bool_and(assign, expr.constraint()))
+                exprs.append(bool_and([assign, expr.constraint()]))
             else:
                 exprs.append(assign)
 
@@ -494,17 +495,34 @@ def bool_not(expr: z3.Bool) -> z3.Bool:
     return z3.Not(expr)
 
 
-def bool_or(exprs: Sequence[z3.Bool]) -> z3.Bool:
+def bool_or(exprs: Iterable[z3.Bool]) -> z3.Bool:
     return _simplify_logical(exprs, z3.Or)
 
 
-def bool_and(*exprs: z3.Bool) -> z3.Bool:
+def bool_and(exprs: Iterable[z3.Bool]) -> z3.Bool:
     return _simplify_logical(exprs, z3.And)
 
 
+def bool_all(exprs: Iterable[z3.Bool]) -> z3.Bool:
+    return bool_and(exprs)
+
+
+def bool_any(exprs: Iterable[z3.Bool]) -> z3.Bool:
+    """
+    Allow any path in exprs to be taken. If only one path is present,
+    it is required. No exprs results in an exception.
+    """
+    return bool_or(exprs)
+
+
+def bool_true() -> Expression:
+    return z3.BoolVal(True)
+
+
 def _simplify_logical(
-    exprs: Sequence[z3.Bool], function: Callable[..., z3.Bool]
+    exprs: Iterable[z3.Bool], function: Callable[..., z3.Bool]
 ) -> z3.Bool:
+    exprs = list(exprs)
     if len(exprs) > 1:
         return function(*exprs)
     elif len(exprs) == 1:

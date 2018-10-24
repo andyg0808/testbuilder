@@ -15,18 +15,18 @@ from typing import (
     Tuple,
 )
 
-from toolz import pipe
-
 import z3
+from toolz import pipe
 
 from .ast_to_ssa import ast_to_ssa
 from .basic_block import BasicBlock
 from .converter import get_variable
 from .slicing import take_slice
 from .ssa_basic_blocks import TestData
-from .ssa_to_expression import Expression, ExprList, bool_and, ssa_lines_to_expression
+from .ssa_to_expression import Expression, ExprList, ssa_lines_to_expression
 from .utils import pipe_print
 from .variable_manager import VarMapping
+from .z3_types import bool_and
 
 NULL = z3.DeclareSort("None")
 
@@ -101,10 +101,7 @@ def _update_paths(
 
 
 def _combine_conditions(conds: Sequence[Expression]) -> Expression:
-    if len(conds) > 1:
-        return bool_and(*conds)
-    else:
-        return conds[0]
+    return bool_and(conds)
 
 
 def unify_all_variables(

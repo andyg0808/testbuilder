@@ -17,7 +17,7 @@ from .test_utils import write_dot
 from .type_inferencer import TypeInferencer
 from .type_manager import TypeManager
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import TypeUnion, bool_and, bool_not, bool_or
+from .z3_types import TypeUnion, bool_all, bool_any, bool_true
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -182,34 +182,6 @@ class VariableFinder(GatherVisitor[sbb.Variable]):
 
 def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
-
-
-def bool_all(exprs: List[z3.Bool]) -> z3.Bool:
-    # exprs = list(exprs)
-    if len(exprs) > 1:
-        return bool_and(*exprs)
-    elif len(exprs) == 1:
-        return exprs[0]
-    else:
-        raise RuntimeError("Taking all of no exprs")
-
-
-def bool_any(exprs: List[z3.Bool]) -> z3.Bool:
-    """
-    Allow any path in exprs to be taken. If only one path is present,
-    it is required. No exprs results in an exception.
-    """
-    exprs = list(exprs)
-    if len(exprs) > 1:
-        return bool_or(exprs)
-    elif len(exprs) == 1:
-        return exprs[0]
-    else:
-        raise RuntimeError("Taking any of no exprs")
-
-
-def bool_true() -> Expression:
-    return z3.BoolVal(True)
 
 
 def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
