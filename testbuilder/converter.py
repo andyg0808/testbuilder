@@ -140,7 +140,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return v
 
     def visit_Call(self, node: n.Call) -> TypeUnion:
-        # Temporarily treat functions as true
+        # Treat functions as true which we couldn't substitute
         return TypeUnion.wrap(z3.BoolVal(True))
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
