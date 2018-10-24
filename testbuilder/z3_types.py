@@ -320,19 +320,21 @@ class TypeRegistrar:
 
         return TypeUnion.wrap(bool_or(exprs))
 
-    def to_boolean(self, value: TypeUnion) -> TypeUnion:
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> TypeUnion:
         """
         Convert all the expressions in this TypeUnion to booleans,
         applying truthy standards as needed in order to convert
         non-boolean types.
         """
-        bools: List[z3.Bool] = []
+        bools: List[CExpr[Expression]] = []
         for cexpr in value.expressions:
-            if cexpr.constraint:
-                bools.append(bool_and(to_boolean(cexpr.expr), cexpr.constraint()))
-            else:
-                bools.append(to_boolean(cexpr.expr))
-        return TypeUnion.wrap(bool_or(bools))
+            expr = to_boolean(cexpr.expr)
+            if invert:
+                expr = bool_not(expr)
+            bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
+        if len(bools) == 0 and isinstance(value, VariableTypeUnion):
+            return self.to_boolean(value.expand(), invert)
+        return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
 
 
 def make_any(name: str) -> AnyT:

@@ -228,7 +228,7 @@ def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
     if value.is_bool():
         return value.to_expr(invert)
     else:
-        return Registrar.to_boolean(value).to_expr(invert)
+        return Registrar.to_boolean(value, invert).to_expr()
 
 
 def get_variable(name: str, idx: int) -> str:
