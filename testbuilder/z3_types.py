@@ -529,7 +529,7 @@ def diff_expression(
         if diff is not None:
             return [(left, right)] + diff
     raise RuntimeError(
-        "Could not find difference between dissimilar values {left} and {right}"
+        f"Could not find difference between dissimilar values {left} and {right}"
     )
 
 
