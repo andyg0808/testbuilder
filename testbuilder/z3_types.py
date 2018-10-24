@@ -368,6 +368,19 @@ MoreMagicTag = Tuple
 
 
 class MoreMagic:
+    """
+    Function overloading and abstract type handling.
+
+    A `MoreMagic` is a callable object which accepts any number of
+    `TypeUnion`s as arguments. It searches for registered handler
+    functions for each element of the Cartesian product of all the
+    expressions in each `TypeUnion`. It discards those n-tuples of
+    types which do not have defined handlers. For those which do have
+    handlers, it calls the handler with the expressions from the
+    n-tuple.
+
+    """
+
     def __init__(self) -> None:
         self.funcref: MMapping[MoreMagicTag, MoreMagicFunc] = {}
         for _, method in inspect.getmembers(self, inspect.ismethod):
@@ -377,12 +390,30 @@ class MoreMagic:
 
     @staticmethod
     def m(*types: Union[z3.SortRef, Type]) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
+        """
+        Creates an instance of MoreMagic and calls `magic` on it with
+        its arguments.
+        """
         res = MoreMagic()
         return res.magic(*types)
 
     def magic(
         self, *types: Union[z3.SortRef, Type]
     ) -> Callable[[MoreMagicFunc], MoreMagic]:
+        """
+        To register an existing function for some argument types, call
+        this method, passing it the argument types, and pass the
+        existing function to the returned registration function. The
+        registration function returns the original MoreMagic object,
+        so calls can be chained.
+
+        Arguments:
+            *types: The argument types for which some function should be run_func
+        Returns:
+            A function to be passed a Callable to register for the
+            argument types passed to `magic`.
+        """
+
         def _magic(func: MoreMagicFunc) -> MoreMagic:
             self.funcref[tuple(types)] = func
             return self
@@ -390,6 +421,14 @@ class MoreMagic:
         return _magic
 
     def __call__(self, *args: TypeUnion) -> TypeUnion:
+        """
+        Call this MoreMagic on the arguments. This will call the
+        registered handler function (if it exists) for each element of
+        the Cartesian product of expressions in the TypeUnions. The
+        return values from the handlers which are called will be added
+        to the resulting `TypeUnion`. n-tuples of the Cartesian
+        product for which handlers do not exist will be skipped.
+        """
         log.info(f"Called {self.__class__} on {args}")
         functions = []
         for arg_tuple in product(*(arg.expressions for arg in args)):
