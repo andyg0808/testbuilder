@@ -35,6 +35,8 @@ from .z3_types import (
     TypeRegistrar,
     TypeUnion,
     VariableTypeUnion,
+    bool_and,
+    bool_or,
     make_any,
     more_magic_tag as magic,
 )
@@ -173,10 +175,10 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(IntSort, IntSort)(operator.ge)
 
     def visit_Or(self, node: n.Or) -> OpFunc:
-        return Magic.m(BoolSort, BoolSort)(z3.Or)
+        return Magic.m(BoolSort, BoolSort)(bool_or)
 
     def visit_And(self, node: n.And) -> OpFunc:
-        return Magic.m(BoolSort, BoolSort)(z3.And)
+        return Magic.m(BoolSort, BoolSort)(bool_and)
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
         class EqMagic(Magic):
