@@ -78,6 +78,8 @@ def to_boolean(expr: Expression) -> z3.Bool:
         return expr != z3.IntVal(0)
     elif z3.is_bool(expr):
         return cast(z3.Bool, expr)
+    elif z3.is_string(expr):
+        return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
     else:
         raise UnknownConversionException(
             f"Can't convert {expr.sort().name()} to boolean"
