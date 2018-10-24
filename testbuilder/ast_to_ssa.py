@@ -1,4 +1,5 @@
 import ast
+import dataclasses
 from functools import reduce, singledispatch
 from typing import (
     Any,
@@ -11,8 +12,6 @@ from typing import (
     Union,
     cast,
 )
-
-import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
