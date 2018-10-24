@@ -461,8 +461,8 @@ class MoreMagic:
 
         try:
             res = func(*(arg.expr for arg in args))
-        except z3.z3types.Z3Exception as e:  # type: ignore
-            raise TypeError(
+        except Exception as e:
+            raise RuntimeError(
                 f"Problem running {func}({', '.join(str(a) for a in args)})"
             ) from e
         constraints = list(concat(arg.constraints for arg in args))
