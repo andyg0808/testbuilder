@@ -179,7 +179,32 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(BoolSort, BoolSort)(z3.And)
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
-        return Magic.m(object, object)(operator.eq)
+        class EqMagic(Magic):
+            # Need to except VariableTypeUnions
+            @magic(z3.SortRef, z3.SortRef)
+            def equality(self, left: Expression, right: Expression) -> z3.Bool:
+                left_sort = left.sort()
+                right_sort = right.sort()
+                if left_sort == right_sort:
+                    return left == right
+                else:
+                    # If the argument sorts are different, the values are different.
+                    return z3.BoolVal(False)
+
+        return EqMagic()
+
+    def visit_NotEq(self, node: n.NotEq) -> OpFunc:
+        class NotEqMagic(Magic):
+            @magic(z3.SortRef, z3.SortRef)
+            def inequality(self, left: Expression, right: Expression) -> z3.Bool:
+                left_sort = left.sort()
+                right_sort = right.sort()
+                if left_sort == right_sort:
+                    return left != right
+                else:
+                    return z3.BoolVal(True)
+
+        return NotEqMagic()
 
     def visit_Lt(self, node: n.Lt) -> OpFunc:
         return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
