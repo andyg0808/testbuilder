@@ -21,6 +21,9 @@ class SSAVisitor(SimpleVisitor[str]):
     def visit_Name(self, node: n.Name) -> str:
         return f"${node.id}_{node.set_count}"
 
+    def visit_NameConstant(self, node: n.NameConstant) -> str:
+        return f"{node.value}"
+
     def visit_Int(self, node: n.Int) -> str:
         return str(node.v)
 
