@@ -102,7 +102,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_Name(self, node: n.Name) -> TypeUnion:
         variable = get_variable(node.id, node.set_count)
-        # constructor = get_type(node.id, node.set_count)
         sorts = self.type_manager.get(variable)
         if sorts is not None:
             print(f"looked up {variable} and got sorts {sorts}")
