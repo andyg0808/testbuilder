@@ -451,7 +451,7 @@ class MoreMagic:
                     newargs.append(arg.expand())
                 else:
                     newargs.append(arg)
-                self(*newargs)
+            return self(*newargs)
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
