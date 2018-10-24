@@ -60,7 +60,10 @@ class BoolSort(SortRef):
 
 
 class ExprRef(AstRef):
-    def __eq__(self, other: Any) -> "Bool":  # type: ignore
+    def __eq__(self, other: Any) -> Bool:  # type: ignore
+        ...
+
+    def __ne__(self, other: Any) -> Bool:  # type: ignore
         ...
 
     def sort(self) -> SortRef:
@@ -194,6 +197,10 @@ def is_bool(value: Any) -> bool:
 
 
 def is_string(value: Any) -> bool:
+    ...
+
+
+def Length(value: SeqRef) -> Int:
     ...
 
 
