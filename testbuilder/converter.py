@@ -119,6 +119,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_Result(self, node: n.Result) -> TypeUnion:
         variable = get_result(node)
+        sorts = self.type_manager.get(variable)
+        if sorts is not None:
+            return Registrar.AllTypes(variable, sorts)
+        self.type_manager.put(variable)
         return Registrar.AllTypes(variable)
 
     def visit_Set(self, node: n.Set) -> TypeUnion:
@@ -144,9 +148,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return TypeUnion.wrap(z3.BoolVal(True))
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
-        var = make_any(get_result(node))
+        variable = get_result(node)
+        var = make_any(variable)
         if node.value:
             expr = self.visit(node.value)
+            self.type_manager.put(variable, expr.sorts)
             return Registrar.assign(var, expr)
         else:
             raise RuntimeError(
