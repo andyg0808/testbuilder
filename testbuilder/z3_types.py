@@ -75,7 +75,7 @@ def to_boolean(expr: Expression) -> z3.Bool:
     expression.
     """
     if z3.is_int(expr):
-        return expr == z3.IntVal(0)
+        return expr != z3.IntVal(0)
     elif z3.is_bool(expr):
         return cast(z3.Bool, expr)
     else:
