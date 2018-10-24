@@ -110,9 +110,12 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return Registrar.AllTypes(variable)
 
     def visit_PrefixedName(self, node: n.PrefixedName) -> TypeUnion:
-        prefix = get_prefix(node)
-        variable = get_variable(node.id, node.set_count)
-        return Registrar.AllTypes(prefix + "_" + variable)
+        variable = get_prefixed_variable(node)
+        sorts = self.type_manager.get(variable)
+        if sorts is not None:
+            return Registrar.AllTypes(variable, sorts)
+        self.type_manager.put(variable)
+        return Registrar.AllTypes(variable)
 
     def visit_Result(self, node: n.Result) -> TypeUnion:
         variable = get_result(node)
@@ -121,7 +124,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Set(self, node: n.Set) -> TypeUnion:
         # We know `target` is a Name
         target = node.target
-        variable = get_variable(target.id, target.set_count)
+        # Since `target` is a Name, it will be converted into a
+        # VariableTypeUnion, which has a `name` attribute giving the
+        # name of its variable. We do it this way to handle
+        # `PrefixedName`s as well as normal `Name`s.
+        variable = cast(VariableTypeUnion, self.visit(target)).name
         value = self.visit(node.e)
         var = make_any(variable)
         self.type_manager.put(variable, value.sorts)
@@ -281,6 +288,12 @@ def get_prefix(prefix: n.Prefix) -> str:
 
 def get_result(prefix: n.Prefix) -> str:
     return get_prefix(prefix) + "_return"
+
+
+def get_prefixed_variable(prefixed_name: n.PrefixedName) -> str:
+    prefix = get_prefix(prefixed_name)
+    variable = get_variable(prefixed_name.id, prefixed_name.set_count)
+    return prefix + "_" + variable
 
 
 def get_type(name: str, set_count: int) -> TypeConstructor:
