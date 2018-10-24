@@ -15,6 +15,7 @@ from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .test_utils import write_dot
 from .type_inferencer import TypeInferencer
+from .type_manager import TypeManager
 from .visitor import GatherVisitor, SimpleVisitor
 from .z3_types import TypeUnion, bool_and, bool_not, bool_or
 
@@ -26,7 +27,8 @@ ExprList = List[Expression]
 class SSAVisitor(SimpleVisitor[ExprList]):
     def __init__(self, module: sbb.Module) -> None:
         self.module = module
-        self.expression = converter.ExpressionConverter()
+        self.type_manager = TypeManager()
+        self.expression = converter.ExpressionConverter(self.type_manager)
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -72,10 +74,16 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         print("node.parent", node.parent, id(node.parent))
         branches = []
+        types = []
         if node.true_branch:
+            self.type_manager.push()
             branches.append(self.visit(node.true_branch, node.parent))
+            types.append(self.type_manager.pop())
         if node.false_branch:
+            self.type_manager.push()
             branches.append(self.visit(node.false_branch, node.parent))
+            types.append(self.type_manager.pop())
+        self.type_manager.merge_and_update(types)
 
         print("branches", branches)
 
@@ -86,10 +94,17 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             return []
 
         code = self.visit(node.parent, stop)
-        branches = [self.visit(branch, node.parent) for branch in node.loops]
-        branches = [b for b in branches if b]
+        branches = []
+        types = []
+        for branch in node.loops:
+            self.type_manager.push()
+            res = self.visit(branch, node.parent)
+            types.append(self.type_manager.pop())
+            if res is not None:
+                branches.append(res)
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
+            self.type_manager.merge_and_update(types)
         else:
             branch_expr = []
         return code + branch_expr

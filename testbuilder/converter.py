@@ -6,21 +6,35 @@ from __future__ import annotations
 
 import operator
 import re
+from copy import copy
 from functools import singledispatch
-from typing import Any, Callable, Mapping, Optional, Type, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Mapping,
+    MutableMapping as MMapping,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import z3
+from toolz import groupby, mapcat
 
 from . import nodetree as n
+from .type_manager import TypeManager
 from .visitor import SimpleVisitor
 from .z3_types import (
     Any as AnyType,
     AnyT,
-    ConstrainedExpression as CExpr,
     Expression,
     MoreMagic as Magic,
+    SortSet,
     TypeRegistrar,
     TypeUnion,
+    VariableTypeUnion,
     make_any,
     more_magic_tag as magic,
 )
@@ -50,9 +64,10 @@ BoolSort = z3.BoolSort()
 
 
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
-    def __init__(self) -> None:
+    def __init__(self, type_manager: TypeManager) -> None:
         super().__init__()
         self.visit_oper = OperatorConverter()
+        self.type_manager = type_manager
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
@@ -62,7 +77,12 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_BinOp(self, node: n.BinOp) -> TypeUnion:
         op = self.visit_oper(node.op)
-        return op(self.visit(node.left), self.visit(node.right))
+        expr = op(self.visit(node.left), self.visit(node.right))
+        var_constraints = mapcat(lambda e: e.constraints, expr.expressions)
+        var_updates = groupby(lambda c: c[0], var_constraints)
+        for varname, constraints in var_updates.items():
+            self.type_manager.put(varname, {c[1] for c in constraints})
+        return expr
 
     def visit_UnaryOp(self, node: n.UnaryOp) -> TypeUnion:
         op = self.visit_oper(node.op)
@@ -81,7 +101,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Name(self, node: n.Name) -> TypeUnion:
         variable = get_variable(node.id, node.set_count)
         # constructor = get_type(node.id, node.set_count)
-        # Add cache support here
+        sorts = self.type_manager.get(variable)
+        if sorts is not None:
+            print(f"looked up {variable} and got sorts {sorts}")
+            return Registrar.AllTypes(variable, sorts)
+        self.type_manager.put(variable)
         return Registrar.AllTypes(variable)
 
     def visit_PrefixedName(self, node: n.PrefixedName) -> TypeUnion:
@@ -96,8 +120,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Set(self, node: n.Set) -> TypeUnion:
         # We know `target` is a Name
         target = node.target
-        var = make_any(get_variable(target.id, target.set_count))
+        variable = get_variable(target.id, target.set_count)
         value = self.visit(node.e)
+        var = make_any(variable)
+        self.type_manager.put(variable, value.sorts)
         return Registrar.assign(var, value)
 
     def visit_Expr(self, node: n.Expr) -> TypeUnion:
