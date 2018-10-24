@@ -360,7 +360,9 @@ def unwrap(val: Expression) -> Expression:
 MoreMagicFunc = Callable[..., T]
 
 
-def more_magic_tag(*types: z3.SortRef) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
+def more_magic_tag(
+    *types: Union[z3.SortRef, Type]
+) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
     def _magic(func: MoreMagicFunc) -> MoreMagicFunc:
         setattr(func, "__magic", tuple(types))
         return func
