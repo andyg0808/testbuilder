@@ -230,7 +230,7 @@ class VariableTypeUnion(TypeUnion):
     def expand(self) -> TypeUnion:
         return self.registrar.expand(self.name, self.sorts)
 
-    def unwrap(self, *args: Any) -> Expression:
+    def unwrap(self, *args: PyAny) -> Expression:
         """
         Tries to unwrap directly; if that fails, expands, then unwraps.
         """
