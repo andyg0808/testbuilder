@@ -8,6 +8,7 @@ RUN = fastbuild
 MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
 export MYPYPATH=./stubs
 
+TESTFILE = testbuilder
 # Run pytest
 # Args:
 #   -ra: Show extra summary information about everything except passing tests
@@ -17,7 +18,7 @@ export MYPYPATH=./stubs
 #   --ff Run failed tests before other tests.
 #   -x   Stop after first failed test. Speeds up testing runs with failures
 #   -v   Show full diffs.
-PYTEST = pytest -x -ra --ff testbuilder
+PYTEST = pytest -x -ra --ff $(TESTFILE)
 
 pytest:
 	pipenv run $(PYTEST) | rainbow.py --colorize
