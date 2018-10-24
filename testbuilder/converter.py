@@ -149,7 +149,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             expr = self.visit(node.value)
             return Registrar.assign(var, expr)
         else:
-            return Registrar.assign(var, expr)
+            raise RuntimeError(
+                "Cannot use return value of function without return value"
+            )
 
 
 class OperatorConverter(SimpleVisitor[OpFunc]):
