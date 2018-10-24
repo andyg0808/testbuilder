@@ -459,7 +459,12 @@ class MoreMagic:
     ) -> Optional[CExpr]:
         log.info(f"Trying to run implementation for type-pair {args}")
 
-        res = func(*(arg.expr for arg in args))
+        try:
+            res = func(*(arg.expr for arg in args))
+        except z3.z3types.Z3Exception as e:  # type: ignore
+            raise TypeError(
+                f"Problem running {func}({', '.join(str(a) for a in args)})"
+            ) from e
         constraints = list(concat(arg.constraints for arg in args))
         if len(constraints) > 0:
             return CExpr(expr=res, constraints=constraints)
