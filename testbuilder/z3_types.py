@@ -218,9 +218,6 @@ class TypeUnion:
         return TypeUnion(expressions, sorts)
 
 
-VariableAttributes = ["registrar", "name", "expand", "sorts"]
-
-
 @dataclass(frozen=True)
 class VariableTypeUnion(TypeUnion):
     name: str
@@ -232,12 +229,14 @@ class VariableTypeUnion(TypeUnion):
     def expand(self) -> TypeUnion:
         return self.registrar.expand(self.name, self.sorts)
 
-    def __getattribute__(self, name: str) -> PyAny:
-        if name.startswith("_") or name in VariableAttributes:
-            return object.__getattribute__(self, name)
-        expanded = self.expand()
-        log.info("Getting", name, "on", expanded)
-        return getattr(expanded, name)
+    def unwrap(self, *args: Any) -> Expression:
+        """
+        Tries to unwrap directly; if that fails, expands, then unwraps.
+        """
+        try:
+            return super().unwrap(*args)
+        except AssertionError:
+            return self.expand().unwrap(*args)
 
 
 @dataclass
