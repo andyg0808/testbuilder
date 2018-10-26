@@ -2,6 +2,7 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
+
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
@@ -78,7 +79,11 @@ def test_generate_basic(op, a, b):
     function_args = {"a": a, "b": b}
     function_expectation = op(a, b)
     function = render_test(
-        Path("mycode.py"), function_name, function_args, function_expectation
+        source=Path("mycode.py"),
+        name=function_name,
+        test_number=0,
+        args=function_args,
+        expected=function_expectation,
     )
     expected = f"""
 from mycode import {op.__name__}
@@ -97,7 +102,11 @@ def test_generate_list_handler():
     function_args = {"a": [1, 2, 3]}
     function_expectation = 1
     function = render_test(
-        Path("mycode.py"), function_name, function_args, function_expectation
+        source=Path("mycode.py"),
+        name=function_name,
+        test_number=0,
+        args=function_args,
+        expected=function_expectation,
     )
     expected = """
 from mycode import min

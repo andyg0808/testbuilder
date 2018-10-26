@@ -51,7 +51,7 @@ def test_basic_solution():
 def test(a):
     return a
     """,
-        "ret == 4",
+        "ret == Any.Int(4)",
         {"a": 4, "ret": 4},
     )
 
@@ -62,7 +62,7 @@ def test_arithmetic_solution():
 def test(a, b):
     return a + b
     """,
-        "ret == 4 and pyname_a == 3",
+        "ret == Any.Int(4) and pyname_a == Any.Int(3)",
         {"a": 3, "b": 1, "ret": 4},
     )
 
@@ -75,7 +75,7 @@ def test(r):
         r -= 1
     return r
     """,
-        "pyname_r == 2",
+        "pyname_r == Any.Int(2)",
         {"ret": 1, "r": 2, "r_1": 1},
     )
 
@@ -89,7 +89,7 @@ def print_all(count):
         print(count)
     return count
     """,
-        "pyname_count == 20",
+        "pyname_count == Any.Int(20)",
         spotcheck({"ret": 0}),
         unroll=20,
     )
@@ -104,7 +104,7 @@ def print_all(count):
         print(count)
     return count
     """,
-        "pyname_count == 20",
+        "pyname_count == Any.Int(20)",
         None,
     )
 
@@ -119,7 +119,7 @@ def print_all(s_empty):
         ret = 2
     return ret
     """,
-        "ret == 1",
+        "ret == Any.Int(1)",
         {"ret": 1, "s_empty": ""},
     )
 
@@ -134,7 +134,7 @@ def print_all(s_thing):
         ret = 2
     return ret
     """,
-        "ret == 1",
+        "ret == Any.Int(1)",
         {"ret": 1, "s_thing": "a"},
     )
 
