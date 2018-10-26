@@ -1,6 +1,11 @@
 #!/usr/bin/tclsh
 
-set tests [glob "cli_tests/*/*.exp"]
+if {[llength $::argv] > 0} {
+  set tests $::argv
+} else {
+  set tests [glob "cli_tests/*/*.exp"]
+}
+
 puts "1..[llength $tests]"
 foreach test $tests {
   set result {}
@@ -12,5 +17,4 @@ foreach test $tests {
     puts $output
     exit 2
   }
-  #>@ stdout 2>@ stderr
 }

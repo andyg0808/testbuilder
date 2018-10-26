@@ -1,21 +1,94 @@
-from typing import Any, List
+from __future__ import annotations
 
-
-class SortRef:
-    def name(self) -> str:
-        ...
+from typing import Any, Callable, Generic, List, Tuple, TypeVar
 
 
 class AstRef:
     pass
 
 
+class SortRef(AstRef):
+    def name(self) -> str:
+        ...
+
+    def subsort(self, other: SortRef) -> bool:
+        ...
+
+    def __eq__(self, other: object) -> bool:
+        ...
+
+
+T = TypeVar("T", bound=DatatypeRef)
+
+
+class DatatypeSortRef(SortRef, Generic[T]):
+    def num_constructors(self) -> int:
+        ...
+
+    def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
+        ...
+
+    def constructor(self, i: int) -> Callable[[ExprRef], T]:
+        ...
+
+    def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
+        ...
+
+
+class Datatype:
+    def __init__(self, name: str) -> None:
+        ...
+
+    def declare(self, name: str, *args: Tuple[str, SortRef]) -> None:
+        ...
+
+    def create(self) -> DatatypeSortRef:
+        ...
+
+
+class ArithSortRef(SortRef):
+    ...
+
+
+IntSort = ArithSortRef
+SeqSortRef = ArithSortRef
+StringSort = SeqSortRef
+
+
+class BoolSort(SortRef):
+    ...
+
+
 class ExprRef(AstRef):
-    def __eq__(self, other: Any) -> "ExprRef":  # type: ignore
+    def __eq__(self, other: Any) -> Bool:  # type: ignore
+        ...
+
+    def __ne__(self, other: Any) -> Bool:  # type: ignore
         ...
 
     def sort(self) -> SortRef:
         ...
+
+    def decl(self) -> FuncDeclRef:
+        ...
+
+    def arg(self, idx: int) -> ExprRef:
+        ...
+
+    def num_args(self) -> int:
+        ...
+
+    def children(self) -> List[ExprRef]:
+        ...
+
+
+class DatatypeRef(ExprRef):
+    def decl(self) -> FuncDeclRef:
+        ...
+
+
+def Const(name: str, sort: SortRef) -> ExprRef:
+    ...
 
 
 class CheckSatResult:
@@ -77,6 +150,12 @@ class Int(ExprRef):
     def __init__(self, name: str) -> None:
         ...
 
+    def __mul__(self, other: Int) -> Int:
+        ...
+
+    def __add__(self, other: Int) -> Int:
+        ...
+
 
 class IntVal(Int):
     def __init__(self, value: int) -> None:
@@ -92,20 +171,20 @@ class String(SeqRef):
         ...
 
 
-class StringVal(SeqRef):
+class StringVal(String):
     def __init__(self, value: str) -> None:
         ...
 
 
-def And(*values: ExprRef) -> ExprRef:
+def And(*values: ExprRef) -> Bool:
     ...
 
 
-def Or(*values: ExprRef) -> ExprRef:
+def Or(*values: ExprRef) -> Bool:
     ...
 
 
-def Not(value: ExprRef) -> ExprRef:
+def Not(value: ExprRef) -> Bool:
     ...
 
 
@@ -121,7 +200,19 @@ def is_string(value: Any) -> bool:
     ...
 
 
+def Length(value: SeqRef) -> Int:
+    ...
+
+
 def eq(a: AstRef, b: AstRef) -> bool:
+    ...
+
+
+def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
+    ...
+
+
+def Concat(left: String, right: String) -> String:
     ...
 
 

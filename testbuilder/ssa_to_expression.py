@@ -1,35 +1,34 @@
-from functools import partial, reduce, singledispatch
-from typing import List, MutableMapping as MMapping, Optional, Set, Union
+from functools import singledispatch
+from typing import Callable, List, Optional, Tuple, Union, cast
 
-from toolz import mapcat, pipe
+from astor import to_source  # type: ignore
 
 import z3
-from dataclasses import dataclass
+from toolz import mapcat, pipe
 
-from . import basic_block as bb, converter, nodetree as n, ssa_basic_blocks as sbb
-from .basic_block import BlockTree
-from .expression_builder import (
-    ExprList,
-    VarMapping,
-    bool_and,
-    bool_not,
-    bool_or,
-    to_boolean,
-)
-from .iter_monad import chain, liftIter
+from . import converter, nodetree as n, ssa_basic_blocks as sbb
+from .converter import to_boolean
+from .function_substituter import FunctionSubstitute
+from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
-from .utils import crash
+from .test_utils import write_dot
+from .type_inferencer import TypeInferencer
+from .type_manager import TypeManager
 from .visitor import GatherVisitor, SimpleVisitor
+from .z3_types import TypeUnion, bool_all, bool_any, bool_true
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
+ExprList = List[Expression]
 
 
 class SSAVisitor(SimpleVisitor[ExprList]):
     def __init__(self, module: sbb.Module) -> None:
         self.module = module
+        self.type_manager = TypeManager()
+        self.expression = converter.ExpressionConverter(self.type_manager)
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -44,14 +43,25 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return []
 
     def visit_ReturnBlock(self, node: sbb.ReturnBlock, stop: StopBlock) -> ExprList:
+        if len(node.parents) == 1:
+            return self.visit(node.parents[0], stop)
         exprs = []
         for parent in node.parents:
-            exprs.append(bool_all(self.visit(parent, stop)))
+            parent_exprs = cast(List[z3.Bool], self.visit(parent, stop))
+            exprs.append(bool_all(parent_exprs))
 
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
-        return [converter.visit_expr(node)]
+        union = self.expression(node)
+        if union.is_bool():
+            return [union.to_expr()]
+        else:
+            # The union is not a boolean; the only supported case this
+            # could happen would be a bare expression, and the only
+            # side-effectful expression is yield, which is
+            # unsupported.
+            return [union.implications()]
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
@@ -64,10 +74,16 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         print("node.parent", node.parent, id(node.parent))
         branches = []
+        types = []
         if node.true_branch:
+            self.type_manager.push()
             branches.append(self.visit(node.true_branch, node.parent))
+            types.append(self.type_manager.pop())
         if node.false_branch:
+            self.type_manager.push()
             branches.append(self.visit(node.false_branch, node.parent))
+            types.append(self.type_manager.pop())
+        self.type_manager.merge_and_update(types)
 
         print("branches", branches)
 
@@ -78,10 +94,17 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             return []
 
         code = self.visit(node.parent, stop)
-        branches = [self.visit(branch, node.parent) for branch in node.loops]
-        branches = [b for b in branches if b]
+        branches = []
+        types = []
+        for branch in node.loops:
+            self.type_manager.push()
+            res = self.visit(branch, node.parent)
+            types.append(self.type_manager.pop())
+            if res is not None:
+                branches.append(res)
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
+            self.type_manager.merge_and_update(types)
         else:
             branch_expr = []
         return code + branch_expr
@@ -92,7 +115,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(converter.visit_expr(node.conditional))]
+        return code + [to_boolean(self.expression(node.conditional))]
 
     def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -100,29 +123,49 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [bool_not(to_boolean(converter.visit_expr(node.conditional)))]
+        return code + [to_boolean(self.expression(node.conditional), invert=True)]
 
 
 @singledispatch
 def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
+    """
+    Convert a node to a TestData description
+
+    Handles both the case of a function and inline code
+    """
     raise RuntimeError(f"process not implemented for {type(node)}")
 
 
 @process.register(sbb.FunctionDef)
 def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
-    expression = bool_all(visitor.visit(node.blocks))
+    if node.blocks.empty():
+        expression = bool_true()
+    else:
+        expressions = visitor.visit(node.blocks)
+        for expr in expressions:
+            assert z3.is_bool(expr), f"{expr} is not boolean"
+        expression = bool_all(cast(List[z3.Bool], expressions))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
-        name=node.name, free_variables=free_variables, expression=expression
+        name=node.name,
+        free_variables=free_variables,
+        expression=expression,
+        source_text=to_source(node.original),
     )
 
 
 @process.register(sbb.BlockTree)
 def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
-    expression = bool_all(visitor.visit(code))
+    if code.empty():
+        expression = bool_true()
+    else:
+        expression = bool_all(cast(List[z3.Bool], visitor.visit(code)))
     free_variables = find_variables(code)
     return sbb.TestData(
-        name="code", free_variables=free_variables, expression=expression
+        name="code",
+        free_variables=free_variables,
+        expression=expression,
+        source_text="<source missing>",
     )
 
 
@@ -136,42 +179,9 @@ class VariableFinder(GatherVisitor[sbb.Variable]):
         else:
             return []
 
-    # def visit_BlockTree(self, tree: sbb.BlockTree) -> List[sbb.Variable]:
-    #     return self.visit(tree.end)
-
-    # def visit_ReturnBlock(self, block: sbb.ReturnBlock) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.parents))
-
-    # def visit_Code(self, block: sbb.Code) -> List[sbb.Variable]:
-    #     return list(mapcat(self.visit, block.code))
-
 
 def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
-
-
-def bool_all(exprs: List[Expression]) -> Expression:
-    exprs = list(exprs)
-    if len(exprs) > 1:
-        return bool_and(*exprs)
-    elif len(exprs) == 1:
-        return exprs[0]
-    else:
-        raise RuntimeError("Taking all of no exprs")
-
-
-def bool_any(exprs: List[Expression]) -> Expression:
-    """
-    Allow any path in exprs to be taken. If only one path is present,
-    it is required. No exprs results in an exception.
-    """
-    exprs = list(exprs)
-    if len(exprs) > 1:
-        return bool_or(*exprs)
-    elif len(exprs) == 1:
-        return exprs[0]
-    else:
-        raise RuntimeError("Taking any of no exprs")
 
 
 def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
@@ -184,38 +194,12 @@ def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
     return process(request.code, v)
 
 
-def ssa_lines_to_expression(
-    target_line: int, lines: Set[int], module: sbb.Module
-) -> sbb.TestData:
-    request = filter_lines(target_line, lines, module)
+def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestData:
+    write_dot(module, "showdot.dot")
+    request = filter_lines(target_line, module)
 
-    repaired_request: sbb.Request = pipe(request, repair, PhiFilterer())
+    repaired_request: sbb.Request = pipe(
+        request, repair, PhiFilterer(), FunctionSubstitute()
+    )
+    write_dot(repaired_request, "showdot.dot")
     return ssa_to_expression(repaired_request)
-
-
-# def blocktree_and_ssa_to_expression(
-#     depth: int, tree: BlockTree, module: sbb.Module, variables: VarMapping
-# ) -> ExprList:
-#     from .basic_block_to_ssa import visit as basic_block_to_ssa
-
-#     assert tree.target
-#     code = basic_block_to_ssa(tree.target, variables)
-#     from .test_utils import show_dot
-
-#     # show_dot(code)
-#     return ssa_to_expression(sbb.Request(module, code))
-
-
-# @singledispatch
-# def is_false_path(node: sbb.Controlled, query: sbb.BasicBlock) -> bool:
-#     raise RuntimeError("Not implemented")
-
-
-# @is_false_path.register(sbb.Conditional)
-# def is_false_path(node: sbb.Conditional, query: sbb.BasicBlock) -> bool:
-#     return node.false_branch is query
-
-
-# @is_false_path.register(sbb.Loop)
-# def is_false_path(node: sbb.Loop, query: sbb.BasicBlock) -> bool:
-#     return node.bypass is query

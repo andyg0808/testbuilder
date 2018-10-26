@@ -1,25 +1,11 @@
-from abc import abstractmethod
-from functools import partial, reduce, singledispatch
-from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    TypeVar,
-    Union,
-    cast,
-)
+import ast
+from functools import reduce, singledispatch
+from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
 from dataclasses import dataclass, field
 
 from . import nodetree as n
-from .slicing import Dependency
 from .visitor import GatherVisitor
 
 Expression = z3.ExprRef
@@ -91,16 +77,27 @@ class StartBlock(BasicBlock):
 @dataclass
 class Controlled(BasicBlock):
     conditional: n.expr
+    line: int
 
 
 @dataclass
 class TrueBranch(Controlled, Parented):
-    line: int
+    pass
+
+
+@dataclass
+class ForcedTrueBranch(TrueBranch):
+    pass
 
 
 @dataclass
 class FalseBranch(Controlled, Parented):
-    line: int
+    pass
+
+
+@dataclass
+class ForcedFalseBranch(FalseBranch):
+    pass
 
 
 @dataclass
@@ -145,7 +142,7 @@ class BlockTree:
         return BlockTree(start=self.start, end=self.end.unify(tree.end))
 
     def set_target(self, target: T) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
+        return BlockTreeIndex._construct(start=self.start, end=self.end, target=target)
 
 
 U = TypeVar("U", bound=BasicBlock)
@@ -163,7 +160,7 @@ class BlockTreeIndex(BlockTree, Generic[T]):
         return BlockTreeIndex(start=start, end=end)
 
     @staticmethod
-    def __construct(
+    def _construct(
         start: StartBlock, end: ReturnBlock, target: T
     ) -> "BlockTreeIndex[T]":
         tree: "BlockTreeIndex[T]" = BlockTreeIndex(start=start, end=end)
@@ -191,14 +188,14 @@ class BlockTreeIndex(BlockTree, Generic[T]):
         return tree.set_target(func(*target_list))
 
     def set_target(self, target: U) -> "BlockTreeIndex[U]":
-        return BlockTreeIndex.__construct(start=self.start, end=self.end, target=target)
+        return BlockTreeIndex._construct(start=self.start, end=self.end, target=target)
 
     def return_target(self) -> BlockTree:
         end = self.end.append(self.target)
         return BlockTree(start=self.start, end=end)
 
     def unify_return(self, tree: BlockTree) -> "BlockTreeIndex[T]":
-        return BlockTreeIndex.__construct(
+        return BlockTreeIndex._construct(
             start=self.start, end=self.end.unify(tree.end), target=self.target
         )
 
@@ -208,6 +205,7 @@ class FunctionDef(Positioned):
     name: str
     args: List[str]
     blocks: BlockTree
+    original: ast.FunctionDef
 
 
 @dataclass
@@ -234,7 +232,7 @@ class TestData:
     name: str
     # statements: Dependency
     # lines: Set[int]
-    # function_text: str
+    source_text: str
     # function: Optional[FunctionDef] = None
     free_variables: List[Variable]
     expression: Expression

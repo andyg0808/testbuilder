@@ -23,6 +23,7 @@ def run_direct():
             ),
         )
     )
+    # s.add(ForAll([pyname_i], conditioned(pyname_i) == If(pyname_i > 4, 6, 14)))
     # s.add(
     #     ForAll(
     #         [pyname_i],
@@ -32,8 +33,9 @@ def run_direct():
     #         ),
     #     )
     # )
-    s.add(conditioned(34) == x)
-    # s.add(run_func(2) == x)
+    s.add(ForAll([pyname_i], run_func(pyname_i) == pyname_i * conditioned(pyname_i)))
+    # s.add(conditioned(34) == x)
+    s.add(run_func(2) == x)
     s.check()
     # print(s.model())
 
@@ -48,12 +50,12 @@ def run_function():
 
     s.add(ForAll([pyname_i], conditioned(pyname_i) == If(pyname_i > 4, 6, 14)))
     s.add(ForAll([pyname_i], run_func(pyname_i) == pyname_i * conditioned(pyname_i)))
-    s.add(conditioned(34) == x)
-    # s.add(run_func(2) == x)
+    # s.add(conditioned(34) == x)
+    s.add(run_func(2) == x)
     s.check()
     # print(s.model())
 
-print("direct")
-print(timeit.timeit("run_direct()", number=100, globals=globals()))
 print("function")
 print(timeit.timeit("run_function()", number=100, globals=globals()))
+print("direct")
+print(timeit.timeit("run_direct()", number=100, globals=globals()))

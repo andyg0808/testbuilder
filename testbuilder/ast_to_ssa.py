@@ -1,4 +1,5 @@
 import ast
+import dataclasses
 from functools import reduce, singledispatch
 from typing import (
     Any,
@@ -7,19 +8,29 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     cast,
 )
 
-import dataclasses
-
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .expression_builder import VarMapping
-from .variable_manager import VariableManager
+from .return_checker import contains_return
+from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
 
 StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
+
+
+def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
+    varmanager = VariableManager(variables)
+    t = AstToSSABasicBlocks(depth, varmanager)
+    if not isinstance(node, ast.Module):
+        assert isinstance(node, ast.stmt)
+        node = ast.Module(body=[node])
+    res = t.visit(node)
+    assert isinstance(res, sbb.Module)
+    return res
 
 
 class AstToSSABasicBlocks(SimpleVisitor):
@@ -48,13 +59,17 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
+        self.variables.push()
+        self.variables.add(args)
         blocktree = self.body_visit(node.body)
+        self.variables.pop()
         return sbb.FunctionDef(
             first_line=blocktree.start.line,
             last_line=blocktree.end.line,
             name=node.name,
             args=args,
             blocks=blocktree,
+            original=node,
         )
 
     def body_visit(self, stmts: StmtList) -> sbb.BlockTree:
@@ -102,16 +117,24 @@ class AstToSSABasicBlocks(SimpleVisitor):
             else:
                 returns.append(block)
 
+        if contains_return(node.orelse):
+            true_branch: Type[sbb.TrueBranch] = sbb.ForcedTrueBranch
+        else:
+            true_branch = sbb.TrueBranch
         true_block = tree.map_target(
-            lambda parent: sbb.TrueBranch(
+            lambda parent: true_branch(
                 number=self.next_id(),
                 conditional=condition,
                 parent=parent,
                 line=node.lineno,
             )
         )
+        if contains_return(node.body):
+            false_branch: Type[sbb.FalseBranch] = sbb.ForcedFalseBranch
+        else:
+            false_branch = sbb.FalseBranch
         false_block = tree.map_target(
-            lambda parent: sbb.FalseBranch(
+            lambda parent: false_branch(
                 number=self.next_id(),
                 conditional=condition,
                 parent=parent,
@@ -320,62 +343,6 @@ def unify_all_variables(
     return (variables, renamings)
 
 
-# def merge_block_trees(
-#     self,
-#     left: sbb.BlockTree,
-#     right: sbb.BlockTree,
-#     joint: Callable[[sbb.BasicBlock, sbb.BasicBlock], sbb.BasicBlock],
-# ) -> sbb.BlockTree:
-#     assert (
-#         left.start is right.start
-#     ), "Both BlockTrees need to originate from the same start point"
-#     assert left.target, f"Left {left} does not have target set"
-#     assert right.target, f"Right {right} does not have target set"
-#     return sbb.BlockTree(
-#         start=left.start,
-#         target=joint(left.target, right.target),
-#         end=sbb.ReturnBlock(
-#             number=self.next_id(), parents=left.end.parents + right.end.parents
-#         ),
-#     )
-
-
-def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
-    # print("input type", type(node))
-    varmanager = VariableManager(variables)
-    t = AstToSSABasicBlocks(depth, varmanager)
-    if not isinstance(node, ast.Module):
-        assert isinstance(node, ast.stmt)
-        node = ast.Module(body=[node])
-    res = t.visit(node)
-    assert isinstance(res, sbb.Module)
-    # print("ast_to_ssa result", res)
-    return res
-
-
-@singledispatch
-def find_start_line(block: object) -> Optional[int]:
-    return None
-
-
-@find_start_line.register(sbb.Parented)
-def find_parented_start(block: sbb.Parented) -> int:
-    parent_line = find_start_line(block.parent)
-    if parent_line is None:
-        return find_block_start(block)
-    else:
-        return parent_line
-
-
-@singledispatch
-def find_block_start(block: sbb.Parented) -> int:
-    raise RuntimeError(f"Unimplemented for type {type(block)}")
-
-
-# @find_block_start.regsiter(sbb.Code)
-# def find_code_start(block: sbb.Code) ->
-
-
 class StatementVisitor(GenericVisitor):
     def __init__(self, variables: VariableManager) -> None:
         self.variables = variables
@@ -405,8 +372,8 @@ class StatementVisitor(GenericVisitor):
         expr = self.expr_visitor(node)
         return n.Expr(line=node.lineno, value=expr)
 
-    def generic_visit(self, node: ast.AST, *args: Any) -> Any:
-        return self.expr_visitor(node)
+    def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> Any:
+        return self.expr_visitor(v)
 
 
 class AstBuilder(GenericVisitor):
@@ -422,14 +389,22 @@ class AstBuilder(GenericVisitor):
 
     def visit_Compare(self, node: ast.Compare) -> n.BinOp:
         left = self.visit(node.left)
-        ops = map(self.visit, node.ops)
-        comparators = map(self.visit, node.comparators)
+        ops = [self.visit(x) for x in node.ops]
+        comparators = [self.visit(x) for x in node.comparators]
 
-        def combine(left: n.expr, zipped: Tuple[n.expr, n.expr]) -> n.expr:
-            op, right = zipped
-            return n.BinOp(left, cast(n.Operator, op), right)
+        lefts = [left] + comparators[:-1]
+        rights = comparators
+        assert len(lefts) == len(rights) == len(ops)
+        binops = []
+        for args in zip(lefts, ops, rights):
+            binops.append(n.BinOp(*args))
 
-        return cast(n.BinOp, reduce(combine, zip(ops, comparators), left))
+        def all_pairs(l: n.BinOp, r: n.BinOp) -> n.BinOp:
+            return n.BinOp(l, n.And(), r)
+
+        res = reduce(all_pairs, binops)
+        print(f"converting {ast.dump(node)} to {res}")
+        return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
         op = self.visit(node.op)
@@ -444,7 +419,8 @@ class AstBuilder(GenericVisitor):
         idx = self.variables.get(node.id)
         return n.Name(node.id, idx)
 
-    def generic_visit(self, node: ast.AST, *args: Any) -> n.Node:
+    def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
+        node = v
         # print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
             return node

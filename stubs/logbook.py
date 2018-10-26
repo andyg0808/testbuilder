@@ -28,6 +28,9 @@ def debug(*args: Any, **kwargs: Any) -> None:
 def info(*args: Any, **kwargs: Any) -> None:
     ...
 
+def trace(*args: Any, **kwargs: Any) -> None:
+    ...
+
 
 class Logger:
     def __init__(self, name: str) -> None:
@@ -52,6 +55,9 @@ class Logger:
         ...
 
     def info(self, *args: Any, **kwargs: Any) -> None:
+        ...
+
+    def trace(self, *args: Any, **kwargs: Any) -> None:
         ...
 
 

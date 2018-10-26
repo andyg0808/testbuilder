@@ -3,9 +3,21 @@ import re
 from inspect import getmembers
 from typing import Any
 
+from astor import to_source  # type: ignore
+
 import z3  # type: ignore
 
-EVAL_GLOBALS = {"z3": z3, "true": z3.BoolVal(True), "false": z3.BoolVal(False)}
+from .z3_types import Any as AnyType, make_any
+
+EVAL_GLOBALS = {
+    "z3": z3,
+    "true": z3.BoolVal(True),
+    "false": z3.BoolVal(False),
+    "type": type,
+    "Any": AnyType,
+    "make_any": make_any,
+}
+MAGIC_FUNCS = {"z3": {"Int", "String"}, "make_any": None}
 EVAL_LOCALS = dict(getmembers(z3))
 # It seems `d` is defined as NoneType, and we would really like it to be
 # available for general use. Delete all variables from z3 of length 1:
@@ -52,21 +64,22 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             # variables
             self.literals.append(node.id)
             return node
-        zzz = ast.Name("z3", ast.Load())
+        # zzz = ast.Name("z3", ast.Load())
         typekey, varname = split_varname(node.id)
-        # print('name', typekey, varname)
+        # # print('name', typekey, varname)
 
-        if typekey:
-            if typekey == "s":
-                sort_name = "String"
-            elif typekey == "b":
-                sort_name = "Bool"
-            else:
-                sort_name = "Int"
-        else:
-            sort_name = "Int"
-        sort_call = ast.Attribute(zzz, sort_name, ast.Load())
-        call = ast.Call(sort_call, [ast.Str(varname)], [])
+        # if typekey:
+        #     if typekey == "s":
+        #         sort_name = "String"
+        #     elif typekey == "b":
+        #         sort_name = "Bool"
+        #     else:
+        #         sort_name = "Int"
+        # else:
+        #     sort_name = "Int"
+        # sort_call = ast.Attribute(zzz, sort_name, ast.Load())
+        any_func = ast.Name("make_any", ast.Load())
+        call = ast.Call(any_func, [ast.Str(varname)], [])
         return ast.fix_missing_locations(ast.copy_location(call, node))
 
     def visit_Str(self, node: ast.Str) -> ast.AST:
@@ -83,6 +96,33 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             raise RuntimeError("Non-integer constants unsupported")
         call = ast.Call(num_sort, [node], [])
         return ast.fix_missing_locations(ast.copy_location(call, node))
+
+    def visit_Call(self, node: ast.Call) -> ast.Call:
+        func = node.func
+        if isinstance(func, ast.Name):
+            if func.id in MAGIC_FUNCS:
+                self.literals.append(func.id)
+                return node
+        return self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
+        # value = self.visit(node.value)
+        value = node.value
+        # print("attrib", ast.dump(node))
+        if isinstance(value, ast.Name):
+            # print("magic thing", value.id)
+            if value.id in MAGIC_FUNCS:
+                funcs = MAGIC_FUNCS[value.id]
+                if funcs is None:
+                    self.literals.append(value.id)
+                    return node
+                else:
+                    if node.attr in funcs:
+                        self.literals.append(f"{value.id}.{node.attr}")
+                        return node
+        return self.generic_visit(node)
+        # attribute = ast.Attribute(value, node.attr, node.ctx)
+        # return ast.fix_missing_locations(ast.copy_location(attribute, node))
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         op_type = type(node.op)
@@ -122,12 +162,35 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             return self.generic_visit(node)
 
 
+class ExpansionTester(ast.NodeVisitor):
+    def generic_visit(self, node: ast.AST) -> bool:
+        super().generic_visit(node)
+        if isinstance(node, ast.stmt) or isinstance(node, ast.expr):
+            if not isinstance(node, ast.Expression):
+                node = ast.copy_location(ast.Expression(node), node)
+            expr = compile(node, filename="<ExpansionTester>", mode="eval")
+        else:
+            return True
+        try:
+            eval(expr, EVAL_GLOBALS, EVAL_LOCALS)
+        except z3.z3types.Z3Exception as e:
+            raise RuntimeError(
+                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
+            ) from e
+        except TypeError as e:
+            raise RuntimeError(
+                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
+            ) from e
+        return True
+
+
 def expand_variables(code: str) -> Any:
     code_tree = ast.parse(code.strip(), mode="eval")
     visitor = VariableExpansionVisitor()
     expanded_code = visitor.visit(code_tree)
-    # print(ast.dump(expanded_code, include_attributes=True))
+    # print("expanded AST", ast.dump(expanded_code, include_attributes=True))
     print("Processed these variables as literals:", visitor.literals)
+    ExpansionTester().visit(expanded_code)
     return eval(
         compile(expanded_code, filename="<string>", mode="eval"),
         EVAL_GLOBALS,

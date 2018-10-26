@@ -1,0 +1,13 @@
+source "./testing.tcl"
+file delete junky_test.py
+spawn python3 ./run.py junky.py
+expect expected
+send "22\n"
+expect expected
+send "22\n"
+expect expected
+send "22\n"
+expect expected
+send "22\n"
+system pytest junky_test.py
+file delete junky_test.py

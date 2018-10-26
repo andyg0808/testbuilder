@@ -3,9 +3,12 @@
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
 
-MYPY = mypy --strict --check-untyped-defs testbuilder/generate_proto.py
+RUN = fastbuild
+
+MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
 export MYPYPATH=./stubs
 
+TESTFILE = testbuilder
 # Run pytest
 # Args:
 #   -ra: Show extra summary information about everything except passing tests
@@ -15,10 +18,10 @@ export MYPYPATH=./stubs
 #   --ff Run failed tests before other tests.
 #   -x   Stop after first failed test. Speeds up testing runs with failures
 #   -v   Show full diffs.
-PYTEST = pytest -x -ra --ff testbuilder
+PYTEST = pytest -x -ra --ff $(TESTFILE)
 
 pytest:
-	pipenv run $(PYTEST)
+	pipenv run $(PYTEST) | rainbow.py --colorize
 
 mypy:
 	pipenv run $(MYPY)
@@ -33,13 +36,17 @@ fastbuild:
 	$(PYTEST) | rainbow.py --colorize
 	./runtests
 
+livetest:
+	$(MYPY)
+	./runtests
+
 run:
 	expect run.exp
 
 watch:
-	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) fastbuild
+	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
 test:
-	./test.sh
+	./runtests
 
 # The rest of this makefile is taken from the default Makefile Sphinx makes
 # Minimal makefile for Sphinx documentation
