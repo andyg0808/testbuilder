@@ -46,7 +46,7 @@ run:
 watch:
 	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
 test:
-	./test.sh
+	./runtests
 
 # The rest of this makefile is taken from the default Makefile Sphinx makes
 # Minimal makefile for Sphinx documentation
