@@ -22,7 +22,9 @@ from .utils import WriteDot
 logger = Logger("generator")
 
 
-def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[str]:
+def generate_tests(
+    source: Path, text: str, io: Any, *, prompt: str = "", depth: int = 10
+) -> List[str]:
     def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
@@ -76,7 +78,7 @@ def generate_tests(source: Path, text: str, io: Any, prompt: str = "") -> List[s
         items.append(module.code)
         return items
 
-    _ast_to_ssa = partial(ast_to_ssa, 10, {})
+    _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
     _generate_test = partial(generate_test, module)
