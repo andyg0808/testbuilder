@@ -189,20 +189,10 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(IntSort, IntSort)(operator.ge)
 
     def visit_Or(self, node: n.Or) -> OpFunc:
-        class OrMagic(Magic):
-            @magic(BoolSort, BoolSort)
-            def orthem(self, left: z3.Bool, right: z3.Bool) -> z3.Bool:
-                return bool_or([left, right])
-
-        return OrMagic()
+        return Magic.m(BoolSort, BoolSort)(lambda *a: bool_or([*a]))
 
     def visit_And(self, node: n.And) -> OpFunc:
-        class AndMagic(Magic):
-            @magic(BoolSort, BoolSort)
-            def andthem(self, left: z3.Bool, right: z3.Bool) -> z3.Bool:
-                return bool_and([left, right])
-
-        return AndMagic()
+        return Magic.m(BoolSort, BoolSort)(lambda *a: bool_and([*a]))
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
         class EqMagic(Magic):
