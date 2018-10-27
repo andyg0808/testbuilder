@@ -1,10 +1,11 @@
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
+
+from toolz import concat, pipe
 
 from logbook import Logger
-from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
@@ -23,7 +24,13 @@ logger = Logger("generator")
 
 
 def generate_tests(
-    source: Path, text: str, io: Any, *, prompt: str = "", depth: int = 10
+    source: Path,
+    text: str,
+    io: Any,
+    *,
+    prompt: str = "",
+    depth: int = 10,
+    lines: Optional[Set[int]] = None,
 ) -> List[str]:
     def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
         test_number, target_line = target_info
@@ -84,7 +91,13 @@ def generate_tests(
     _generate_test = partial(generate_test, module)
 
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
-        return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
+        if lines is not None:
+            _filter = partial(filter, lambda x: x in lines)
+            return pipe(
+                unit, LineSplitter(), _filter, enumerate, liftIter(_generate_test), list
+            )
+        else:
+            return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
 
     print("lines", LineSplitter()(module))
     return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)

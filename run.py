@@ -6,14 +6,15 @@ Usage: run.py [options] <source.py>
 
 Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
+    --lines=<line,line,line>  Lines to generate tests for
 """
 
 import sys
 from pathlib import Path
 
 from docopt import docopt
-from logbook import NullHandler, StderrHandler
 
+from logbook import NullHandler, StderrHandler
 from testbuilder.generate import generate_tests
 
 NullHandler().push_application()
@@ -28,13 +29,18 @@ def main(filename: str) -> None:
         text = io.read()
 
     depth_s = opts["--unroll-depth"]
-    print("depth string", depth_s)
     if depth_s:
         depth = int(depth_s)
     else:
         depth = 10
 
-    test_cases = generate_tests(filepath, text, sys.stdin, depth=depth)
+    lines_s = opts["--lines"]
+    if lines_s:
+        lines = {int(s) for s in lines_s.split(",")}
+    else:
+        lines = None
+
+    test_cases = generate_tests(filepath, text, sys.stdin, depth=depth, lines=lines)
     with open(filepath.stem + "_test.py", "x") as tests:
         tests.write("\n\n".join(test_cases))
 

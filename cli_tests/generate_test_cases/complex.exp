@@ -1,10 +1,9 @@
 source "./testing.tcl"
 file delete complex_test.py
-spawn python3 ./run.py --unroll-depth=20 complex.py
+spawn python3 ./run.py --unroll-depth=20 --lines=2,8,12 complex.py
 
 expect expected
 send "0\n"
-expect "Couldn't generate a test for line 7"
 expect "Couldn't generate a test for line 8"
 expect expected
 send "None\n"
