@@ -38,13 +38,6 @@ Constants: Mapping[Any, TypeUnion] = {
 
 Registrar = TypeRegistrar(AnyType)
 
-Typelist: Mapping[str, TypeConstructor] = {
-    "b": z3.Bool,
-    "i": z3.Int,
-    "s": z3.String,
-    "a": Registrar.make_any,
-}
-
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
@@ -287,13 +280,3 @@ def get_prefixed_variable(prefixed_name: n.PrefixedName) -> str:
     prefix = get_prefix(prefixed_name)
     variable = get_variable(prefixed_name.id, prefixed_name.set_count)
     return prefix + "_" + variable
-
-
-def get_type(name: str, set_count: int) -> TypeConstructor:
-    match = TypeRegex.match(name)
-    if match and match.group(1):
-        # There was a type given for the variable. Use that.
-        return Typelist[match.group(1).lower()]
-    else:
-        # It's not got a type. Assume it's an integer.
-        return z3.Int
