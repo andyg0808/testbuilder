@@ -47,7 +47,7 @@ def conversion_assert(
     tree = tree.code[0]
     if expected_constraint is not None:
         expected_constraint = expand_variables(expected_constraint)
-    result = ExpressionConverter(TypeManager())(tree)
+    result = ExpressionConverter(Registrar, TypeManager())(tree)
     if get_boolean:
         assert result.is_bool(), "Expected boolean result!"
         result = result.to_expr()

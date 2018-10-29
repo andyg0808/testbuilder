@@ -44,7 +44,7 @@ def generate_tests(
             )
             return ""
         function = request.code
-        _filter_inputs = partial(filter_inputs, function)
+        _ssa_to_expression = partial(ssa_to_expression, registrar)
 
         expr: sbb.TestData = pipe(
             request,
@@ -53,7 +53,7 @@ def generate_tests(
             FunctionSubstitute(),
             ExprStripper(),
             WriteDot("generate.dot"),
-            ssa_to_expression,
+            _ssa_to_expression,
         )
         solution: Optional[Solution] = solve(registrar, expr)
         if not solution:
@@ -62,6 +62,7 @@ def generate_tests(
                 " maybe try increasing the loop unrolling depth?"
             )
             return ""
+        _filter_inputs = partial(filter_inputs, function)
         _render_test = partial(
             prompt_and_render_test,
             source,

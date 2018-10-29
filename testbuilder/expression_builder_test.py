@@ -8,7 +8,9 @@ from toolz import pipe
 
 from .expression_builder import get_expression
 from .variable_expander import expand_variables
-from .z3_types import diff_expression, print_diff
+from .z3_types import Any as AnyType, TypeRegistrar, diff_expression, print_diff
+
+Registrar = TypeRegistrar(AnyType)
 
 
 def check_expression(
@@ -40,7 +42,7 @@ def check_expression(
     """
     if isinstance(expected, str):
         expected = expand_variables(expected)
-    _get_expression = partial(get_expression, line, depth=depth)
+    _get_expression = partial(get_expression, Registrar, line, depth=depth)
     test_data = pipe(code_string.strip(), ast.parse, _get_expression)
     if test_data is None:
         expr = None

@@ -26,7 +26,7 @@ from .ssa_basic_blocks import TestData
 from .ssa_to_expression import Expression, ExprList, ssa_lines_to_expression
 from .utils import pipe_print
 from .variable_manager import VarMapping
-from .z3_types import bool_and
+from .z3_types import TypeRegistrar, bool_and
 
 NULL = z3.DeclareSort("None")
 
@@ -34,16 +34,19 @@ NULL = z3.DeclareSort("None")
 StopBlock = Optional[BasicBlock]
 
 
-def get_expression(line: int, code: ast.AST, depth: int = 1) -> Optional[TestData]:
+def get_expression(
+    registrar: TypeRegistrar, line: int, code: ast.AST, depth: int = 1
+) -> Optional[TestData]:
     dep_tree = take_slice(line, code)
     if not dep_tree:
         return None
-    eb = ExpressionBuilder(depth, dep_tree.lineno)
+    eb = ExpressionBuilder(registrar, depth, dep_tree.lineno)
     return eb.get_expression(code)
 
 
 class ExpressionBuilder:
-    def __init__(self, depth: int, target_line: int) -> None:
+    def __init__(self, registrar: TypeRegistrar, depth: int, target_line: int) -> None:
+        self.registrar = registrar
         self.depth = depth
         self.target_line = target_line
 
@@ -57,7 +60,9 @@ class ExpressionBuilder:
     def _modern_convert_tree(self, variables: VarMapping, code: ast.AST) -> TestData:
 
         _ast_to_ssa = partial(ast_to_ssa, self.depth, variables)
-        _ssa_to_expression = partial(ssa_lines_to_expression, self.target_line)
+        _ssa_to_expression = partial(
+            ssa_lines_to_expression, self.registrar, self.target_line
+        )
 
         testdata: TestData = pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)
         return testdata

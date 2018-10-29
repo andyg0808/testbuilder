@@ -7,7 +7,6 @@ import z3
 from toolz import mapcat, pipe
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
-from .converter import to_boolean
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .linefilterer import filter_lines
@@ -17,7 +16,7 @@ from .test_utils import write_dot
 from .type_inferencer import TypeInferencer
 from .type_manager import TypeManager
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import TypeUnion, bool_all, bool_any, bool_true
+from .z3_types import TypeRegistrar, TypeUnion, bool_all, bool_any, bool_true
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -25,10 +24,13 @@ ExprList = List[Expression]
 
 
 class SSAVisitor(SimpleVisitor[ExprList]):
-    def __init__(self, module: sbb.Module) -> None:
+    def __init__(self, registrar: TypeRegistrar, module: sbb.Module) -> None:
         self.module = module
         self.type_manager = TypeManager()
-        self.expression = converter.ExpressionConverter(self.type_manager)
+        self.registrar = registrar
+        self.expression = converter.ExpressionConverter(
+            self.registrar, self.type_manager
+        )
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -115,7 +117,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(self.expression(node.conditional))]
+        return code + [self.to_boolean(self.expression(node.conditional))]
 
     def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -123,7 +125,13 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(self.expression(node.conditional), invert=True)]
+        return code + [self.to_boolean(self.expression(node.conditional), invert=True)]
+
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.Bool:
+        if value.is_bool():
+            return value.to_expr(invert)
+        else:
+            return self.registrar.to_boolean(value, invert).to_expr()
 
 
 @singledispatch
@@ -184,17 +192,19 @@ def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
 
 
-def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
+def ssa_to_expression(registrar: TypeRegistrar, request: sbb.Request) -> sbb.TestData:
     assert isinstance(request, sbb.Request)
     # TODO: I think this is right?
-    v = SSAVisitor(request.module)
+    v = SSAVisitor(registrar, request.module)
     assert isinstance(request.code, sbb.BlockTree) or isinstance(
         request.code, sbb.FunctionDef
     )
     return process(request.code, v)
 
 
-def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestData:
+def ssa_lines_to_expression(
+    registrar: TypeRegistrar, target_line: int, module: sbb.Module
+) -> sbb.TestData:
     write_dot(module, "showdot.dot")
     request = filter_lines(target_line, module)
 
@@ -202,4 +212,4 @@ def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestDat
         request, repair, PhiFilterer(), FunctionSubstitute()
     )
     write_dot(repaired_request, "showdot.dot")
-    return ssa_to_expression(repaired_request)
+    return ssa_to_expression(registrar, repaired_request)

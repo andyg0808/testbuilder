@@ -29,7 +29,7 @@ def compare_dicts(actual, expected):
 
 def check_solve(code, conditions, expected, unroll=1):
     parse = ast.parse(code)
-    testdata = get_expression(-1, parse, depth=unroll)
+    testdata = get_expression(Registrar, -1, parse, depth=unroll)
     if conditions:
         condition_expression = expand_variables(conditions)
         expression = sbb.TestData(

@@ -36,17 +36,16 @@ Constants: Mapping[Any, TypeUnion] = {
     False: TypeUnion.wrap(z3.BoolVal(False)),
 }
 
-Registrar = TypeRegistrar(AnyType)
-
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
 
 
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
-    def __init__(self, type_manager: TypeManager) -> None:
+    def __init__(self, registrar: TypeRegistrar, type_manager: TypeManager) -> None:
         super().__init__()
         self.visit_oper = OperatorConverter()
+        self.registrar = registrar
         self.type_manager = type_manager
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
@@ -71,7 +70,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Return(self, node: n.Return) -> TypeUnion:
         if node.value:
             expr = self.visit(node.value)
-            return Registrar.assign(Registrar.make_any("ret"), expr)
+            return self.registrar.assign(self.registrar.make_any("ret"), expr)
         else:
             return TypeUnion.wrap(z3.BoolVal(True))
 
@@ -83,25 +82,25 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         sorts = self.type_manager.get(variable)
         if sorts is not None:
             print(f"looked up {variable} and got sorts {sorts}")
-            return Registrar.AllTypes(variable, sorts)
+            return self.registrar.AllTypes(variable, sorts)
         self.type_manager.put(variable)
-        return Registrar.AllTypes(variable)
+        return self.registrar.AllTypes(variable)
 
     def visit_PrefixedName(self, node: n.PrefixedName) -> TypeUnion:
         variable = get_prefixed_variable(node)
         sorts = self.type_manager.get(variable)
         if sorts is not None:
-            return Registrar.AllTypes(variable, sorts)
+            return self.registrar.AllTypes(variable, sorts)
         self.type_manager.put(variable)
-        return Registrar.AllTypes(variable)
+        return self.registrar.AllTypes(variable)
 
     def visit_Result(self, node: n.Result) -> TypeUnion:
         variable = get_result(node)
         sorts = self.type_manager.get(variable)
         if sorts is not None:
-            return Registrar.AllTypes(variable, sorts)
+            return self.registrar.AllTypes(variable, sorts)
         self.type_manager.put(variable)
-        return Registrar.AllTypes(variable)
+        return self.registrar.AllTypes(variable)
 
     def visit_Set(self, node: n.Set) -> TypeUnion:
         # We know `target` is a Name
@@ -112,9 +111,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         # `PrefixedName`s as well as normal `Name`s.
         variable = cast(VariableTypeUnion, self.visit(target)).name
         value = self.visit(node.e)
-        var = Registrar.make_any(variable)
+        var = self.registrar.make_any(variable)
         self.type_manager.put(variable, value.sorts)
-        return Registrar.assign(var, value)
+        return self.registrar.assign(var, value)
 
     def visit_Expr(self, node: n.Expr) -> TypeUnion:
         v = self.visit(node.value)
@@ -127,11 +126,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
         variable = get_result(node)
-        var = Registrar.make_any(variable)
+        var = self.registrar.make_any(variable)
         if node.value:
             expr = self.visit(node.value)
             self.type_manager.put(variable, expr.sorts)
-            return Registrar.assign(var, expr)
+            return self.registrar.assign(var, expr)
         else:
             raise RuntimeError(
                 "Cannot use return value of function without return value"
@@ -237,17 +236,6 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
 # E = TypeVar("E", bound=n.expr)
 # B = TypeVar("B")
-
-
-def to_boolean(value: TypeUnion, invert: bool = False) -> z3.Bool:
-    """
-    Forcibly convert a TypeUnion to a boolean. Will apply truthy
-    standards if needed in order to avoid problems.
-    """
-    if value.is_bool():
-        return value.to_expr(invert)
-    else:
-        return Registrar.to_boolean(value, invert).to_expr()
 
 
 def get_variable(name: str, idx: int) -> str:
