@@ -60,12 +60,6 @@ class AnySort(z3.DatatypeSortRef):
         ...
 
 
-AnyDatatype = z3.Datatype("Any")
-AnyDatatype.declare("Int", ("i", z3.IntSort()))
-AnyDatatype.declare("Bool", ("b", z3.BoolSort()))
-AnyDatatype.declare("String", ("s", z3.StringSort()))
-Any: AnySort = cast(AnySort, AnyDatatype.create())
-
 T = TypeVar("T")
 
 
@@ -237,6 +231,16 @@ class VariableTypeUnion(TypeUnion):
             return super().unwrap(*args)
         except AssertionError:
             return self.expand().unwrap(*args)
+
+
+@dataclass
+class TypeBuilder:
+    def construct(self) -> TypeRegistrar:
+        datatype = z3.Datatype("Any")
+        datatype.declare("Int", ("i", z3.IntSort()))
+        datatype.declare("Bool", ("b", z3.BoolSort()))
+        datatype.declare("String", ("s", z3.StringSort()))
+        return TypeRegistrar(cast(AnySort, datatype.create()))
 
 
 @dataclass

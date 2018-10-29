@@ -7,9 +7,9 @@ from astor import to_source  # type: ignore
 
 import z3  # type: ignore
 
-from .z3_types import Any as AnyType, TypeRegistrar
+from .z3_types import TypeBuilder
 
-Registrar = TypeRegistrar(AnyType)
+Registrar = TypeBuilder().construct()
 
 EVAL_GLOBALS = {
     "z3": z3,

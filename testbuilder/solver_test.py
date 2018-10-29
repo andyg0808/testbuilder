@@ -8,9 +8,9 @@ from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
 from .solver import solve
 from .variable_expander import expand_variables
-from .z3_types import Any as AnyType, TypeRegistrar
+from .z3_types import TypeBuilder
 
-Registrar = TypeRegistrar(AnyType)
+Registrar = TypeBuilder().construct()
 
 
 def compare_dicts(actual, expected):

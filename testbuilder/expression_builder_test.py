@@ -8,9 +8,9 @@ from toolz import pipe
 
 from .expression_builder import get_expression
 from .variable_expander import expand_variables
-from .z3_types import Any as AnyType, TypeRegistrar, diff_expression, print_diff
+from .z3_types import TypeBuilder, diff_expression, print_diff
 
-Registrar = TypeRegistrar(AnyType)
+Registrar = TypeBuilder().construct()
 
 
 def check_expression(

@@ -18,7 +18,7 @@ from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import filter_lines, ssa_to_expression
 from .utils import WriteDot
-from .z3_types import Any as AnyType, TypeRegistrar
+from .z3_types import TypeBuilder
 
 logger = Logger("generator")
 
@@ -32,7 +32,7 @@ def generate_tests(
     depth: int = 10,
     lines: Optional[Set[int]] = None,
 ) -> List[str]:
-    registrar = TypeRegistrar(AnyType)
+    registrar = TypeBuilder().construct()
 
     def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
         test_number, target_line = target_info

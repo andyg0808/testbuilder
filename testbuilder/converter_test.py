@@ -10,9 +10,9 @@ from .converter import ExpressionConverter
 from .ssa_repair import repair
 from .type_manager import TypeManager
 from .variable_expander import expand_variables
-from .z3_types import Any as AnyType, TypeRegistrar, diff_expression, print_diff
+from .z3_types import TypeBuilder, diff_expression, print_diff
 
-Registrar = TypeRegistrar(AnyType)
+Registrar = TypeBuilder().construct()
 
 Bool = z3.BoolSort()
 Int = z3.IntSort()

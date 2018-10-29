@@ -15,7 +15,6 @@ from . import nodetree as n
 from .type_manager import TypeManager
 from .visitor import SimpleVisitor
 from .z3_types import (
-    Any as AnyType,
     Expression,
     MoreMagic as Magic,
     TypeRegistrar,
