@@ -41,7 +41,7 @@ def check_expression(
         points. Currently does nothing.
     """
     if isinstance(expected, str):
-        expected = expand_variables(expected)
+        expected = expand_variables(expected, Registrar)
     _get_expression = partial(get_expression, Registrar, line, depth=depth)
     test_data = pipe(code_string.strip(), ast.parse, _get_expression)
     if test_data is None:

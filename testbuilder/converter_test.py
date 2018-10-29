@@ -32,7 +32,7 @@ def conversion_assert(
     if isinstance(expected, str):
         if code_string is None:
             code_string = expected
-        expected = expand_variables(expected)
+        expected = expand_variables(expected, registrar=Registrar)
     code = ast.parse(code_string)
     tree = ast_to_ssa(2, variables, code)
     # Make variable assignment counts sensible
@@ -46,7 +46,7 @@ def conversion_assert(
     assert len(tree.code) == 1
     tree = tree.code[0]
     if expected_constraint is not None:
-        expected_constraint = expand_variables(expected_constraint)
+        expected_constraint = expand_variables(expected_constraint, registrar=Registrar)
     result = ExpressionConverter(Registrar, TypeManager())(tree)
     if get_boolean:
         assert result.is_bool(), "Expected boolean result!"
@@ -152,7 +152,7 @@ def test_negative():
 
 
 def test_return():
-    print("expansion", type(expand_variables("ret == Any.Int(2)")))
+    print("expansion", type(expand_variables("ret == Any.Int(2)", Registrar)))
     conversion_assert("ret == Any.Int(2)", "return 2")
 
 

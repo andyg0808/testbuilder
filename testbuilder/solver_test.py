@@ -31,7 +31,7 @@ def check_solve(code, conditions, expected, unroll=1):
     parse = ast.parse(code)
     testdata = get_expression(Registrar, -1, parse, depth=unroll)
     if conditions:
-        condition_expression = expand_variables(conditions)
+        condition_expression = expand_variables(conditions, Registrar)
         expression = sbb.TestData(
             name=testdata.name,
             source_text=testdata.source_text,

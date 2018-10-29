@@ -11,9 +11,9 @@ Registrar = z3t.TypeBuilder().construct()
 def test_var_expand():
     assert z3.eq(
         Registrar.anytype.i(Registrar.make_any("a")) + z3.IntVal(1),
-        expand_variables("Any.i(a) + 1"),
+        expand_variables("Any.i(a) + 1", Registrar),
     )
-    result = expand_variables("c == Any.Int(Any.i(amphibian) + 12398)")
+    result = expand_variables("c == Any.Int(Any.i(amphibian) + 12398)", Registrar)
     assert z3.eq(
         Registrar.make_any("c")
         == Registrar.anytype.Int(
@@ -21,21 +21,21 @@ def test_var_expand():
         ),
         result,
     )
-    assert z3.eq(z3.IntVal("1"), expand_variables("1"))
+    assert z3.eq(z3.IntVal("1"), expand_variables("1", Registrar))
 
 
 def test_include_z3():
-    assert z3.eq(z3.BoolVal(True), expand_variables("z3.BoolVal(True)"))
+    assert z3.eq(z3.BoolVal(True), expand_variables("z3.BoolVal(True)", Registrar))
 
 
 def test_include_z3():
-    assert z3.eq(z3.BoolVal(True), expand_variables("true"))
+    assert z3.eq(z3.BoolVal(True), expand_variables("true", Registrar))
 
 
 def test_logical_notation():
     assert z3.eq(
         z3.And(z3.BoolVal(True), z3.Or(z3.Not(z3.BoolVal(False)), z3.BoolVal(True))),
-        expand_variables("true & (~false | true)"),
+        expand_variables("true & (~false | true)", Registrar),
     )
 
 
@@ -46,9 +46,9 @@ def test_low_precedence_logical_notation():
             z3.Or(z3.Not(z3.BoolVal(False)), z3.BoolVal(True)),
             z3.BoolVal(True),
         ),
-        expand_variables("true and (not false or true) and true"),
+        expand_variables("true and (not false or true) and true", Registrar),
     )
 
 
 def test_string_support():
-    assert z3.eq(z3.StringVal("abc"), expand_variables("'abc'"))
+    assert z3.eq(z3.StringVal("abc"), expand_variables("'abc'", Registrar))
