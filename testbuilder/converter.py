@@ -130,6 +130,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         assert v is not None
         return v
 
+    def visit_Array(self, node: n.Array) -> TypeUnion:
+        values = [self.visit(e) for e in node.elems]
+        raise RuntimeError("Implementation of Array is incomplete")
+
     def visit_Call(self, node: n.Call) -> TypeUnion:
         # Treat functions as true which we couldn't substitute
         return TypeUnion.wrap(z3.BoolVal(True))

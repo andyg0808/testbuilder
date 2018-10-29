@@ -58,6 +58,11 @@ class Str(expr):
 
 
 @dataclass
+class Array(expr):
+    elems: List[expr]
+
+
+@dataclass
 class Operator(Node):
     pass
 

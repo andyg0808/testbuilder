@@ -418,6 +418,9 @@ class AstBuilder(GenericVisitor):
         idx = self.variables.get(node.id)
         return n.Name(node.id, idx)
 
+    def visit_List(self, node: ast.List) -> n.Array:
+        return n.Array(elems=[self.visit(e) for e in node.elts])
+
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v
         # print(f"visiting generically to {node}")

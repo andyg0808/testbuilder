@@ -71,6 +71,10 @@ def test_string():
     conversion_assert('"def" + "hjk"')
 
 
+def test_array():
+    conversion_assert("[1,2,3]")
+
+
 def test_add():
     conversion_assert("1 + 2")
 
