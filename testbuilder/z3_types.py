@@ -534,6 +534,8 @@ def _simplify_logical(
     exprs: Iterable[z3.Bool], eliminate: bool, function: Callable[..., z3.Bool]
 ) -> z3.Bool:
     exprs = list(exprs)
+    if len(exprs) == 0:
+        raise RuntimeError("Need at least one expression to combine")
     # `eliminate_bool` is the value which, if present in exprs, would
     # make the entire expression evaluate to itself. For `and`, this
     # is `False`; for `or`, this is `True`.
@@ -552,10 +554,8 @@ def _simplify_logical(
     exprs = [e for e in exprs if not z3.eq(combine_bool, e)]
     if len(exprs) > 1:
         return function(*exprs)
-    elif len(exprs) == 1:
-        return exprs[0]
     else:
-        raise RuntimeError("Need at least one expression to combine")
+        return exprs[0]
 
 
 def diff_expression(
