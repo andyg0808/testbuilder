@@ -103,7 +103,16 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             res = self.visit(branch, node.parent)
             types.append(self.type_manager.pop())
             if res is not None:
-                branches.append(res)
+                if len(res) == 0:
+                    # This can happen if no assignments occur in a
+                    # loop. Then the bypass doesn't even have a
+                    # phi-fixing assignment, and it ends up completely
+                    # empty. By using True as a result, we avoid
+                    # making `bool_all` angry when deciding what to do
+                    # with this branch.
+                    branches.append([bool_true()])
+                else:
+                    branches.append(res)
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
             self.type_manager.merge_and_update(types)
