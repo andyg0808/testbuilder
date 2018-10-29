@@ -18,7 +18,7 @@ from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import filter_lines, ssa_to_expression
 from .utils import WriteDot
-from .z3_types import TypeBuilder
+from .z3_types import TypeBuilder, TypeRegistrar
 
 logger = Logger("generator")
 
@@ -32,9 +32,9 @@ def generate_tests(
     depth: int = 10,
     lines: Optional[Set[int]] = None,
 ) -> List[str]:
-    registrar = TypeBuilder().construct()
-
-    def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
+    def generate_test(
+        registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
+    ) -> str:
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
         if isinstance(request.code, sbb.BlockTree):
@@ -91,7 +91,9 @@ def generate_tests(
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
-    _generate_test = partial(generate_test, module)
+    builder = TypeBuilder()
+    registrar = builder.construct()
+    _generate_test = partial(generate_test, registrar, module)
 
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
         if lines is not None:
