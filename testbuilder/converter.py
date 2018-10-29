@@ -6,32 +6,19 @@ from __future__ import annotations
 
 import operator
 import re
-from copy import copy
-from functools import singledispatch
-from typing import (
-    Any,
-    Callable,
-    Mapping,
-    MutableMapping as MMapping,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Mapping, cast
+
+from toolz import groupby, mapcat
 
 import z3
-from toolz import groupby, mapcat
 
 from . import nodetree as n
 from .type_manager import TypeManager
 from .visitor import SimpleVisitor
 from .z3_types import (
     Any as AnyType,
-    AnyT,
     Expression,
     MoreMagic as Magic,
-    SortSet,
     TypeRegistrar,
     TypeUnion,
     VariableTypeUnion,

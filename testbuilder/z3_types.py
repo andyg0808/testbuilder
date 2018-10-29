@@ -11,7 +11,6 @@ from typing import (
     List,
     MutableMapping as MMapping,
     Optional,
-    Sequence,
     Set,
     Tuple,
     Type,
@@ -20,9 +19,10 @@ from typing import (
     cast,
 )
 
+from toolz import concat
+
 import z3
 from logbook import Logger
-from toolz import concat
 from typeassert import assertify
 from z3 import DatatypeRef
 

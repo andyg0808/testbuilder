@@ -1,11 +1,10 @@
 import ast
 import dataclasses
-from functools import reduce, singledispatch
+from functools import reduce
 from typing import (
     Any,
     List,
     MutableMapping as MMapping,
-    Optional,
     Sequence,
     Tuple,
     Type,

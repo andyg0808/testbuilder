@@ -6,7 +6,7 @@ from typing import Any, List
 
 from toolz import pipe
 
-from . import nodetree as n, ssa_basic_blocks as sbb
+from . import nodetree as n
 from .visitor import GatherVisitor
 
 
