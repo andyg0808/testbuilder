@@ -8,6 +8,9 @@ from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
 from .solver import solve
 from .variable_expander import expand_variables
+from .z3_types import Any as AnyType, TypeRegistrar
+
+Registrar = TypeRegistrar(AnyType)
 
 
 def compare_dicts(actual, expected):
@@ -38,7 +41,7 @@ def check_solve(code, conditions, expected, unroll=1):
     else:
         expression = testdata
     print("expression", expression)
-    res = solve(expression)
+    res = solve(Registrar, expression)
     if isinstance(expected, spotcheck):
         expected.check(res)
     else:

@@ -20,8 +20,6 @@ from testbuilder.generate import generate_tests
 NullHandler().push_application()
 StderrHandler(level="NOTICE").push_application()
 
-# from testbuilder.generate import generate_tests
-
 
 def main(filename: str) -> None:
     filepath = Path(filename)

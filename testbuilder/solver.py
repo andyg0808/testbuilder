@@ -1,12 +1,11 @@
 import re
 from typing import Any, Mapping, Optional
 
+import z3
 from typeassert import assertify
 
-import z3
-
 from . import ssa_basic_blocks as sbb
-from .z3_types import Any as AnyType, unwrap
+from .z3_types import TypeRegistrar
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 
@@ -14,7 +13,7 @@ Solution = Mapping[str, Any]
 
 
 @assertify
-def solve(data: sbb.TestData) -> Optional[Solution]:
+def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
     solver = z3.Solver()
     solver.add(data.expression)
     res = solver.check()
@@ -35,8 +34,8 @@ def solve(data: sbb.TestData) -> Optional[Solution]:
 
         pyvalue: Any
         if isinstance(value, z3.DatatypeRef):
-            if value.sort() == AnyType:
-                value = unwrap(value)
+            if value.sort() == registrar.anytype:
+                value = registrar.unwrap(value)
         if z3.is_int(value):
             pyvalue = value.as_long()
         elif z3.is_string(value):

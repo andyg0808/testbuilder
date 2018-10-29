@@ -3,9 +3,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple, Union
 
-from toolz import concat, pipe
-
 from logbook import Logger
+from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
@@ -19,6 +18,7 @@ from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import filter_lines, ssa_to_expression
 from .utils import WriteDot
+from .z3_types import Any as AnyType, TypeRegistrar
 
 logger = Logger("generator")
 
@@ -32,6 +32,8 @@ def generate_tests(
     depth: int = 10,
     lines: Optional[Set[int]] = None,
 ) -> List[str]:
+    registrar = TypeRegistrar(AnyType)
+
     def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
@@ -53,7 +55,7 @@ def generate_tests(
             WriteDot("generate.dot"),
             ssa_to_expression,
         )
-        solution: Optional[Solution] = solve(expr)
+        solution: Optional[Solution] = solve(registrar, expr)
         if not solution:
             logger.error(
                 f"Couldn't generate a test for line {target_line};"

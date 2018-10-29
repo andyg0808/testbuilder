@@ -339,20 +339,19 @@ class TypeRegistrar:
             return self.to_boolean(value.expand(), invert)
         return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
 
+    def unwrap(self, val: Expression) -> Expression:
+        """
+        Extracts a value from an Any type.
 
-def unwrap(val: Expression) -> Expression:
-    """
-    Extracts a value from an Any type.
-
-    Assumes all constructors for Any take a single argument, which is the
-    value stored in them.
-    """
-    if val.sort() == Any:
-        if val.num_args() == 1:
-            return val.arg(0)
-        else:
-            raise RuntimeError("Unexpected constructor for unwrapping")
-    return val
+        Assumes all constructors for Any take a single argument, which is the
+        value stored in them.
+        """
+        if val.sort() == self.anytype:
+            if val.num_args() == 1:
+                return val.arg(0)
+            else:
+                raise RuntimeError("Unexpected constructor for unwrapping")
+        return val
 
 
 MoreMagicFunc = Callable[..., T]
