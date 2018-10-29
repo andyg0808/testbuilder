@@ -8,9 +8,8 @@ import operator
 import re
 from typing import Any, Callable, Mapping, cast
 
-from toolz import groupby, mapcat
-
 import z3
+from toolz import groupby, mapcat
 
 from . import nodetree as n
 from .type_manager import TypeManager
@@ -24,7 +23,6 @@ from .z3_types import (
     VariableTypeUnion,
     bool_and,
     bool_or,
-    make_any,
     more_magic_tag as magic,
 )
 
@@ -44,7 +42,7 @@ Typelist: Mapping[str, TypeConstructor] = {
     "b": z3.Bool,
     "i": z3.Int,
     "s": z3.String,
-    "a": make_any,
+    "a": Registrar.make_any,
 }
 
 IntSort = z3.IntSort()
@@ -80,7 +78,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Return(self, node: n.Return) -> TypeUnion:
         if node.value:
             expr = self.visit(node.value)
-            return Registrar.assign(make_any("ret"), expr)
+            return Registrar.assign(Registrar.make_any("ret"), expr)
         else:
             return TypeUnion.wrap(z3.BoolVal(True))
 
@@ -121,7 +119,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         # `PrefixedName`s as well as normal `Name`s.
         variable = cast(VariableTypeUnion, self.visit(target)).name
         value = self.visit(node.e)
-        var = make_any(variable)
+        var = Registrar.make_any(variable)
         self.type_manager.put(variable, value.sorts)
         return Registrar.assign(var, value)
 
@@ -136,7 +134,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
         variable = get_result(node)
-        var = make_any(variable)
+        var = Registrar.make_any(variable)
         if node.value:
             expr = self.visit(node.value)
             self.type_manager.put(variable, expr.sorts)

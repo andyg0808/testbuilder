@@ -7,15 +7,17 @@ from astor import to_source  # type: ignore
 
 import z3  # type: ignore
 
-from .z3_types import Any as AnyType, make_any
+from .z3_types import Any as AnyType, TypeRegistrar
+
+Registrar = TypeRegistrar(AnyType)
 
 EVAL_GLOBALS = {
     "z3": z3,
     "true": z3.BoolVal(True),
     "false": z3.BoolVal(False),
     "type": type,
-    "Any": AnyType,
-    "make_any": make_any,
+    "Any": Registrar.anytype,
+    "make_any": Registrar.make_any,
 }
 MAGIC_FUNCS = {"z3": {"Int", "String"}, "make_any": None}
 EVAL_LOCALS = dict(getmembers(z3))

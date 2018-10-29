@@ -5,15 +5,18 @@ import z3
 from . import z3_types as z3t
 from .variable_expander import expand_variables
 
+Registrar = z3t.TypeRegistrar(z3t.Any)
+
 
 def test_var_expand():
     assert z3.eq(
-        z3t.Any.i(z3t.make_any("a")) + z3.IntVal(1), expand_variables("Any.i(a) + 1")
+        z3t.Any.i(Registrar.make_any("a")) + z3.IntVal(1),
+        expand_variables("Any.i(a) + 1"),
     )
     result = expand_variables("c == Any.Int(Any.i(amphibian) + 12398)")
     assert z3.eq(
-        z3t.make_any("c")
-        == z3t.Any.Int(z3t.Any.i(z3t.make_any("amphibian")) + z3.IntVal(12398)),
+        Registrar.make_any("c")
+        == z3t.Any.Int(z3t.Any.i(Registrar.make_any("amphibian")) + z3.IntVal(12398)),
         result,
     )
     assert z3.eq(z3.IntVal("1"), expand_variables("1"))

@@ -19,10 +19,9 @@ from typing import (
     cast,
 )
 
-from toolz import concat
-
 import z3
 from logbook import Logger
+from toolz import concat
 from typeassert import assertify
 from z3 import DatatypeRef
 
@@ -225,7 +224,7 @@ class VariableTypeUnion(TypeUnion):
     registrar: TypeRegistrar
 
     def _get_any(self) -> AnyT:
-        return make_any(self.name)
+        return self.registrar.make_any(self.name)
 
     def expand(self) -> TypeUnion:
         return self.registrar.expand(self.name, self.sorts)
@@ -266,10 +265,13 @@ class TypeRegistrar:
                 expressions=[], sorts=sorts, name=name, registrar=self
             )
         else:
-            expr = make_any(name)
+            expr = self.make_any(name)
             return VariableTypeUnion(
                 expressions=[], sorts=set(), name=name, registrar=self
             )
+
+    def make_any(self, name: str) -> AnyT:
+        return cast(AnyT, z3.Const(name, self.anytype))
 
     def expand(self, name: str, types: Set[z3.SortRef] = set()) -> TypeUnion:
         """
@@ -278,7 +280,7 @@ class TypeRegistrar:
             types: A set of sorts to restrict the variable to. If the
                 set is empty, does not restrict the variable at all.
         """
-        var = make_any(name)
+        var = self.make_any(name)
         exprs = []
         sorts: Set[z3.SortRef] = set()
         for i in range(self.anytype.num_constructors()):
@@ -336,10 +338,6 @@ class TypeRegistrar:
         if len(bools) == 0 and isinstance(value, VariableTypeUnion):
             return self.to_boolean(value.expand(), invert)
         return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
-
-
-def make_any(name: str) -> AnyT:
-    return cast(AnyT, z3.Const(name, Any))
 
 
 def unwrap(val: Expression) -> Expression:

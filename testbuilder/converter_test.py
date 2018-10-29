@@ -10,7 +10,9 @@ from .converter import ExpressionConverter
 from .ssa_repair import repair
 from .type_manager import TypeManager
 from .variable_expander import expand_variables
-from .z3_types import Any as AnyType, diff_expression, make_any, print_diff
+from .z3_types import Any as AnyType, TypeRegistrar, diff_expression, print_diff
+
+Registrar = TypeRegistrar(AnyType)
 
 Bool = z3.BoolSort()
 Int = z3.IntSort()
@@ -156,7 +158,7 @@ def test_return():
 
 def test_variable():
     conversion_assert(
-        AnyType.i(make_any("pyname_a")),
+        Registrar.anytype.i(Registrar.make_any("pyname_a")),
         "a",
         expected_type=Int,
         expected_constraint="Any.is_Int(pyname_a)",
