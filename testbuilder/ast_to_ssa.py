@@ -47,14 +47,17 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
     def visit_Module(self, node: ast.Module) -> sbb.Module:
         functions: MMapping[str, sbb.FunctionDef] = {}
+        classes: MMapping[str, sbb.ClassDef] = {}
         code = []
         for line in node.body:
             if isinstance(line, ast.FunctionDef):
                 functions[line.name] = self.visit(line)
+            elif isinstance(line, ast.ClassDef):
+                classes[line.name] = self.visit(line)
             else:
                 code.append(line)
         blocktree = self.body_visit(code)
-        return sbb.Module(functions, blocktree)
+        return sbb.Module(functions=functions, classes=classes, code=blocktree)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]

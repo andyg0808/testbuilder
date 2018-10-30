@@ -1,9 +1,9 @@
 import ast
+from dataclasses import dataclass, field
 from functools import reduce, singledispatch
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
-from dataclasses import dataclass, field
 
 from . import nodetree as n
 from .visitor import GatherVisitor
@@ -209,8 +209,16 @@ class FunctionDef(Positioned):
 
 
 @dataclass
+class ClassDef(Positioned):
+    name: str
+    variables: List[str]
+    functions: List[FunctionDef]
+
+
+@dataclass
 class Module:
     functions: Mapping[str, FunctionDef]
+    classes: Mapping[str, ClassDef]
     code: BlockTree
 
 
