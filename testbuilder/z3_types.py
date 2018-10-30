@@ -233,14 +233,22 @@ class VariableTypeUnion(TypeUnion):
             return self.expand().unwrap(*args)
 
 
-@dataclass
 class TypeBuilder:
+    any_index = 0
+
+    def __init__(self, name_part: str = "") -> None:
+        TypeBuilder.any_index += 1
+        print(f"Starting new TypeBuilder with index {TypeBuilder.any_index}")
+        if name_part:
+            self.datatype = z3.Datatype(f"{name_part}_{TypeBuilder.any_index}")
+        else:
+            self.datatype = z3.Datatype(f"Any_{TypeBuilder.any_index}")
+
     def construct(self) -> TypeRegistrar:
-        datatype = z3.Datatype("Any")
-        datatype.declare("Int", ("i", z3.IntSort()))
-        datatype.declare("Bool", ("b", z3.BoolSort()))
-        datatype.declare("String", ("s", z3.StringSort()))
-        return TypeRegistrar(cast(AnySort, datatype.create()))
+        self.datatype.declare("Int", ("i", z3.IntSort()))
+        self.datatype.declare("Bool", ("b", z3.BoolSort()))
+        self.datatype.declare("String", ("s", z3.StringSort()))
+        return TypeRegistrar(cast(AnySort, self.datatype.create()))
 
 
 @dataclass
