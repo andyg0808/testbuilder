@@ -61,6 +61,7 @@ def generate_tests(
                 f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
+            logger.debug(f"Couldn't solve {expr}")
             return ""
         _filter_inputs = partial(filter_inputs, function)
         _render_test = partial(
