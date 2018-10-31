@@ -13,7 +13,6 @@ from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .test_utils import write_dot
-from .type_inferencer import TypeInferencer
 from .type_manager import TypeManager
 from .visitor import GatherVisitor, SimpleVisitor
 from .z3_types import TypeRegistrar, TypeUnion, bool_all, bool_any, bool_true
