@@ -12,7 +12,7 @@ from .type_manager import TypeManager
 from .variable_expander import expand_variables
 from .z3_types import TypeBuilder, diff_expression, print_diff
 
-Registrar = TypeBuilder().construct()
+Registrar = TypeBuilder().wrappers().build()
 
 Bool = z3.BoolSort()
 Int = z3.IntSort()

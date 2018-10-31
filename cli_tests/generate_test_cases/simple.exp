@@ -4,6 +4,6 @@ spawn python3 ./run.py simple.py
 expect expected
 send "0\n"
 expect expected
-send "1\n"
+send "0\n"
 system pytest simple_test.py
 file delete simple_test.py

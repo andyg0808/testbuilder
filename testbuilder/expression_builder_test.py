@@ -10,8 +10,6 @@ from .expression_builder import get_expression
 from .variable_expander import expand_variables
 from .z3_types import TypeBuilder, diff_expression, print_diff
 
-Registrar = TypeBuilder().construct()
-
 
 def check_expression(
     code_string,
@@ -40,6 +38,10 @@ def check_expression(
         to include, but control structures will be included for all exit
         points. Currently does nothing.
     """
+    builder = TypeBuilder()
+    builder.wrappers()
+    Registrar = builder.build()
+
     if isinstance(expected, str):
         expected = expand_variables(expected, Registrar)
     _get_expression = partial(get_expression, Registrar, line, depth=depth)

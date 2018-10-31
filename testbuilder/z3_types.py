@@ -35,6 +35,12 @@ class AnyT(z3.DatatypeRef):
 
 
 class AnySort(z3.DatatypeSortRef):
+    def none(self) -> AnyT:
+        ...
+
+    def is_none(self, v: Expression) -> z3.Bool:
+        ...
+
     def Int(self, i: z3.Int) -> AnyT:
         ...
 
@@ -61,23 +67,6 @@ class AnySort(z3.DatatypeSortRef):
 
 
 T = TypeVar("T")
-
-
-def to_boolean(expr: Expression) -> z3.Bool:
-    """
-    Apply Python's truthy standards to make a boolean of an
-    expression.
-    """
-    if z3.is_int(expr):
-        return expr != z3.IntVal(0)
-    elif z3.is_bool(expr):
-        return cast(z3.Bool, expr)
-    elif z3.is_string(expr):
-        return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
-    else:
-        raise UnknownConversionException(
-            f"Can't convert {expr.sort().name()} to boolean"
-        )
 
 
 class UnknownConversionException(RuntimeError):
@@ -244,11 +233,30 @@ class TypeBuilder:
         else:
             self.datatype = z3.Datatype(f"Any_{TypeBuilder.any_index}")
 
-    def construct(self) -> TypeRegistrar:
+    def wrappers(self) -> TypeBuilder:
         self.datatype.declare("Int", ("i", z3.IntSort()))
         self.datatype.declare("Bool", ("b", z3.BoolSort()))
         self.datatype.declare("String", ("s", z3.StringSort()))
+        return self
+
+    def none(self) -> TypeBuilder:
+        self.datatype.declare("none")
+        return self
+
+    def structures(self) -> TypeBuilder:
+        self.datatype.declare(
+            "Pair", ("Pair_left", self.datatype), ("Pair_right", self.datatype)
+        )
+        return self
+
+    def build(self) -> TypeRegistrar:
         return TypeRegistrar(cast(AnySort, self.datatype.create()))
+
+    def construct(self) -> TypeRegistrar:
+        self.none()
+        self.wrappers()
+        self.structures()
+        return self.build()
 
 
 @dataclass
@@ -296,7 +304,11 @@ class TypeRegistrar:
         exprs = []
         sorts: Set[z3.SortRef] = set()
         for i in range(self.anytype.num_constructors()):
-            expr = self.anytype.accessor(i, 0)(var)
+            constructor = self.anytype.constructor(i)
+            if constructor.arity() == 1:
+                expr = self.anytype.accessor(i, 0)(var)
+            else:
+                expr = var
             # Allow restricting the expansion of the variable
             if len(types) > 0:
                 if expr.sort() not in types:
@@ -343,13 +355,37 @@ class TypeRegistrar:
         """
         bools: List[CExpr[Expression]] = []
         for cexpr in value.expressions:
-            expr = to_boolean(cexpr.expr)
+            expr = self.expr_to_boolean(cexpr.expr)
             if invert:
                 expr = bool_not(expr)
             bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
         if len(bools) == 0 and isinstance(value, VariableTypeUnion):
             return self.to_boolean(value.expand(), invert)
         return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
+
+    def expr_to_boolean(self, expr: Expression) -> z3.Bool:
+        """
+        Apply Python's truthy standards to make a boolean of an
+        expression.
+        """
+        if z3.is_int(expr):
+            return expr != z3.IntVal(0)
+        elif z3.is_bool(expr):
+            return cast(z3.Bool, expr)
+        elif z3.is_string(expr):
+            return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
+        elif expr.sort() == self.anytype:
+            if expr.decl() == self.anytype.none:
+                return z3.BoolVal(False)
+            else:
+                # For all anytype values that aren't None, assume they
+                # are true. This will not be the case for some types,
+                # but it's true for our current set of types
+                return z3.BoolVal(True)
+        else:
+            raise UnknownConversionException(
+                f"Can't convert {expr.sort().name()} to boolean"
+            )
 
     def unwrap(self, val: Expression) -> Expression:
         """
@@ -361,8 +397,6 @@ class TypeRegistrar:
         if val.sort() == self.anytype:
             if val.num_args() == 1:
                 return val.arg(0)
-            else:
-                raise RuntimeError("Unexpected constructor for unwrapping")
         return val
 
 

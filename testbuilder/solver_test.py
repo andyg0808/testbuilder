@@ -10,7 +10,7 @@ from .solver import solve
 from .variable_expander import expand_variables
 from .z3_types import TypeBuilder
 
-Registrar = TypeBuilder().construct()
+Registrar = TypeBuilder().wrappers().build()
 
 
 def compare_dicts(actual, expected):

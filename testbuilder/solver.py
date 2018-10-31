@@ -43,6 +43,14 @@ def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
             pyvalue = pyvalue[1:-1]
         elif z3.is_bool(value):
             pyvalue = bool(value)
+        elif isinstance(value, z3.DatatypeRef) and value.sort() == registrar.anytype:
+            if value.decl() == registrar.anytype.none.decl():
+                pyvalue = None
+            else:
+                print("word", registrar.anytype.none.sort())
+                raise TypeError(
+                    f"Couldn't extract Python value from {value} {value.decl()} {value.sort()}"
+                )
         else:
             raise TypeError(f"Couldn't find adapter for {type(value)}")
 

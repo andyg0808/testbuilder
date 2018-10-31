@@ -165,7 +165,7 @@ def test_boring():
         """
 from boring import caller
 def test_caller():
-    fishy = 0
+    fishy = None
     actual = caller(fishy)
     expected = 36
     assert actual == expected

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, List, Tuple, TypeVar
+from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union
 
 
 class AstRef:
@@ -28,7 +28,7 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
         ...
 
-    def constructor(self, i: int) -> Callable[[ExprRef], T]:
+    def constructor(self, i: int) -> FuncDeclRef:
         ...
 
     def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
@@ -39,7 +39,7 @@ class Datatype:
     def __init__(self, name: str) -> None:
         ...
 
-    def declare(self, name: str, *args: Tuple[str, SortRef]) -> None:
+    def declare(self, name: str, *args: Tuple[str, Union[SortRef, Datatype]]) -> None:
         ...
 
     def create(self) -> DatatypeSortRef:
@@ -104,6 +104,12 @@ class FuncDeclRef:
     def name(self) -> str:
         ...
 
+    def __call__(self, *args: ExprRef) -> ExprRef:
+        ...
+
+    def arity(self) -> int:
+        ...
+
 
 class FuncInterp:
     # This isn't quite accurate, but handling the types correctly is too much
@@ -113,6 +119,9 @@ class FuncInterp:
         ...
 
     def as_string(self) -> str:
+        ...
+
+    def as_list(self) -> List[Any]:
         ...
 
 
