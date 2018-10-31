@@ -7,6 +7,7 @@ Usage: run.py [options] <source.py>
 Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
     --lines=<line,line,line>  Lines to generate tests for
+    --verbose=<level>  Output all logging information for <level> and above
 """
 
 import sys
@@ -16,9 +17,6 @@ from docopt import docopt
 
 from logbook import NullHandler, StderrHandler
 from testbuilder.generate import generate_tests
-
-NullHandler().push_application()
-StderrHandler(level="NOTICE").push_application()
 
 
 def main(filename: str) -> None:
@@ -45,4 +43,12 @@ def main(filename: str) -> None:
 
 if __name__ == "__main__":
     opts = docopt(__doc__)
+
+    verbosity = opts["--verbose"]
+    NullHandler().push_application()
+    if verbosity:
+        StderrHandler(level=verbosity).push_application()
+    else:
+        StderrHandler(level="NOTICE").push_application()
+
     main(opts["<source.py>"])
