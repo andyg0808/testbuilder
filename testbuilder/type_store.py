@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import Mapping, MutableMapping as MMapping, Optional, Set, Tuple
-
 from dataclasses import dataclass, field
+from typing import Mapping, MutableMapping as MMapping, Optional, Set, Tuple
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .vartypes import AnyType, Type, Types
