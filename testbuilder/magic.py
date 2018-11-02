@@ -3,7 +3,18 @@ from __future__ import annotations
 import inspect
 from dataclasses import dataclass
 from itertools import product
-from typing import Callable, List, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    Callable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import z3
 from logbook import Logger
@@ -86,6 +97,10 @@ class Magic:
 
         return _magic
 
+    @staticmethod
+    def cartesian_product(args: Sequence[TypeUnion]) -> Iterator[Sequence[CExpr]]:
+        return product(*(arg.expressions for arg in args))
+
     def __call__(self, *args: TypeUnion) -> TypeUnion:
         """
         Call this Magic on the arguments. This will call the
@@ -97,11 +112,11 @@ class Magic:
         """
         log.info(f"Called {self.__class__} on {args}")
         functions = []
-        for arg_tuple in product(*(arg.expressions for arg in args)):
+        for arg_tuple in Magic.cartesian_product(args):
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
             if func is None:
                 continue
-            functions.append((func, arg_tuple))
+            functions.append((func, cast(Tuple, arg_tuple)))
         exprs = []
         sorts = set()
         for func, args in functions:
