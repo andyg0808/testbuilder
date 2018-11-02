@@ -8,10 +8,8 @@ from typing import (
     List,
     MutableMapping as MMapping,
     Optional,
-    Set,
     Tuple,
     TypeVar,
-    cast,
 )
 
 from logbook import Logger
@@ -266,7 +264,7 @@ class Filter(GenericVisitor[Coroutine]):
         parent = getattr(v, "parent", None)
         if parent:
             results["parent"] = yield from self.visit(parent, stop, targets)
-        return cast(sbb.BasicBlock, v.__class__(**results))
+        return v.__class__(**results)
 
 
 def filter_lines(target_line: int, module: sbb.Module) -> sbb.Request:
