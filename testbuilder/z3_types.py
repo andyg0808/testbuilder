@@ -423,7 +423,6 @@ def more_magic_tag(
 class MoreMagicRegistration:
     types: Tuple
     function: MoreMagicFunc
-    require_matching: bool = False
 
 
 class MoreMagic:
@@ -457,17 +456,8 @@ class MoreMagic:
         res = MoreMagic()
         return res.magic(*types)
 
-    @staticmethod
-    def meq(count: int) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
-        """
-        Creates an instance of MoreMagic with `require_matching` set
-        True and registers it for all groups of `count` arguments.
-        """
-        res = MoreMagic()
-        return res.magic(*(object for i in range(count)), require_matching=True)
-
     def magic(
-        self, *types: Union[z3.SortRef, Type], require_matching: bool = False
+        self, *types: Union[z3.SortRef, Type]
     ) -> Callable[[MoreMagicFunc], MoreMagic]:
         """
         To register an existing function for some argument types, call
@@ -484,9 +474,7 @@ class MoreMagic:
         """
 
         def _magic(func: MoreMagicFunc) -> MoreMagic:
-            registration = MoreMagicRegistration(
-                types=tuple(types), require_matching=require_matching, function=func
-            )
+            registration = MoreMagicRegistration(types=tuple(types), function=func)
             self.funcref.append(registration)
             return self
 
@@ -563,11 +551,6 @@ class MoreMagic:
 
         for registration in self.funcref:
             log.info(f"Checking {registration.types} against {args}")
-            if registration.require_matching:
-                reduction_sort = reduce(fuzziest, args)
-                if not all(fuzzy_sort_equality(sort, reduction_sort) for sort in args):
-                    continue
-
             if all(sort_compare(*tu) for tu in zip(args, registration.types)):
                 return registration.function
         return None
