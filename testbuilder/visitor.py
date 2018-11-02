@@ -1,9 +1,9 @@
+import dataclasses
 import inspect
 import re
 import traceback
 from abc import abstractmethod
 from typing import (
-    get_type_hints,
     Any,
     Callable,
     Generator,
@@ -18,12 +18,11 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_type_hints,
 )
 
 from logbook import Logger
 from toolz import mapcat
-
-import dataclasses
 
 log = Logger("visitor")
 
@@ -237,7 +236,7 @@ class UpdateVisitor(GenericVisitor):
     def generic_visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         try:
             fields = dataclasses.fields(v)
-        except TypeError as err:
+        except TypeError:
             # If we are trying to look for fields on something
             # that isn't a dataclass, it's probably a primitive
             # field type, so just stop here.
@@ -255,4 +254,4 @@ class UpdateVisitor(GenericVisitor):
             else:
                 res = self.visit(data, *args, **kwargs)
             results[f.name] = res
-        return cast(A, v.__class__(**results))
+        return v.__class__(**results)  # type: ignore
