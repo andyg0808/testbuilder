@@ -279,14 +279,9 @@ class TypeRegistrar:
             }
 
             print(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
-            return VariableTypeUnion(
-                expressions=[], sorts=sorts, name=name, registrar=self
-            )
         else:
-            expr = self.make_any(name)
-            return VariableTypeUnion(
-                expressions=[], sorts=set(), name=name, registrar=self
-            )
+            sorts = set()
+        return VariableTypeUnion(expressions=[], sorts=sorts, name=name, registrar=self)
 
     def make_any(self, name: str) -> AnyT:
         return cast(AnyT, z3.Const(name, self.anytype))
