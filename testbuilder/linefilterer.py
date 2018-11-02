@@ -1,4 +1,5 @@
 # from __future__ import annotations
+import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -13,8 +14,6 @@ from typing import (
 )
 
 from logbook import Logger
-
-import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
@@ -126,7 +125,8 @@ def target_finder(obj: Any) -> Optional[SSAName]:
 
 @target_finder.register(n.Set)
 def find_Set_target(obj: n.Set) -> SSAName:
-    return (obj.target.id, obj.target.set_count)
+    name = obj.target.find_name()
+    return (name.id, name.set_count)
 
 
 class Filter(GenericVisitor[Coroutine]):

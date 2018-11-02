@@ -5,6 +5,7 @@ functions for the Python AST.
 """
 from __future__ import annotations
 
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
 
@@ -126,7 +127,7 @@ class UnaryOp(expr):
 
 @dataclass
 class Set(stmt):
-    target: Name
+    target: LValue
     e: expr
 
 
@@ -166,10 +167,28 @@ class NameConstant(expr):
     value: Any
 
 
+class LValue:
+    @abstractmethod
+    def find_name(self) -> Name:
+        ...
+
+
 @dataclass
-class Name(expr):
+class Attribute(expr, LValue):
+    value: LValue
+    attr: str
+
+    def find_name(self) -> Name:
+        return self.value.find_name()
+
+
+@dataclass
+class Name(expr, LValue):
     id: str
     set_count: int
+
+    def find_name(self) -> Name:
+        return self
 
     def __post_init__(self) -> None:
         assert isinstance(self.id, str)
