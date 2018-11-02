@@ -332,6 +332,10 @@ class TypeRegistrar:
             return self.anytype.String(val)  # type: ignore
         if val.sort() == z3.BoolSort():
             return self.anytype.Bool(val)  # type: ignore
+        if val.sort() == self.anytype:
+            # This can happen if we already have a wrapped type, or if
+            # the type is a non-wrapper type
+            return val  # type: ignore
         raise RuntimeError("Unknown type being wrapped")
 
     @assertify
