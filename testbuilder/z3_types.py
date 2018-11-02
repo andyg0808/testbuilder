@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
+from functools import reduce
 from itertools import product
 from typing import (
     Any as PyAny,
@@ -414,7 +415,11 @@ def more_magic_tag(
     return _magic
 
 
-MoreMagicTag = Tuple
+@dataclass
+class MoreMagicRegistration:
+    types: Tuple
+    function: MoreMagicFunc
+    require_matching: bool = False
 
 
 class MoreMagic:
@@ -432,11 +437,12 @@ class MoreMagic:
     """
 
     def __init__(self) -> None:
-        self.funcref: MMapping[MoreMagicTag, MoreMagicFunc] = {}
+        self.funcref: List[MoreMagicRegistration] = []
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
             if magic is not None:
-                self.funcref[magic] = method
+                registration = MoreMagicRegistration(function=method, types=magic)
+                self.funcref.append(registration)
 
     @staticmethod
     def m(*types: Union[z3.SortRef, Type]) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
@@ -447,8 +453,17 @@ class MoreMagic:
         res = MoreMagic()
         return res.magic(*types)
 
+    @staticmethod
+    def meq(count: int) -> Callable[[MoreMagicFunc], MoreMagicFunc]:
+        """
+        Creates an instance of MoreMagic with `require_matching` set
+        True and registers it for all groups of `count` arguments.
+        """
+        res = MoreMagic()
+        return res.magic(*(object for i in range(count)), require_matching=True)
+
     def magic(
-        self, *types: Union[z3.SortRef, Type]
+        self, *types: Union[z3.SortRef, Type], require_matching: bool = False
     ) -> Callable[[MoreMagicFunc], MoreMagic]:
         """
         To register an existing function for some argument types, call
@@ -465,7 +480,10 @@ class MoreMagic:
         """
 
         def _magic(func: MoreMagicFunc) -> MoreMagic:
-            self.funcref[tuple(types)] = func
+            registration = MoreMagicRegistration(
+                types=tuple(types), require_matching=require_matching, function=func
+            )
+            self.funcref.append(registration)
             return self
 
         return _magic
@@ -524,16 +542,30 @@ class MoreMagic:
     def __select(self, args: Tuple) -> Optional[Callable[..., Expression]]:
         log.info(f"Selecting implementation using {args}")
 
+        def fuzzy_sort_equality(sub: z3.SortRef, parent: z3.SortRef) -> bool:
+            return parent == sub or parent.subsort(sub)
+
+        def fuzziest(left: z3.SortRef, right: z3.SortRef) -> z3.SortRef:
+            if fuzzy_sort_equality(left, right):
+                return right
+            else:
+                return left
+
         def sort_compare(arg_sort: z3.SortRef, func_key: z3.SortRef) -> bool:
             if isinstance(func_key, z3.SortRef):
-                return func_key == arg_sort or func_key.subsort(arg_sort)
+                return fuzzy_sort_equality(arg_sort, func_key)
             elif isinstance(func_key, type):
                 return isinstance(arg_sort, func_key)
 
-        for key, func in self.funcref.items():
-            log.info(f"Checking {key} against {args}")
-            if all(sort_compare(*tu) for tu in zip(args, key)):
-                return func
+        for registration in self.funcref:
+            log.info(f"Checking {registration.types} against {args}")
+            if registration.require_matching:
+                reduction_sort = reduce(fuzziest, args)
+                if not all(fuzzy_sort_equality(sort, reduction_sort) for sort in args):
+                    continue
+
+            if all(sort_compare(*tu) for tu in zip(args, registration.types)):
+                return registration.function
         return None
 
 
