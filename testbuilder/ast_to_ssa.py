@@ -355,11 +355,15 @@ class StatementVisitor(GenericVisitor):
         target = self.get_target_variable(node.targets[0])
         return n.Set(line=node.lineno, target=target, e=expr)
 
-    def get_target_variable(self, node: ast.expr) -> n.Name:
+    def get_target_variable(self, node: ast.expr) -> n.LValue:
         if isinstance(node, ast.Name):
             var: n.Name = self.expr_visitor.visit_Name(node)
             var.set_count = self.variables.get_target(node.id)
             return var
+        elif isinstance(node, ast.Attribute):
+            return n.Attribute(
+                value=self.get_target_variable(node.value), attr=node.attr
+            )
         else:
             raise RuntimeError("Unknown target type")
 
