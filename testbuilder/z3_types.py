@@ -227,11 +227,12 @@ class TypeBuilder:
 
     def __init__(self, name_part: str = "") -> None:
         TypeBuilder.any_index += 1
-        print(f"Starting new TypeBuilder with index {TypeBuilder.any_index}")
+        self.index = TypeBuilder.any_index
+        print(f"Starting new TypeBuilder with index {self.index}")
         if name_part:
-            self.datatype = z3.Datatype(f"{name_part}_{TypeBuilder.any_index}")
+            self.datatype = z3.Datatype(f"{name_part}_{self.index}")
         else:
-            self.datatype = z3.Datatype(f"Any_{TypeBuilder.any_index}")
+            self.datatype = z3.Datatype(f"Any_{self.index}")
 
     def wrappers(self) -> TypeBuilder:
         self.datatype.declare("Int", ("i", z3.IntSort()))
