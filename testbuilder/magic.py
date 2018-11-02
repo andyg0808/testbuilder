@@ -147,10 +147,7 @@ class Magic:
                 f"Problem running {func}({', '.join(str(a) for a in args)})"
             ) from e
         constraints = list(concat(arg.constraints for arg in args))
-        if len(constraints) > 0:
-            return CExpr(expr=res, constraints=constraints)
-        else:
-            return CExpr(expr=res)
+        return CExpr(expr=res, constraints=constraints)
 
     def __select(self, args: Tuple) -> Optional[Callable[..., Expression]]:
         log.info(f"Selecting implementation using {args}")
