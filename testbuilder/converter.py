@@ -12,17 +12,16 @@ import z3
 from toolz import groupby, mapcat
 
 from . import nodetree as n
+from .magic import Magic, magic_tag as magic
 from .type_manager import TypeManager
 from .visitor import SimpleVisitor
 from .z3_types import (
     Expression,
-    MoreMagic as Magic,
     TypeRegistrar,
     TypeUnion,
     VariableTypeUnion,
     bool_and,
     bool_or,
-    more_magic_tag as magic,
 )
 
 OpFunc = Callable[..., TypeUnion]
