@@ -18,6 +18,9 @@ class SSAVisitor(SimpleVisitor[str]):
         op = self.visit(node.op)
         return f"{left} {op} {right}"
 
+    def visit_Attribute(self, node: n.Attribute) -> str:
+        return f"{self.visit(node.value)}.{node.attr}"
+
     def visit_Name(self, node: n.Name) -> str:
         return f"${node.id}_{node.set_count}"
 
