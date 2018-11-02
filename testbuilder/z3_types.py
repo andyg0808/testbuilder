@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
-from functools import reduce
 from itertools import product
 from typing import (
     Any as PyAny,
     Callable,
+    Generator,
     Generic,
     Iterable,
     List,
@@ -264,6 +264,10 @@ class TypeBuilder:
 @dataclass
 class TypeRegistrar:
     anytype: AnySort
+
+    def constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
+        for i in range(self.anytype.num_constructors()):
+            yield self.anytype.constructor(i)
 
     @assertify
     def AllTypes(self, name: str, restricted: SortSet = set()) -> VariableTypeUnion:
