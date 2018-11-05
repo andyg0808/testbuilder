@@ -378,7 +378,7 @@ class TypeRegistrar:
         elif z3.is_string(expr):
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
-            if expr.decl() == self.anytype.none:
+            if hasattr(self.anytype, "none") and expr.decl() == self.anytype.none:
                 return z3.BoolVal(False)
             else:
                 # For all anytype values that aren't None, assume they
