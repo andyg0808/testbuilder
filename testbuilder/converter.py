@@ -214,7 +214,15 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
         class EqMagic(Magic):
-            # Need to except VariableTypeUnions
+            def should_expand(self, *args: TypeUnion) -> bool:
+                left, right = args
+                if not isinstance(left, VariableTypeUnion):
+                    return True
+                if not isinstance(right, VariableTypeUnion):
+                    return True
+                print("not expanding")
+                return False
+
             @magic(z3.SortRef, z3.SortRef)
             def equality(self, left: Expression, right: Expression) -> z3.Bool:
                 left_sort = left.sort()
@@ -229,6 +237,14 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
     def visit_NotEq(self, node: n.NotEq) -> OpFunc:
         class NotEqMagic(Magic):
+            def should_expand(self, *args: TypeUnion) -> bool:
+                left, right = args
+                if not isinstance(left, VariableTypeUnion):
+                    return True
+                if not isinstance(right, VariableTypeUnion):
+                    return True
+                return False
+
             @magic(z3.SortRef, z3.SortRef)
             def inequality(self, left: Expression, right: Expression) -> z3.Bool:
                 left_sort = left.sort()

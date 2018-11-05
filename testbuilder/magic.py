@@ -97,6 +97,9 @@ class Magic:
 
         return _magic
 
+    def should_expand(self, *args: TypeUnion) -> bool:
+        return False
+
     @staticmethod
     def cartesian_product(args: Sequence[TypeUnion]) -> Iterator[Sequence[CExpr]]:
         return product(*(arg.expressions for arg in args))
@@ -126,6 +129,11 @@ class Magic:
         """
         log.info(f"Called {self.__class__} on {args}")
         functions = []
+        if self.should_expand(*args) and Magic.unexpanded(args):
+            print("Expanding", args)
+            newargs = Magic.expand(args)
+            print("Expanded", newargs)
+            return self(*newargs)
         for arg_tuple in Magic.cartesian_product(args):
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
             if func is None:
