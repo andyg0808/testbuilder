@@ -1,8 +1,5 @@
-import pytest
-
 import z3
 
-from . import z3_types as z3t
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
 

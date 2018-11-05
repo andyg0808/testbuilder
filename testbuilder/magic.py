@@ -21,9 +21,10 @@ from toolz import concat
 import z3
 from dataclasses import dataclass
 
+from .constrained_expression import ConstrainedExpression as CExpr
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import CExpr, Expression
+from .z3_types import Expression
 
 log = Logger("Magic")
 

@@ -5,9 +5,8 @@ from typing import Callable, List, Optional, cast
 import z3
 from dataclasses import dataclass
 
-from .z3_types import ConstrainedExpression, Expression, SortSet, bool_or
-
-CExpr = ConstrainedExpression
+from .constrained_expression import ConstrainedExpression as CExpr
+from .z3_types import Expression, SortSet, bool_or
 
 
 @dataclass(frozen=True)

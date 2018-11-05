@@ -7,21 +7,10 @@ from dataclasses import dataclass
 from typeassert import assertify
 from z3 import DatatypeRef
 
+from .constrained_expression import ConstrainedExpression as CExpr
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import (
-    AnySort,
-    AnyT,
-    ConstrainedExpression,
-    Expression,
-    SortSet,
-    UnknownConversionException,
-    bool_and,
-    bool_not,
-    bool_or,
-)
-
-CExpr = ConstrainedExpression
+from .z3_types import AnySort, AnyT, Expression, SortSet, bool_and, bool_not, bool_or
 
 
 @dataclass
@@ -181,3 +170,7 @@ class TypeRegistrar:
             if val.num_args() == 1:
                 return val.arg(0)
         return val
+
+
+class UnknownConversionException(RuntimeError):
+    pass
