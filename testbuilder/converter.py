@@ -75,7 +75,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_NameConstant(self, node: n.NameConstant) -> TypeUnion:
         return Constants[node.value]
 
-    def visit_Name(self, node: n.Name) -> TypeUnion:
+    def visit_Name(self, node: n.Name) -> VariableTypeUnion:
+        # TODO: Can any of this be replaced with make_any
         variable = get_variable(node.id, node.set_count)
         sorts = self.type_manager.get(variable)
         if sorts is not None:
