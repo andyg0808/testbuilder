@@ -113,6 +113,10 @@ def test_eq():
     conversion_assert("4 == 4")
 
 
+def test_var_eq():
+    conversion_assert("pyname_a == pyname_b", "a == b")
+
+
 def test_implicit_bool_negation():
     conversion_assert(
         "Not(Any.b(pyname_a))",
