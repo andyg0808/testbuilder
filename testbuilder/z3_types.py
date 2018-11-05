@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Iterable, List, Optional, Set, Tuple
 
-from logbook import Logger
-
 import z3
-
-log = Logger("z3_types")
 
 Expression = z3.ExprRef
 
