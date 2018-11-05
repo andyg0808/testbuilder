@@ -120,8 +120,44 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return v
 
     def visit_Call(self, node: n.Call) -> TypeUnion:
+        print("call node", node)
+        print(f"type of function: {type(node)}")
+        if isinstance(node.func, n.Name):
+            function = node.func.id
+            for constructor in self.registrar.constructors():
+                print(f"trying {constructor.name()} on {function}")
+                if constructor.name() == function:
+                    args = [self.visit(v) for v in node.args]
+                    assert len(node.keywords) == 0
+                    union = self.construct_call(constructor, args)
+                    print("union is ", union)
+                    return union
+
         # Treat functions as true which we couldn't substitute
         return TypeUnion.wrap(z3.BoolVal(True))
+
+    def construct_call(
+        self, constructor: z3.FuncDeclRef, args: Sequence[TypeUnion]
+    ) -> TypeUnion:
+
+        print("Constructing call", constructor, args)
+        exprs = []
+        sorts = set()
+        for arg_tuple in Magic.cartesian_product(args):
+            print("running for", arg_tuple)
+            expr = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
+            constraints = list(mapcat(lambda x: x.constraints, arg_tuple))
+            if len(constraints) > 0:
+                cexpr = CExpr(expr=expr, constraints=list(constraints))
+            else:
+                cexpr = CExpr(expr=expr)
+            exprs.append(cexpr)
+            sorts.add(expr.sort())
+        if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
+            newargs = Magic.expand_args(args)
+            return self.construct_call(constructor, newargs)
+
+        return TypeUnion(expressions=exprs, sorts=sorts)
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:
         variable = get_result(node)
