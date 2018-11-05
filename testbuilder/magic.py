@@ -101,6 +101,16 @@ class Magic:
     def cartesian_product(args: Sequence[TypeUnion]) -> Iterator[Sequence[CExpr]]:
         return product(*(arg.expressions for arg in args))
 
+    @staticmethod
+    def expand_args(args: Sequence[TypeUnion]) -> Sequence[TypeUnion]:
+        newargs = []
+        for arg in args:
+            if isinstance(arg, VariableTypeUnion):
+                newargs.append(arg.expand())
+            else:
+                newargs.append(arg)
+        return newargs
+
     def __call__(self, *args: TypeUnion) -> TypeUnion:
         """
         Call this Magic on the arguments. This will call the
@@ -126,12 +136,7 @@ class Magic:
             exprs.append(res)
             sorts.add(res.expr.sort())
         if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
-            newargs = []
-            for arg in args:
-                if isinstance(arg, VariableTypeUnion):
-                    newargs.append(arg.expand())
-                else:
-                    newargs.append(arg)
+            newargs = Magic.expand_args(args)
             return self(*newargs)
         return TypeUnion(exprs, sorts)
 
