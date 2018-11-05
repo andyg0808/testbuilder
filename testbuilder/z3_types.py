@@ -163,7 +163,11 @@ class TypeUnion:
             choices = []
             for cexpr in self.expressions:
                 if cexpr.expr.sort() == choice:
-                    choices.append(cexpr)
+                    if constraint is not None:
+                        if z3.eq(constraint, cexpr.constraint()):
+                            choices.append(cexpr)
+                    else:
+                        choices.append(cexpr)
             assert (
                 len(choices) == 1
             ), f"Found {len(choices)} expressions of sort {choice}; need one to unwrap."
