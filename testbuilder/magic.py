@@ -102,7 +102,11 @@ class Magic:
         return product(*(arg.expressions for arg in args))
 
     @staticmethod
-    def expand_args(args: Sequence[TypeUnion]) -> Sequence[TypeUnion]:
+    def unexpanded(args: Sequence[TypeUnion]) -> bool:
+        return any(isinstance(arg, VariableTypeUnion) for arg in args)
+
+    @staticmethod
+    def expand(args: Sequence[TypeUnion]) -> Sequence[TypeUnion]:
         newargs = []
         for arg in args:
             if isinstance(arg, VariableTypeUnion):
@@ -135,8 +139,8 @@ class Magic:
                 continue
             exprs.append(res)
             sorts.add(res.expr.sort())
-        if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
-            newargs = Magic.expand_args(args)
+        if len(exprs) == 0 and Magic.unexpanded(args):
+            newargs = Magic.expand(args)
             return self(*newargs)
         return TypeUnion(exprs, sorts)
 
