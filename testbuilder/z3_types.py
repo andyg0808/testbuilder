@@ -318,10 +318,16 @@ class TypeRegistrar:
 
     def wrap(self, val: Expression) -> AnyT:
         if val.sort() == z3.IntSort():
+            if val.decl() == self.anytype.i:
+                return val.arg(0)  # type: ignore
             return self.anytype.Int(val)  # type: ignore
         if val.sort() == z3.StringSort():
+            if val.decl() == self.anytype.s:
+                return val.arg(0)  # type: ignore
             return self.anytype.String(val)  # type: ignore
         if val.sort() == z3.BoolSort():
+            if val.decl() == self.anytype.b:
+                return val.arg(0)  # type: ignore
             return self.anytype.Bool(val)  # type: ignore
         if val.sort() == self.anytype:
             # This can happen if we already have a wrapped type, or if
