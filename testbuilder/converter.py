@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import operator
 import re
-from typing import Any, Callable, Mapping, cast
+from typing import Any, Callable, Mapping, Sequence, Tuple, cast
 
 import z3
 from toolz import groupby, mapcat
@@ -14,8 +14,11 @@ from toolz import groupby, mapcat
 from . import nodetree as n
 from .magic import Magic, magic_tag as magic
 from .type_manager import TypeManager
+from .utils import crash
 from .visitor import SimpleVisitor
 from .z3_types import (
+    AnyT,
+    CExpr,
     Expression,
     TypeRegistrar,
     TypeUnion,
@@ -42,7 +45,7 @@ BoolSort = z3.BoolSort()
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def __init__(self, registrar: TypeRegistrar, type_manager: TypeManager) -> None:
         super().__init__()
-        self.visit_oper = OperatorConverter()
+        self.visit_oper = OperatorConverter(registrar)
         self.registrar = registrar
         self.type_manager = type_manager
 
@@ -154,7 +157,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             exprs.append(cexpr)
             sorts.add(expr.sort())
         if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
-            newargs = Magic.expand_args(args)
+            newargs = Magic.expand(args)
             return self.construct_call(constructor, newargs)
 
         return TypeUnion(expressions=exprs, sorts=sorts)
@@ -173,6 +176,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
 
 class OperatorConverter(SimpleVisitor[OpFunc]):
+    def __init__(self, registrar: TypeRegistrar) -> None:
+        self.registrar = registrar
+
     def visit_Add(self, node: n.Add) -> OpFunc:
         class AddMagic(Magic):
             @magic(IntSort, IntSort)
