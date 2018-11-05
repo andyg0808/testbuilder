@@ -112,6 +112,10 @@ class USub(UnaryOperator):
     pass
 
 
+class Not(UnaryOperator):
+    pass
+
+
 @dataclass
 class BinOp(expr):
     left: expr

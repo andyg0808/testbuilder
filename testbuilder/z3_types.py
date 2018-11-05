@@ -356,14 +356,19 @@ class TypeRegistrar:
         applying truthy standards as needed in order to convert
         non-boolean types.
         """
+        if isinstance(value, VariableTypeUnion):
+            # Always want to work on expanded version, because a
+            # VariableTypeUnion is either unconstrained or empty. If
+            # unconstrained, we need to expand to get constrained
+            # values. If empty, expanding gets the appropriate
+            # constrained values.
+            return self.to_boolean(value.expand(), invert)
         bools: List[CExpr[Expression]] = []
         for cexpr in value.expressions:
             expr = self.expr_to_boolean(cexpr.expr)
             if invert:
                 expr = bool_not(expr)
             bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
-        if len(bools) == 0 and isinstance(value, VariableTypeUnion):
-            return self.to_boolean(value.expand(), invert)
         return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
 
     def expr_to_boolean(self, expr: Expression) -> z3.Bool:

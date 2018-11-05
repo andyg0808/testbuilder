@@ -246,6 +246,12 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
     def visit_Gt(self, node: n.Gt) -> OpFunc:
         return Magic.m(IntSort, IntSort)(operator.gt)
 
+    def visit_Not(self, node: n.Not) -> OpFunc:
+        def not_func(value: TypeUnion) -> TypeUnion:
+            return self.registrar.to_boolean(value, invert=True)
+
+        return not_func
+
     def visit_USub(self, node: n.USub) -> OpFunc:
         return Magic.m(IntSort)(lambda x: -x)
 

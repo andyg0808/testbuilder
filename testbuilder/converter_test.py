@@ -113,6 +113,15 @@ def test_eq():
     conversion_assert("4 == 4")
 
 
+def test_implicit_bool_negation():
+    conversion_assert(
+        "Not(Any.b(pyname_a))",
+        "not a",
+        expected_type=Bool,
+        expected_constraint="Any.is_Bool(pyname_a)",
+    )
+
+
 def test_bounding():
     expected = z3.And(z3.IntVal(1) < z3.IntVal(2), z3.IntVal(2) < z3.IntVal(3))
     conversion_assert(expected, "1 < 2 < 3")
