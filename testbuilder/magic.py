@@ -134,7 +134,7 @@ class Magic:
         exprs = []
         sorts = set()
         for func, args in functions:
-            res = self.__call_on_exprs(func, args)
+            res = self.__call_on_exprs(func.function, args)
             if res is None:
                 continue
             exprs.append(res)
@@ -158,7 +158,7 @@ class Magic:
         constraints = list(concat(arg.constraints for arg in args))
         return CExpr(expr=res, constraints=constraints)
 
-    def __select(self, args: Tuple) -> Optional[Callable[..., Expression]]:
+    def __select(self, args: Tuple) -> Optional[MagicRegistration]:
         log.info(f"Selecting implementation using {args}")
 
         def fuzzy_sort_equality(sub: z3.SortRef, parent: z3.SortRef) -> bool:
@@ -179,5 +179,5 @@ class Magic:
         for registration in self.funcref:
             log.info(f"Checking {registration.types} against {args}")
             if all(sort_compare(*tu) for tu in zip(args, registration.types)):
-                return registration.function
+                return registration
         return None
