@@ -2,9 +2,9 @@ from functools import singledispatch
 from typing import Callable, List, Optional, Tuple, Union, cast
 
 from astor import to_source  # type: ignore
+from toolz import mapcat, pipe
 
 import z3
-from toolz import mapcat, pipe
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -14,8 +14,10 @@ from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .test_utils import write_dot
 from .type_manager import TypeManager
+from .type_registrar import TypeRegistrar
+from .type_union import TypeUnion
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import TypeRegistrar, TypeUnion, bool_all, bool_any, bool_true
+from .z3_types import bool_all, bool_any, bool_true
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]

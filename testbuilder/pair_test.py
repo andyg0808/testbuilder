@@ -2,13 +2,14 @@ import ast
 from functools import partial
 
 import pytest
-
-import z3
 from toolz import pipe
 
+import z3
+
 from .expression_builder import get_expression
+from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
-from .z3_types import TypeBuilder, diff_expression, print_diff
+from .z3_types import diff_expression, print_diff
 
 
 def check_expression(

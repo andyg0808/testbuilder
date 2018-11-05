@@ -5,7 +5,7 @@ import z3
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
-from .z3_types import TypeRegistrar
+from .type_registrar import TypeRegistrar
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 

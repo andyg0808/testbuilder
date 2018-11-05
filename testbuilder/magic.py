@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
 from itertools import product
 from typing import (
     Callable,
@@ -16,11 +15,15 @@ from typing import (
     cast,
 )
 
-import z3
 from logbook import Logger
 from toolz import concat
 
-from .z3_types import CExpr, Expression, TypeUnion, VariableTypeUnion
+import z3
+from dataclasses import dataclass
+
+from .type_union import TypeUnion
+from .variable_type_union import VariableTypeUnion
+from .z3_types import CExpr, Expression
 
 log = Logger("Magic")
 

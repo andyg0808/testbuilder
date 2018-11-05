@@ -15,8 +15,9 @@ from typing import (
     Tuple,
 )
 
-import z3
 from toolz import pipe
+
+import z3
 
 from .ast_to_ssa import ast_to_ssa
 from .basic_block import BasicBlock
@@ -24,9 +25,10 @@ from .converter import get_variable
 from .slicing import take_slice
 from .ssa_basic_blocks import TestData
 from .ssa_to_expression import Expression, ExprList, ssa_lines_to_expression
+from .type_registrar import TypeRegistrar
 from .utils import pipe_print
 from .variable_manager import VarMapping
-from .z3_types import TypeRegistrar, bool_and
+from .z3_types import bool_and
 
 NULL = z3.DeclareSort("None")
 

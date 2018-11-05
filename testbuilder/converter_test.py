@@ -8,9 +8,10 @@ from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
 from .converter import ExpressionConverter
 from .ssa_repair import repair
+from .type_builder import TypeBuilder
 from .type_manager import TypeManager
 from .variable_expander import expand_variables
-from .z3_types import TypeBuilder, diff_expression, print_diff
+from .z3_types import diff_expression, print_diff
 
 Registrar = TypeBuilder().wrappers().build()
 

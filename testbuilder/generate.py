@@ -17,8 +17,9 @@ from .renderer import prompt_and_render_test
 from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import filter_lines, ssa_to_expression
+from .type_builder import TypeBuilder
+from .type_registrar import TypeRegistrar
 from .utils import WriteDot
-from .z3_types import TypeBuilder, TypeRegistrar
 
 logger = Logger("generator")
 

@@ -7,7 +7,7 @@ from astor import to_source  # type: ignore
 
 import z3  # type: ignore
 
-from .z3_types import TypeRegistrar
+from .type_registrar import TypeRegistrar
 
 MAGIC_FUNCS = {"z3": {"Int", "String"}, "make_any": None}
 
