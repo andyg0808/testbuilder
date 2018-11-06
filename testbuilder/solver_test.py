@@ -1,7 +1,5 @@
 import ast
 
-import pytest
-
 import z3
 
 from . import ssa_basic_blocks as sbb

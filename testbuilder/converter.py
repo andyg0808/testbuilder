@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import operator
 import re
-from typing import Any, Callable, Mapping, Sequence, Tuple, cast
+from typing import Any, Callable, Mapping, Sequence, cast
 
 from toolz import groupby, mapcat
 
@@ -18,10 +18,9 @@ from .magic import Magic, magic_tag as magic
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
-from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
-from .z3_types import AnyT, Expression, bool_and, bool_or
+from .z3_types import Expression, bool_and, bool_or
 
 OpFunc = Callable[..., TypeUnion]
 TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)

@@ -1,10 +1,8 @@
 import ast
-import sys
-from pprint import pprint
 from typing import Mapping, Optional, Sequence, Set, Union
 
 import pytest
-from logbook import StreamHandler, debug, warn
+from logbook import debug, warn
 
 from dataclasses import dataclass
 
@@ -430,8 +428,6 @@ else:
     if ...:
         pass
 """
-
-    from .test_utils import show_dot
 
     parsed = ast.parse(code)
     tw = TreeWalker(parsed)

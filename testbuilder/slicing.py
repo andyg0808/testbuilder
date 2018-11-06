@@ -2,7 +2,6 @@
 import ast
 from abc import abstractmethod
 from copy import copy
-from functools import reduce
 from typing import (
     Any,
     Generic,

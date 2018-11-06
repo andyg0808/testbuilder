@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from copy import copy
-from dataclasses import dataclass, field
-from typing import Mapping, MutableMapping as MMapping, Optional, Set, Tuple
+from typing import Mapping, MutableMapping as MMapping, Tuple
 
-from . import nodetree as n, ssa_basic_blocks as sbb
-from .vartypes import AnyType, Type, Types
+from dataclasses import dataclass, field
+
+from . import nodetree as n
+from .vartypes import AnyType, Types
 
 SSAName = Tuple[str, int]
 TypeMapping = Mapping[SSAName, Types]

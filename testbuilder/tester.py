@@ -12,7 +12,7 @@ from termcolor import cprint
 import z3
 
 # import IPython
-from . import method_env_2, utils
+from . import method_env_2
 from .result import Result
 from .symb_util import Symbolics
 

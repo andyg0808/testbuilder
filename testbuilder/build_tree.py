@@ -1,6 +1,4 @@
 import ast
-import hashlib
-from pprint import pprint
 from typing import List, Mapping, MutableMapping as MMapping, Optional, Sequence, Set
 
 from . import basic_block

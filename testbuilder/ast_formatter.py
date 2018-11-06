@@ -1,6 +1,6 @@
 import ast
 from functools import reduce
-from typing import Any, List, cast
+from typing import Any, cast
 
 
 class Formatter(ast.NodeVisitor):

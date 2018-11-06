@@ -1,17 +1,5 @@
-from functools import partial, reduce
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    TypeVar,
-    cast,
-)
-
-from toolz import compose, pipe
+from functools import reduce
+from typing import Callable, Iterator, Optional, TypeVar
 
 A = TypeVar("A")
 B = TypeVar("B")

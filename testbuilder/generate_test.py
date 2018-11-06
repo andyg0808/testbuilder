@@ -1,13 +1,11 @@
 from io import StringIO
 from pathlib import Path
 
-import pytest
-
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
 from .generate import generate_tests
-from .hypothesis_entities import function_names, functions
+from .hypothesis_entities import functions
 from .renderer import render_test
 
 # def test_generation():

@@ -60,9 +60,9 @@ def check_expression(
         assert expr is None
     else:
         diff = diff_expression(expected, expr)
-        if diff != None:
+        if diff is not None:
             print_diff(diff)
-        assert diff == None
+        assert diff is None
 
 
 @pytest.mark.xfail

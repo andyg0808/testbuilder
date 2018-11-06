@@ -1,5 +1,5 @@
 import inspect
-from typing import Generator, Generic, List, TypeVar, cast
+from typing import Generator, List, TypeVar, cast
 
 T = TypeVar("T")
 U = TypeVar("U")

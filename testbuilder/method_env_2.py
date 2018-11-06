@@ -1,24 +1,16 @@
 import ast
 
-import astor
-
 # import IPython
 from termcolor import cprint
 
-import z3
-
-from .result import Result
-
 
 class AnnotationResult:
-
-    def __init__(result, ops):
+    def __init__(self, result, ops):
         self.ops = ops
         self.result = result
 
 
 class SymbolicExpressionConverter(ast.NodeVisitor):
-
     def method(self, name, attr, args):
         return ast.Call(self.attribute(name, attr), args, [])
 
@@ -69,7 +61,6 @@ class SymbolicExpressionConverter(ast.NodeVisitor):
 
 
 class AnnotateModule(ast.NodeTransformer):
-
     def __init__(self):
         self.conv = SymbolicExpressionConverter()
         self.names = []

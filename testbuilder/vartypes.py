@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Mapping, Set
+from typing import Set
 
 Type = Enum("Type", "int boolean")
 Types = Set[Type]

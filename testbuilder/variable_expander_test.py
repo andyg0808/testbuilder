@@ -26,7 +26,7 @@ def test_include_z3():
     assert z3.eq(z3.BoolVal(True), expand_variables("z3.BoolVal(True)", Registrar))
 
 
-def test_include_z3():
+def test_expand_z3():
     assert z3.eq(z3.BoolVal(True), expand_variables("true", Registrar))
 
 

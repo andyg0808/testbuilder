@@ -1,7 +1,8 @@
 from copy import copy
-from dataclasses import dataclass, field
 from functools import reduce
-from typing import List, MutableMapping as MMapping, Optional, Sequence, Set
+from typing import List, MutableMapping as MMapping, Optional, Sequence
+
+from dataclasses import dataclass, field
 
 from .z3_types import SortSet
 

@@ -1,5 +1,5 @@
 from functools import singledispatch
-from typing import Callable, List, Optional, Tuple, Union, cast
+from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
 from toolz import mapcat, pipe
