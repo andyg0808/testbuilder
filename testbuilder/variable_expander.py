@@ -73,26 +73,32 @@ class VariableExpansionVisitor(ast.NodeTransformer):
             if func.id in self.magic_funcs:
                 self.literals.append(func.id)
                 return node
+        elif isinstance(func, ast.Attribute):
+            if self.is_magic(func):
+                self.literals.append(self.magic_name(func))
+                return node
         return self.generic_visit(node)
 
-    def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:
-        # value = self.visit(node.value)
+    def magic_name(self, node: ast.Attribute) -> str:
         value = node.value
-        # print("attrib", ast.dump(node))
+        assert isinstance(value, ast.Name)
+        funcs = self.magic_funcs[value.id]
+        if funcs is None:
+            return value.id
+        else:
+            return f"{value.id}.{node.attr}"
+
+    def is_magic(self, node: ast.Attribute) -> bool:
+        value = node.value
         if isinstance(value, ast.Name):
-            # print("magic thing", value.id)
             if value.id in self.magic_funcs:
                 funcs = self.magic_funcs[value.id]
                 if funcs is None:
-                    self.literals.append(value.id)
-                    return node
+                    return True
                 else:
                     if node.attr in funcs:
-                        self.literals.append(f"{value.id}.{node.attr}")
-                        return node
-        return self.generic_visit(node)
-        # attribute = ast.Attribute(value, node.attr, node.ctx)
-        # return ast.fix_missing_locations(ast.copy_location(attribute, node))
+                        return True
+        return False
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
         op_type = type(node.op)
