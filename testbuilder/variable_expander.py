@@ -11,6 +11,7 @@ from .type_registrar import TypeRegistrar
 
 MAGIC_FUNCS = {"z3": {"Int", "String"}, "make_any": None}
 
+# Operators which should be redefined to do z3 operations
 MagicOps = {
     ast.BitOr: "Or",
     ast.BitAnd: "And",
@@ -158,6 +159,7 @@ class ExpansionTester(ast.NodeVisitor):
 
 
 def expand_variables(code: str, registrar: TypeRegistrar) -> Any:
+    # Values to include as globals during evaluation
     eval_globals = {
         "z3": z3,
         "true": z3.BoolVal(True),
@@ -167,6 +169,7 @@ def expand_variables(code: str, registrar: TypeRegistrar) -> Any:
         "make_any": registrar.make_any,
     }
 
+    # Values to include as locals during evaluation
     eval_locals = dict(getmembers(z3))
     # It seems `d` is defined as NoneType, and we would really like it to be
     # available for general use. Delete all variables from z3 of length 1:
