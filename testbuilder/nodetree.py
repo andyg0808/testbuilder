@@ -6,8 +6,9 @@ functions for the Python AST.
 from __future__ import annotations
 
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
+
+from dataclasses import dataclass
 
 AddedLine = -1
 
