@@ -1,7 +1,7 @@
 import ast
 import re
 from inspect import getmembers
-from typing import Any, NoReturn
+from typing import Any, Mapping, NoReturn, Optional
 
 from astor import to_source  # type: ignore
 
@@ -168,7 +168,9 @@ class ExpansionTester(ast.NodeVisitor):
         return True
 
 
-def expand_variables(code: str, registrar: TypeRegistrar) -> Any:
+def expand_variables(
+    code: str, registrar: TypeRegistrar, local_vals: Optional[Mapping[str, Any]] = None
+) -> Any:
     # Values to include as globals during evaluation
     eval_globals = {
         "z3": z3,
@@ -181,6 +183,8 @@ def expand_variables(code: str, registrar: TypeRegistrar) -> Any:
 
     # Values to include as locals during evaluation
     eval_locals = dict(getmembers(z3))
+    if local_vals is not None:
+        eval_locals.update(local_vals)
     # It seems `d` is defined as NoneType, and we would really like it to be
     # available for general use. Delete all variables from z3 of length 1:
     def clean_locals():
