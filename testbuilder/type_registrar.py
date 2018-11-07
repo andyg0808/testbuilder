@@ -80,19 +80,20 @@ class TypeRegistrar:
             sorts.add(expr.sort())
         return TypeUnion(exprs, sorts)
 
+    def _extract_or_wrap(self, val: Expression, extractor: str, wrapper: str) -> AnyT:
+        acc = getattr(self.anytype, extractor, None)
+        if acc is not None and val.decl() == acc:
+            return cast(AnyT, val.arg(0))
+        wrap_func = getattr(self.anytype, wrapper)
+        return cast(AnyT, wrap_func(val))
+
     def wrap(self, val: Expression) -> AnyT:
         if val.sort() == z3.IntSort():
-            if val.decl() == self.anytype.i:
-                return val.arg(0)  # type: ignore
-            return self.anytype.Int(val)  # type: ignore
+            return self._extract_or_wrap(val, "i", "Int")
         if val.sort() == z3.StringSort():
-            if val.decl() == self.anytype.s:
-                return val.arg(0)  # type: ignore
-            return self.anytype.String(val)  # type: ignore
+            return self._extract_or_wrap(val, "s", "String")
         if val.sort() == z3.BoolSort():
-            if val.decl() == self.anytype.b:
-                return val.arg(0)  # type: ignore
-            return self.anytype.Bool(val)  # type: ignore
+            return self._extract_or_wrap(val, "b", "Bool")
         if val.sort() == self.anytype:
             # This can happen if we already have a wrapped type, or if
             # the type is a non-wrapper type
