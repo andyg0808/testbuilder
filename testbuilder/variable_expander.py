@@ -9,7 +9,9 @@ import z3  # type: ignore
 
 from .type_registrar import TypeRegistrar
 
-MAGIC_FUNCS = {"z3": {"Int", "String"}, "make_any": None}
+# Functions whose arguments should be left untouched (i.e., they
+# should be left as the standard Python types)
+MAGIC_FUNCS = {"z3": {"Int", "String", "Array", "Store"}, "make_any": None}
 
 # Operators which should be redefined to do z3 operations
 MagicOps = {
