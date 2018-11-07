@@ -15,7 +15,7 @@ from .z3_types import AnySort, AnyT, Expression, SortSet, bool_and, bool_not, bo
 
 @dataclass
 class TypeRegistrar:
-    anytype: AnySort
+    anytype: z3.DatatypeSortRef
 
     def constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
         for i in range(self.anytype.num_constructors()):
@@ -148,7 +148,8 @@ class TypeRegistrar:
         elif z3.is_string(expr):
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
-            if hasattr(self.anytype, "none") and expr.decl() == self.anytype.none:
+            none = getattr(self.anytype, "none", None)
+            if none is not None and expr.decl() == none:
                 return z3.BoolVal(False)
             else:
                 # For all anytype values that aren't None, assume they
