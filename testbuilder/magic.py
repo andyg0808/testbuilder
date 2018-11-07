@@ -32,19 +32,24 @@ log = Logger("Magic")
 T = TypeVar("T")
 
 MagicFunc = Callable[..., T]
+TagType = Union[z3.SortRef, Type]
+
+
+@dataclass(frozen=True)
+class MagicTag:
+    types: Sequence[TagType]
 
 
 def magic_tag(*types: Union[z3.SortRef, Type]) -> Callable[[MagicFunc], MagicFunc]:
     def _magic(func: MagicFunc) -> MagicFunc:
-        setattr(func, "__magic", tuple(types))
+        setattr(func, "__magic", MagicTag(types=types))
         return func
 
     return _magic
 
 
-@dataclass
-class MagicRegistration:
-    types: Tuple
+@dataclass(frozen=True)
+class MagicRegistration(MagicTag):
     function: MagicFunc
 
 
@@ -67,14 +72,14 @@ class Magic:
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
             if magic is not None:
-                registration = MagicRegistration(function=method, types=magic)
+                registration = MagicRegistration(function=method, types=magic.types)
                 self.funcref.append(registration)
 
     @staticmethod
-    def m(*types: Union[z3.SortRef, Type]) -> Callable[[MagicFunc], MagicFunc]:
+    def m(*types: TagType) -> Callable[[MagicFunc], MagicFunc]:
         """
-        Creates an instance of Magic and calls `magic` on it with
-        its arguments.
+        Create an instance of Magic and call `magic` on it with these
+        arguments.
         """
         res = Magic()
         return res.magic(*types)
@@ -95,7 +100,7 @@ class Magic:
         """
 
         def _magic(func: MagicFunc) -> Magic:
-            registration = MagicRegistration(types=tuple(types), function=func)
+            registration = MagicRegistration(types=types, function=func)
             self.funcref.append(registration)
             return self
 
@@ -182,7 +187,7 @@ class Magic:
             else:
                 return left
 
-        def sort_compare(arg_sort: z3.SortRef, func_key: z3.SortRef) -> bool:
+        def sort_compare(arg_sort: z3.SortRef, func_key: TagType) -> bool:
             if isinstance(func_key, z3.SortRef):
                 return fuzzy_sort_equality(arg_sort, func_key)
             elif isinstance(func_key, type):
