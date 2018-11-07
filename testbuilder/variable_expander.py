@@ -1,7 +1,7 @@
 import ast
 import re
 from inspect import getmembers
-from typing import Any
+from typing import Any, NoReturn
 
 from astor import to_source  # type: ignore
 
@@ -151,16 +151,20 @@ class ExpansionTester(ast.NodeVisitor):
             expr = compile(node, filename="<ExpansionTester>", mode="eval")
         else:
             return True
+
+        def fail(reason: Exception) -> NoReturn:
+            raise RuntimeError(
+                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
+            ) from e
+
         try:
             eval(expr, self.eval_globals, self.eval_locals)
         except z3.z3types.Z3Exception as e:
-            raise RuntimeError(
-                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
-            ) from e
+            fail(e)
         except TypeError as e:
-            raise RuntimeError(
-                f"Expansion test failed while expanding\n{to_source(node)}\nError: {e}"
-            ) from e
+            fail(e)
+        except z3.ArgumentError as e:
+            fail(e)
         return True
 
 
