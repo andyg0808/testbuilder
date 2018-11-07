@@ -168,6 +168,8 @@ class Magic:
 
         try:
             res = func(*(arg.expr for arg in args))
+            if res is None:
+                return None
         except Exception as e:
             raise RuntimeError(
                 f"Problem running {func}({', '.join(str(a) for a in args)})"
