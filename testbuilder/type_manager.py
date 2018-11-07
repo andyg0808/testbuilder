@@ -2,11 +2,15 @@ from copy import copy
 from functools import reduce
 from typing import List, MutableMapping as MMapping, Optional, Sequence
 
+from logbook import Logger
+
 from dataclasses import dataclass, field
 
 from .z3_types import SortSet
 
 SortMapping = MMapping[str, SortSet]
+
+log = Logger("type_manager")
 
 
 @dataclass
@@ -34,7 +38,7 @@ class TypeManager:
         self.type_list = copy(self.stack[-1])
 
     def merge_and_update(self, mappings: Sequence[SortMapping]) -> None:
-        print("mappings to start", mappings)
+        log.debug("mappings to start", mappings)
         if len(mappings) == 0:
             self.type_list = {}
             return
@@ -43,7 +47,7 @@ class TypeManager:
         ]
         keys = reduce(lambda ks, m: ks & m, keysets)
 
-        print("keys", keys)
+        log.debug("keys", keys)
         new_mapping: SortMapping = {k: set() for k in keys}
         for mapping in mappings:
             for key in keys:
@@ -51,4 +55,4 @@ class TypeManager:
                 assert len(current) != 0, "Key has empty value"
                 new_mapping[key] |= current
                 self.type_list = new_mapping
-        print("new mapping", self.type_list)
+        log.debug("new mapping", self.type_list)
