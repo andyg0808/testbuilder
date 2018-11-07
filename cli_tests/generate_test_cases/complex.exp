@@ -2,8 +2,9 @@ source "./testing.tcl"
 file delete complex_test.py
 spawn python3 ./run.py --unroll-depth=20 --lines=2,8,12 complex.py
 
-expect expected
-send "0\n"
+expect -re {expected.*\{.*: ([-\d]+), .*: (\d+)\}}
+set value [expr $expect_out(1,string) * $expect_out(2,string)]
+send -- "$value\n"
 expect "Couldn't generate a test for line 8"
 expect expected
 send "None\n"

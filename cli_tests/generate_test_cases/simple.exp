@@ -1,9 +1,22 @@
 source "./testing.tcl"
+
+proc max {a b} {
+    if {$a >= $b} {
+        return $a
+    } else {
+        return $b
+    }
+}
+
+proc wait_and_respond args {
+    expect -re {expected.*\{.*: (\d+), .*: (\d+)\}.*}
+    send "[max $expect_out(1,string) $expect_out(2,string)]\n"
+}
+
 file delete simple_test.py
+
 spawn python3 ./run.py simple.py
-expect expected
-send "0\n"
-expect expected
-send "0\n"
+wait_and_respond
+wait_and_respond
 system pytest simple_test.py
 file delete simple_test.py
