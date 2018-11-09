@@ -225,4 +225,8 @@ def Concat(left: String, right: String) -> String:
     ...
 
 
+def CreateDatatypes(*types: Datatype) -> Tuple[DatatypeSortRef, ...]:
+    ...
+
+
 DeclareSort = ...  # type: Any
