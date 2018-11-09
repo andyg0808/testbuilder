@@ -15,6 +15,7 @@ import z3
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr
 from .magic import Magic, magic_tag as magic
+from .store import Store
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
@@ -39,11 +40,14 @@ BoolSort = z3.BoolSort()
 
 
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
-    def __init__(self, registrar: TypeRegistrar, type_manager: TypeManager) -> None:
+    def __init__(
+        self, registrar: TypeRegistrar, type_manager: TypeManager, store: Store
+    ) -> None:
         super().__init__()
         self.visit_oper = OperatorConverter(registrar)
         self.registrar = registrar
         self.type_manager = type_manager
+        self.store = store
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))

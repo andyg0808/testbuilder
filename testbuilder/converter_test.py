@@ -7,6 +7,7 @@ from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
 from .converter import ExpressionConverter
 from .ssa_repair import repair
+from .store import Store
 from .type_builder import TypeBuilder
 from .type_manager import TypeManager
 from .variable_expander import expand_variables
@@ -47,7 +48,7 @@ def conversion_assert(
     tree = tree.code[0]
     if expected_constraint is not None:
         expected_constraint = expand_variables(expected_constraint, registrar=Registrar)
-    result = ExpressionConverter(Registrar, TypeManager())(tree)
+    result = ExpressionConverter(Registrar, TypeManager(), Store())(tree)
     if get_boolean:
         assert result.is_bool(), "Expected boolean result!"
         result = result.to_expr()

@@ -12,6 +12,7 @@ from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
+from .store import Store
 from .test_utils import write_dot
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
@@ -29,8 +30,9 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         self.module = module
         self.type_manager = TypeManager()
         self.registrar = registrar
+        self.store = Store()
         self.expression = converter.ExpressionConverter(
-            self.registrar, self.type_manager
+            self.registrar, self.type_manager, self.store
         )
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
