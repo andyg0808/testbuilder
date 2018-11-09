@@ -36,9 +36,7 @@ class TypeUnion:
         return bool_or(boolexprs)
 
     def implications(self) -> z3.Bool:
-        constraints = [
-            cast(z3.Bool, x.constraint) for x in self.expressions if x.constrained()
-        ]
+        constraints = [x.constraint() for x in self.expressions if x.constrained()]
         return bool_or(constraints)
 
     def unwrap(
