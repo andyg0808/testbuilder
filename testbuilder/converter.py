@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import operator
 import re
-from typing import Any, Callable, Mapping, Sequence, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, cast
 
 from toolz import groupby, mapcat
 
@@ -18,6 +18,7 @@ from .magic import Magic, magic_tag as magic
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
+from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import Expression, bool_and, bool_or
@@ -73,6 +74,33 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_NameConstant(self, node: n.NameConstant) -> TypeUnion:
         return Constants[node.value]
 
+    def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
+        value = self.visit(node.value)
+        if isinstance(value, VariableTypeUnion):
+            value = value.expand()
+        attr = node.attr
+        assert attr in ["left", "right"]
+        accessor = getattr(self.registrar.anytype, "Pair_" + attr)
+        # conditional = getattr(self.registrar.anytype, "is_Pair")
+        decl = getattr(self.registrar.anytype, "Pair")
+
+        def _access(value: Expression) -> Optional[Expression]:
+            if value.decl() != decl:
+                return None
+            return cast(Expression, accessor(value))
+
+        print("incoming value", value, attr)
+        grab = Magic.m(object)(_access)
+        grabbed = grab(value)
+        print("grabbed", grabbed)
+        return grabbed  # type: ignore
+
+        # variable = self.visit(node.value)
+        # accessor = self.find_accessor(node.attr)
+        # expression = accessor(variable)
+        # sort = expression.sort()
+        # return TypeUnion(expressions=[expression], sorts={sort})
+
     def visit_Name(self, node: n.Name) -> VariableTypeUnion:
         # TODO: Can any of this be replaced with make_any
         variable = get_variable(node.id, node.set_count)
@@ -100,17 +128,37 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return self.registrar.AllTypes(variable)
 
     def visit_Set(self, node: n.Set) -> TypeUnion:
-        # We know `target` is a Name
-        target = node.target
-        # Since `target` is a Name, it will be converted into a
-        # VariableTypeUnion, which has a `name` attribute giving the
-        # name of its variable. We do it this way to handle
-        # `PrefixedName`s as well as normal `Name`s.
-        variable = cast(VariableTypeUnion, self.visit(target)).name
         value = self.visit(node.e)
-        var = self.registrar.make_any(variable)
-        self.type_manager.put(variable, value.sorts)
-        return self.registrar.assign(var, value)
+        return self.assign(node.target, value)
+
+    def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
+        if isinstance(target, n.Name):
+            var_expr = self.visit(target)
+            var_name = cast(VariableTypeUnion, var_expr).name
+            self.type_manager.put(var_name, value.sorts)
+            var = self.registrar.make_any(var_name)
+            return self.registrar.assign(var, value)
+        elif isinstance(target, n.Attribute):
+            if target.attr == "left":
+                right_val: TypeUnion = self.visit(n.Attribute(target.value, "right"))
+                left_val: TypeUnion = value
+
+                def assign_left(
+                    left: Expression, right: Expression
+                ) -> Optional[Expression]:
+                    if left.sort() != right.sort():
+                        return None
+                    pair = getattr(self.registrar.anytype, "Pair", None)
+                    if pair is not None:
+                        return cast(Expression, pair(left, right))
+                    else:
+                        return None
+
+                assignment = Magic.m(z3.SortRef, z3.SortRef)(assign_left)
+                return self.assign(target.value, assignment(left_val, right_val))
+            print("variable name is", var_name)
+
+        crash()
 
     def visit_Expr(self, node: n.Expr) -> TypeUnion:
         v = self.visit(node.value)
