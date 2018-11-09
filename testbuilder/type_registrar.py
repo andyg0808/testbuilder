@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, List, Set, cast
+from typing import Generator, List, Optional, Set, cast
 
 import z3
 from dataclasses import dataclass
@@ -10,12 +10,13 @@ from z3 import DatatypeRef
 from .constrained_expression import ConstrainedExpression as CExpr
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnySort, AnyT, Expression, SortSet, bool_and, bool_not, bool_or
+from .z3_types import AnyT, Expression, SortSet, bool_and, bool_not, bool_or
 
 
 @dataclass
 class TypeRegistrar:
     anytype: z3.DatatypeSortRef
+    reftype: Optional[z3.DatatypeSortRef]
 
     def constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
         for i in range(self.anytype.num_constructors()):

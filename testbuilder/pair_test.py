@@ -40,7 +40,7 @@ def check_expression(
         points. Currently does nothing.
     """
     builder = TypeBuilder()
-    builder.wrappers().structures()
+    builder.wrappers().references().structures()
     Registrar = builder.build()
 
     if isinstance(expected, str):

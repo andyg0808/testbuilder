@@ -180,6 +180,7 @@ def expand_variables(
         "false": z3.BoolVal(False),
         "type": type,
         "Any": registrar.anytype,
+        "Ref": registrar.reftype,
         "make_any": registrar.make_any,
     }
 

@@ -11,6 +11,10 @@ class AnyT(z3.DatatypeRef):
     ...
 
 
+class PairT(z3.DatatypeRef):
+    ...
+
+
 class AnySort(z3.DatatypeSortRef):
     def none(self) -> AnyT:
         ...
