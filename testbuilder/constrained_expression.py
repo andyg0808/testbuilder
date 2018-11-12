@@ -10,8 +10,8 @@ VarConstraint = Tuple[str, z3.SortRef, z3.Bool]
 
 
 @dataclass
-class ConstrainedExpression(Generic[E]):
-    expr: E
+class ConstrainedExpression:
+    expr: Expression
     constraints: List[VarConstraint] = field(default_factory=list)
 
     def constrained(self) -> bool:

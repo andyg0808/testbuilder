@@ -11,7 +11,7 @@ from .z3_types import Expression, SortSet, bool_or
 
 @dataclass(frozen=True)
 class TypeUnion:
-    expressions: List[CExpr[Expression]]
+    expressions: List[CExpr]
     sorts: SortSet
 
     @staticmethod

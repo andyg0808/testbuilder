@@ -138,7 +138,7 @@ class TypeRegistrar:
             # values. If empty, expanding gets the appropriate
             # constrained values.
             return self.to_boolean(value.expand(), invert)
-        bools: List[CExpr[Expression]] = []
+        bools: List[CExpr] = []
         for cexpr in value.expressions:
             expr = self.expr_to_boolean(cexpr.expr)
             if invert:
