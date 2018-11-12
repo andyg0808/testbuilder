@@ -84,9 +84,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             value = value.expand()
         attr = node.attr
         assert attr in ["left", "right"]
-        accessor = getattr(self.registrar.anytype, "Pair_" + attr)
+        accessor = getattr(self.registrar.reftype, "Pair_" + attr)
         # conditional = getattr(self.registrar.anytype, "is_Pair")
-        decl = getattr(self.registrar.anytype, "Pair")
+        decl = getattr(self.registrar.reftype, "Pair")
 
         def _access(value: Expression) -> Optional[Expression]:
             if value.decl() != decl:
