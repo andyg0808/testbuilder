@@ -71,7 +71,9 @@ def check_expression(
         assert diff is None
 
 
-@pytest.mark.xfail
+@pytest.mark.skip(
+    reason="Not planning to implement full support for custom classes for now"
+)
 def test_class():
     check_expression(
         """
