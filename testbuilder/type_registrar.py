@@ -18,9 +18,15 @@ class TypeRegistrar:
     anytype: z3.DatatypeSortRef
     reftype: Optional[z3.DatatypeSortRef]
 
-    def constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
-        for i in range(self.anytype.num_constructors()):
-            yield self.anytype.constructor(i)
+    def store(self, name: str) -> z3.ArrayRef:
+        assert self.reftype is not None
+        return z3.Array(name, z3.IntSort(), self.reftype)
+
+    def ref_constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
+        if self.reftype is None:
+            return
+        for i in range(self.reftype.num_constructors()):
+            yield self.reftype.constructor(i)
 
     @assertify
     def AllTypes(self, name: str, restricted: SortSet = set()) -> VariableTypeUnion:

@@ -174,7 +174,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         print(f"type of function: {type(node)}")
         if isinstance(node.func, n.Name):
             function = node.func.id
-            for constructor in self.registrar.constructors():
+            for constructor in self.registrar.ref_constructors():
                 print(f"trying {constructor.name()} on {function}")
                 if constructor.name() == function:
                     args = [self.visit(v) for v in node.args]
@@ -190,12 +190,14 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, constructor: z3.FuncDeclRef, args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
+        Reference = getattr(self.registrar.anytype, "Reference")
         print("Constructing call", constructor, args)
         exprs = []
         sorts = set()
         for arg_tuple in Magic.cartesian_product(args):
             print("running for", arg_tuple)
-            expr = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
+            target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
+            expr = Reference(self.store.add(target))
             constraints = list(mapcat(lambda x: x.constraints, arg_tuple))
             if len(constraints) > 0:
                 cexpr = CExpr(expr=expr, constraints=list(constraints))
@@ -206,7 +208,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
             newargs = Magic.expand(args)
             return self.construct_call(constructor, newargs)
-
         return TypeUnion(expressions=exprs, sorts=sorts)
 
     def visit_ReturnResult(self, node: n.ReturnResult) -> TypeUnion:

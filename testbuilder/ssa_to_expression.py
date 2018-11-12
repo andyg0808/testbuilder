@@ -30,7 +30,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         self.module = module
         self.type_manager = TypeManager()
         self.registrar = registrar
-        self.store = Store()
+        self.store = Store(self.registrar)
         self.expression = converter.ExpressionConverter(
             self.registrar, self.type_manager, self.store
         )
@@ -60,13 +60,16 @@ class SSAVisitor(SimpleVisitor[ExprList]):
     def visit_Stmt(self, node: n.stmt) -> ExprList:
         union = self.expression(node)
         if union.is_bool():
-            return [union.to_expr()]
+            exprs: List[Expression] = [union.to_expr()]
         else:
             # The union is not a boolean; the only supported case this
             # could happen would be a bare expression, and the only
             # side-effectful expression is yield, which is
             # unsupported.
-            return [union.implications()]
+            exprs = [union.implications()]
+        if self.store.pending():
+            exprs.append(self.store.write())
+        return exprs
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)

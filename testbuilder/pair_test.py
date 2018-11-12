@@ -44,7 +44,13 @@ def check_expression(
     Registrar = builder.build()
 
     if isinstance(expected, str):
-        expected = expand_variables(expected, Registrar)
+        store_sort = z3.ArraySort(z3.IntSort(), Registrar.reftype)
+        local_vals = {
+            "store": z3.Const("store", store_sort),
+            "store_1": z3.Const("store_1", store_sort),
+            "store_2": z3.Const("store_2", store_sort),
+        }
+        expected = expand_variables(expected, Registrar, local_vals=local_vals)
     _get_expression = partial(get_expression, Registrar, line, depth=depth)
     test_data = pipe(code_string.strip(), ast.parse, _get_expression)
     if test_data is None:
@@ -82,4 +88,16 @@ right = e.right
         and pyname_left == Any.Pair_left(pyname_e)\
         and pyname_right == Any.Pair_right(pyname_e)
 """,
+    )
+def test_basic_pair():
+    check_expression(
+        "x = Pair(1,2)",
+        """
+        pyname_x == Any.Reference(0) \
+        and store_1 == Store(store, 0,
+                             Ref.Pair(Any.Int(1), Any.Int(2)))
+        """,
+        #         """
+        # # pyname_x_store_1 = Ref.Pair(Any.Int(1), Any.Int(2))
+        #         """,
     )
