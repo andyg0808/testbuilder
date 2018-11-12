@@ -91,6 +91,34 @@ right = e.right
         and pyname_right == Ref.Pair_right(pyname_e)
 """,
     )
+
+
+# If I can name a store to fetch a variable from, couldn't I stringify
+# the store access and treat it as the name of a variable in which the
+# current value is stored?  If that's so, what's to keep me from
+# tracking all the values currently in the store and using a separate
+# variable for each version?
+
+# Because the separate variables are awkward to access when dealing
+# wth potential aliasing in input variables. I need to allow inputs to
+# choose arbitrary reference values.
+
+# Basically, the challenge is allowing aliasing in the initial values
+# of parameters. We could make all values currently in the store
+# available via Or assignment. But that's going to be messy. So
+# keeping the store in the solver's domain and using integer values as
+# keys allows us to simply create references to any item in the store:
+# we choose an integer less than or equal to the largest index in the
+# store.  Allocating new store items seems interesting, though. How do
+# we figure out if an item should
+
+# Very few constructs will be ambigous about whether they refer to a
+# reference or not. Only references can have attribute
+# accesses. Without an attribute access, it's not necessarilly as
+# clear whether something is a reference, but there can't be any
+# operations not defined for that reference.
+
+
 def test_basic_pair():
     check_expression(
         "x = Pair(1,2)",
@@ -102,6 +130,34 @@ def test_basic_pair():
         #         """
         # # pyname_x_store_1 = Ref.Pair(Any.Int(1), Any.Int(2))
         #         """,
+    )
+
+
+@pytest.mark.xfail
+def test_read_inferred_pair():
+    """
+    Test the constructs around inferring a reference to a pair in a
+    variable.
+    """
+    check_expression(
+        "x.left > 0",
+        """
+Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0
+        """,
+    )
+
+
+@pytest.mark.xfail
+def test_write_inferred_pair():
+    """
+    Test that writing a
+    variable.
+    """
+    check_expression(
+        "x.left > 0",
+        """
+Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0
+        """,
     )
 
 
@@ -120,4 +176,79 @@ x = Pair(e, f)
         store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)),
         )
         """,
+    )
+
+
+@pytest.mark.xfail
+def test_unconstrained_variables_into_pair():
+    """
+    Create a pair from two unconstrained variables. We want the pair
+    to realize that the variables are both `Any`s, as are its slots,
+    and just match the two, instead of expanding the variables and
+    running a full Cartesian product on the possible subtypes
+    """
+    check_expression(
+        "x = Pair(e, f)",
+        """
+store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)) \
+and pyname_x == Any.Reference(0)
+    """,
+    )
+
+
+@pytest.mark.xfail
+def test_ints_into_pair():
+    check_expression(
+        "x = Pair(1, 2)",
+        """
+pyname_x == Ref.Pair(Any.Int(1), Any.Int(2))
+""",
+    )
+
+
+@pytest.mark.xfail
+def test_alias_pair():
+    check_expression(
+        """
+a = Pair(1,2)
+b = a
+a.left = 2
+not (b.left != 2)
+        """,
+        """
+pyname_a == Ref.Pair(Any.Int(1), Any.Int(2))\
+and pyname_b == pyname_a\
+and pyname_a_1 == Ref.Pair(Any.Int(2), Ref.Pair_right(pyname_a))\
+and Not(Ref.Pair_left(pyname_b) != Any.Int(2))
+        """,
+    )
+
+
+@pytest.mark.xfail
+def test_read_pair():
+    check_expression(
+        """
+a = Pair(1, 2)
+x = a.left
+        """,
+        """
+pyname_a == Any.Reference(0)\
+and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(1), Any.Int(2)))\
+and pyname_x == Ref.Pair_left(store_1[Any.r(pyname_a)])
+        """,
+    )
+
+
+@pytest.mark.xfail
+def test_modify_pair():
+    check_expression(
+        """
+x = Pair(1,2)
+x.left = 3
+    """,
+        """
+pyname_x == Any.Reference(0)\
+and store_1 == Store(store, Any.r(pyname_x), Ref.Pair(Any.Int(1), Any.Int(2)))\
+and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(pyname_x))
+    """,
     )
