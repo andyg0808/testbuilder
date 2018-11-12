@@ -17,6 +17,8 @@ TESTFILE = testbuilder
 #        tests.
 #   --ff Run failed tests before other tests.
 #   -x   Stop after first failed test. Speeds up testing runs with failures
+#   --maxfail=n Stop after `n` failed tests. This is useful to get a
+#        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
 PYTEST = pytest -x -ra --ff $(TESTFILE)
 
