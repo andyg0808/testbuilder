@@ -86,9 +86,9 @@ left = e.left
 right = e.right
         """,
         """
-        pyname_e == Any.Pair(Any.Int(2), Any.Int(3))\
-        and pyname_left == Any.Pair_left(pyname_e)\
-        and pyname_right == Any.Pair_right(pyname_e)
+        pyname_e == Ref.Pair(Any.Int(2), Any.Int(3))\
+        and pyname_left == Ref.Pair_left(pyname_e)\
+        and pyname_right == Ref.Pair_right(pyname_e)
 """,
     )
 def test_basic_pair():
