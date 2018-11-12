@@ -177,7 +177,7 @@ class Magic:
         constraints = list(concat(arg.constraints for arg in args))
         return CExpr(expr=res, constraints=constraints)
 
-    def __select(self, args: Tuple) -> Optional[MagicRegistration]:
+    def __select(self, args: Sequence[z3.SortRef]) -> Optional[MagicRegistration]:
         log.info(f"Selecting implementation using {args}")
 
         def fuzzy_sort_equality(sub: z3.SortRef, parent: z3.SortRef) -> bool:
