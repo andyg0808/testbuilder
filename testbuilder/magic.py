@@ -40,7 +40,7 @@ class MagicTag:
     types: Sequence[TagType]
 
 
-def magic_tag(*types: Union[z3.SortRef, Type]) -> Callable[[MagicFunc], MagicFunc]:
+def magic_tag(*types: TagType) -> Callable[[MagicFunc], MagicFunc]:
     def _magic(func: MagicFunc) -> MagicFunc:
         setattr(func, "__magic", MagicTag(types=types))
         return func
@@ -84,7 +84,7 @@ class Magic:
         res = Magic()
         return res.magic(*types)
 
-    def magic(self, *types: Union[z3.SortRef, Type]) -> Callable[[MagicFunc], Magic]:
+    def magic(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
         """
         To register an existing function for some argument types, call
         this method, passing it the argument types, and pass the
