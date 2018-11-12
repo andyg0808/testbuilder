@@ -69,7 +69,10 @@ class TypeRegistrar:
         sorts: Set[z3.SortRef] = set()
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
-            if constructor.arity() == 1:
+            if constructor.name() == "Reference":
+                # Reference constructor shouldn't be extracted from
+                expr: Expression = var
+            elif constructor.arity() == 1:
                 expr = self.anytype.accessor(i, 0)(var)
             else:
                 expr = var

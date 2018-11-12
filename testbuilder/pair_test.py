@@ -103,3 +103,21 @@ def test_basic_pair():
         # # pyname_x_store_1 = Ref.Pair(Any.Int(1), Any.Int(2))
         #         """,
     )
+
+
+def test_variable_into_pair():
+    check_expression(
+        """
+e = 1
+f = 2
+x = Pair(e, f)
+""",
+        """
+        And(
+        pyname_e == Any.Int(1),
+        pyname_f == Any.Int(2),
+        pyname_x == Any.Reference(0),
+        store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)),
+        )
+        """,
+    )
