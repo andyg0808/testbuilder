@@ -46,6 +46,10 @@ class Datatype:
         ...
 
 
+class ArraySortRef(SortRef):
+    ...
+
+
 class ArithSortRef(SortRef):
     ...
 
@@ -175,6 +179,10 @@ class SeqRef(ExprRef):
     pass
 
 
+class ArrayRef(ExprRef):
+    pass
+
+
 class String(SeqRef):
     def __init__(self, name: str) -> None:
         ...
@@ -226,6 +234,18 @@ def Concat(left: String, right: String) -> String:
 
 
 def CreateDatatypes(*types: Datatype) -> Tuple[DatatypeSortRef, ...]:
+    ...
+
+
+def ArraySort(key: SortRef, value: SortRef) -> ArraySortRef:
+    ...
+
+
+def Store(array: ArrayRef, key: ExprRef, value: ExprRef) -> ArrayRef:
+    ...
+
+
+def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
     ...
 
 
