@@ -10,7 +10,7 @@ from z3 import DatatypeRef
 from .constrained_expression import ConstrainedExpression as CExpr
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, SortSet, bool_and, bool_not, bool_or
+from .z3_types import AnyT, Expression, Sort, SortSet, bool_and, bool_not, bool_or
 
 
 @dataclass
@@ -70,7 +70,11 @@ class TypeRegistrar:
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
             if constructor.name() == "Reference":
-                # Reference constructor shouldn't be extracted from
+                if len(types) > 0:
+                    if Sort.Reference not in types:
+                        continue
+                # Reference variable is itself the value; it is not a
+                # wrapper
                 expr: Expression = var
             elif constructor.arity() == 1:
                 expr = self.anytype.accessor(i, 0)(var)
