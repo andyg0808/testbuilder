@@ -86,7 +86,7 @@ class TypeUnion:
 
     def map(self, oper: Callable[[Expression], Optional[Expression]]) -> TypeUnion:
         expressions = []
-        sorts = set()
+        sorts: SortSet = set()
         for cexpr in self.expressions:
             res = oper(cexpr.expr)
             if res is not None:

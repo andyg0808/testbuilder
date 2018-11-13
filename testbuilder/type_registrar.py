@@ -41,7 +41,7 @@ class TypeRegistrar:
         """
         if len(restricted) > 0:
             union = self.expand(name)
-            sorts = {
+            sorts: SortSet = {
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
             }
 
@@ -57,7 +57,7 @@ class TypeRegistrar:
     def make_any(self, name: str) -> AnyT:
         return cast(AnyT, z3.Const(name, self.anytype))
 
-    def expand(self, name: str, types: Set[z3.SortRef] = set()) -> TypeUnion:
+    def expand(self, name: str, types: SortSet = set()) -> TypeUnion:
         """
         Arguments:
             name: The variable name to expand
@@ -66,7 +66,7 @@ class TypeRegistrar:
         """
         var = self.make_any(name)
         exprs = []
-        sorts: Set[z3.SortRef] = set()
+        sorts: SortSet = set()
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
             if constructor.name() == "Reference":

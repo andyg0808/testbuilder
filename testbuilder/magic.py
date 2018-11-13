@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from .constrained_expression import ConstrainedExpression as CExpr
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import Expression
+from .z3_types import Expression, SortSet
 
 log = Logger("Magic")
 
@@ -149,7 +149,7 @@ class Magic:
                 continue
             functions.append((func, cast(Tuple, arg_tuple)))
         exprs = []
-        sorts = set()
+        sorts: SortSet = set()
         for func, args in functions:
             res = self.__call_on_exprs(func.function, args)
             if res is None:
