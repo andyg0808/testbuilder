@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 from docopt import docopt
-
 from logbook import NullHandler, StderrHandler
+
 from testbuilder.generate import generate_tests
 
 
@@ -37,7 +37,8 @@ def main(filename: str) -> None:
         lines = None
 
     test_cases = generate_tests(filepath, text, sys.stdin, depth=depth, lines=lines)
-    with open(filepath.stem + "_test.py", "x") as tests:
+    with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
+        tests.write("from importlib import import_module")
         tests.write("\n\n".join(test_cases))
 
 
