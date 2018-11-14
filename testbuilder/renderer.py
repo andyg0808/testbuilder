@@ -39,9 +39,11 @@ def render_test(
         number_str = f"_{test_number+1}"
     else:
         number_str = ""
-    # print("callstring", call_string)
+    # See https://stackoverflow.com/a/38813946/2243495
+    # This allows correct importing of modules with unacceptable
+    # Python names
     return f"""
-from {source.stem} import {name}
+{name} = import_module("{source.stem}").{name}
 def test_{name}{number_str}():
     {args_string}
     actual = {call_string}
