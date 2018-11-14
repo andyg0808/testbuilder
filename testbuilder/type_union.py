@@ -19,6 +19,9 @@ class TypeUnion:
         cexpr = CExpr(expr=expr)
         return TypeUnion([cexpr], {expr.sort()})
 
+    def empty(self) -> bool:
+        return len(self.expressions) == 0
+
     def is_bool(self) -> bool:
         return self.sorts == {z3.BoolSort()}
 
@@ -53,7 +56,7 @@ class TypeUnion:
                 "Cannot unwrap TypeUnion without exactly one "
                 f"value; this has {self.expressions}"
             )
-            assert len(self.expressions) > 0, "Cannot unwrap empty TypeUnion"
+            assert not self.empty(), "Cannot unwrap empty TypeUnion"
 
             cexpr = self.expressions[0]
         else:
