@@ -179,8 +179,13 @@ class SeqRef(ExprRef):
     pass
 
 
-class ArrayRef(ExprRef):
-    pass
+K = TypeVar("K", bound=ExprRef)
+V = TypeVar("V", bound=ExprRef)
+
+
+class ArrayRef(ExprRef, Generic[K, V]):
+    def __getitem__(self, arg: K) -> V:
+        ...
 
 
 class String(SeqRef):
@@ -241,7 +246,7 @@ def ArraySort(key: SortRef, value: SortRef) -> ArraySortRef:
     ...
 
 
-def Store(array: ArrayRef, key: ExprRef, value: ExprRef) -> ArrayRef:
+def Store(array: ArrayRef[K, V], key: K, value: V) -> ArrayRef[K, V]:
     ...
 
 

@@ -197,7 +197,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         for arg_tuple in Magic.cartesian_product(args):
             print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
-            expr = Reference(self.store.add(target))
+            expr = Reference(self.store.add(cast(z3.DatatypeRef, target)))
             constraints = list(mapcat(lambda x: x.constraints, arg_tuple))
             if len(constraints) > 0:
                 cexpr = CExpr(expr=expr, constraints=list(constraints))

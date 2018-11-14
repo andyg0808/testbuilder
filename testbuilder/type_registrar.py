@@ -8,6 +8,7 @@ from typeassert import assertify
 from z3 import DatatypeRef
 
 from .constrained_expression import ConstrainedExpression as CExpr
+from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
 from .z3_types import AnyT, Expression, Sort, SortSet, bool_and, bool_not, bool_or
@@ -18,9 +19,9 @@ class TypeRegistrar:
     anytype: z3.DatatypeSortRef
     reftype: Optional[z3.DatatypeSortRef]
 
-    def store(self, name: str) -> z3.ArrayRef:
+    def store(self, name: str) -> StoreArray:
         assert self.reftype is not None
-        return z3.Array(name, z3.IntSort(), self.reftype)
+        return cast(StoreArray, z3.Array(name, z3.IntSort(), self.reftype))
 
     def ref_constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
         if self.reftype is None:
