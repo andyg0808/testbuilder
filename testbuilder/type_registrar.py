@@ -79,14 +79,7 @@ class TypeRegistrar:
         sorts: SortSet = set()
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
-            if constructor.name() == "Reference":
-                if len(types) > 0:
-                    if Sort.Reference not in types:
-                        continue
-                # Reference variable is itself the value; it is not a
-                # wrapper
-                expr: Expression = var
-            elif constructor.arity() == 1:
+            if constructor.arity() == 1:
                 expr = self.anytype.accessor(i, 0)(var)
             else:
                 expr = var
