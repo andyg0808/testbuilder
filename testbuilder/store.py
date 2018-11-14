@@ -7,11 +7,6 @@ from .store_array import ArrayKey, ArrayVal, StoreArray
 from .type_registrar import TypeRegistrar
 from .z3_types import Expression
 
-# @dataclass(frozen=True)
-# class StoreStore:
-#     address: int
-#     value: Expression
-
 
 @dataclass
 class Store:
@@ -20,8 +15,6 @@ class Store:
     keys: int = 0
     store_number = 0
     written_number = 0
-    # values: MMapping[int, Expression] = field(default_factory=dict)
-    # queue: List[Expression] = field(default_factory=list)
 
     @property
     def store(self) -> StoreArray:
@@ -36,10 +29,6 @@ class Store:
     def add(self, value: ArrayVal) -> int:
         key = self.keys
         self.keys += 1
-        # self.values[key] = value
-        # self.queue.append(StoreStore(key, value))
-        # extract = getattr(self.registrar.anytype, "r")
-        # keyexpr = extract(self.registrar.make_any(key))
         self._set(z3.IntVal(key), value)
         return key
 
