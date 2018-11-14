@@ -134,7 +134,6 @@ def test_basic_pair():
     )
 
 
-@pytest.mark.xfail
 def test_read_inferred_pair():
     """
     Test the constructs around inferring a reference to a pair in a
@@ -143,7 +142,9 @@ def test_read_inferred_pair():
     check_expression(
         "x.left > 0",
         """
-Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0
+And(Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0,
+    And(Any.is_Reference(pyname_x),
+        Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)]))))
         """,
     )
 

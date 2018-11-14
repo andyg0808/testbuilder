@@ -78,32 +78,24 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_NameConstant(self, node: n.NameConstant) -> TypeUnion:
         return Constants[node.value]
 
+    def dereference(self, val: TypeUnion) -> TypeUnion:
+        return Magic.m(Reference)(self.store.get)(val)
+
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
         value = self.visit(node.value)
         if isinstance(value, VariableTypeUnion):
             value = value.expand()
         attr = node.attr
         assert attr in ["left", "right"]
+        assert (
+            self.registrar.reftype is not None
+        ), "Need reference types enabled to use attributes"
+
         accessor = getattr(self.registrar.reftype, "Pair_" + attr)
-        # conditional = getattr(self.registrar.anytype, "is_Pair")
-        decl = getattr(self.registrar.reftype, "Pair")
 
-        def _access(value: Expression) -> Optional[Expression]:
-            if value.decl() != decl:
-                return None
-            return cast(Expression, accessor(value))
-
-        print("incoming value", value, attr)
-        grab = Magic.m(object)(_access)
-        grabbed = grab(value)
-        print("grabbed", grabbed)
-        return grabbed
-
-        # variable = self.visit(node.value)
-        # accessor = self.find_accessor(node.attr)
-        # expression = accessor(variable)
-        # sort = expression.sort()
-        # return TypeUnion(expressions=[expression], sorts={sort})
+        dereferenced = self.dereference(value)
+        component = Magic.m(self.registrar.reftype)(accessor)(dereferenced)
+        return self.registrar.expand_reference(component)
 
     def visit_Name(self, node: n.Name) -> VariableTypeUnion:
         # TODO: Can any of this be replaced with make_any

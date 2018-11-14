@@ -97,6 +97,47 @@ class TypeRegistrar:
             sorts.add(expr.sort())
         return TypeUnion(exprs, sorts)
 
+    def expand_reference(
+        self, union: TypeUnion, types: SortSet = set(), name: Optional[str] = None
+    ) -> TypeUnion:
+        """
+        Arguments:
+            name: The variable name to expand
+            types: A set of sorts to restrict the variable to. If the
+                set is empty, does not restrict the variable at all.
+        """
+        assert self.reftype is not None
+        exprs = []
+        sorts: SortSet = set()
+        for cexpr in union.expressions:
+            val = cexpr.expr
+            # assert val.sort() == self.reftype
+            if name is None:
+                local_name = str(val)
+            else:
+                local_name = name
+            for i in range(self.anytype.num_constructors()):
+                constructor = self.anytype.constructor(i)
+                if constructor.arity() == 1:
+                    expr = self.anytype.accessor(i, 0)(val)
+                else:
+                    expr = val
+                # Allow restricting the expansion of the variable
+                if len(types) > 0:
+                    if expr.sort() not in types:
+                        continue
+                if len(types) == 1:
+                    cexpr = CExpr(expr=expr)
+                else:
+                    constraint = self.anytype.recognizer(i)(val)
+                    constraints = cexpr.constraints + [
+                        (local_name, expr.sort(), constraint)
+                    ]
+                    cexpr = CExpr(expr=expr, constraints=constraints)
+                exprs.append(cexpr)
+                sorts.add(expr.sort())
+        return TypeUnion(exprs, sorts)
+
     def _extract_or_wrap(self, val: Expression, extractor: str, wrapper: str) -> AnyT:
         acc = getattr(self.anytype, extractor, None)
         if acc is not None and val.decl() == acc:
