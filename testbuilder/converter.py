@@ -97,7 +97,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         grab = Magic.m(object)(_access)
         grabbed = grab(value)
         print("grabbed", grabbed)
-        return grabbed  # type: ignore
+        return grabbed
 
         # variable = self.visit(node.value)
         # accessor = self.find_accessor(node.attr)
