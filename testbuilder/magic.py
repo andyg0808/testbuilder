@@ -76,7 +76,7 @@ class Magic:
                 self.funcref.append(registration)
 
     @staticmethod
-    def m(*types: TagType) -> Callable[[MagicFunc], MagicFunc]:
+    def m(*types: TagType) -> Callable[[MagicFunc], Magic]:
         """
         Create an instance of Magic and call `magic` on it with these
         arguments.
