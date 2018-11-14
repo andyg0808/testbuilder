@@ -22,7 +22,7 @@ from .type_union import TypeUnion
 from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
-from .z3_types import Expression, bool_and, bool_or
+from .z3_types import Expression, Reference, SortSet, bool_and, bool_or
 
 OpFunc = Callable[..., TypeUnion]
 TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
@@ -190,14 +190,13 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, constructor: z3.FuncDeclRef, args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
-        Reference = getattr(self.registrar.anytype, "Reference")
         print("Constructing call", constructor, args)
         exprs = []
-        sorts = set()
+        sorts: SortSet = set()
         for arg_tuple in Magic.cartesian_product(args):
             print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
-            expr = Reference(self.store.add(cast(z3.DatatypeRef, target)))
+            expr = self.store.add(cast(z3.DatatypeRef, target))
             constraints = list(mapcat(lambda x: x.constraints, arg_tuple))
             if len(constraints) > 0:
                 cexpr = CExpr(expr=expr, constraints=list(constraints))

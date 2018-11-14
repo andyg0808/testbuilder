@@ -5,7 +5,7 @@ from typing import Optional, cast
 import z3
 
 from .type_registrar import TypeRegistrar
-from .z3_types import AnySort
+from .z3_types import AnySort, Reference
 
 
 class TypeBuilder:
@@ -34,7 +34,7 @@ class TypeBuilder:
         return self
 
     def references(self) -> TypeBuilder:
-        self.datatype.declare("Reference", ("r", z3.IntSort()))
+        self.datatype.declare("Reference", ("r", Reference))
         self.reftype = z3.Datatype(self.name + "_reftypes")
         return self
 

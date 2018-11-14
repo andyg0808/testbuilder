@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .store_array import ArrayKey, ArrayVal, StoreArray
 from .type_registrar import TypeRegistrar
-from .z3_types import Expression
+from .z3_types import Reference
 
 
 @dataclass
@@ -26,13 +26,13 @@ class Store:
     def store(self, value: StoreArray) -> None:
         self._current_store = value
 
-    def add(self, value: ArrayVal) -> int:
-        key = self.keys
+    def add(self, value: ArrayVal) -> ArrayKey:
+        key = Reference.Reference(z3.IntVal(self.keys))
         self.keys += 1
-        self._set(z3.IntVal(key), value)
+        self._set(key, value)
         return key
 
-    def get(self, key: ArrayKey) -> Expression:
+    def get(self, key: ArrayKey) -> ArrayVal:
         return self.store[key]
 
     def _set(self, key: ArrayKey, value: ArrayVal) -> None:

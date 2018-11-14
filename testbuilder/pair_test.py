@@ -9,7 +9,7 @@ import z3
 from .expression_builder import get_expression
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
-from .z3_types import diff_expression, print_diff
+from .z3_types import Reference, diff_expression, print_diff
 
 
 def check_expression(
@@ -44,11 +44,12 @@ def check_expression(
     Registrar = builder.build()
 
     if isinstance(expected, str):
-        store_sort = z3.ArraySort(z3.IntSort(), Registrar.reftype)
+        store_sort = z3.ArraySort(Reference, Registrar.reftype)
         local_vals = {
             "store": z3.Const("store", store_sort),
             "store_1": z3.Const("store_1", store_sort),
             "store_2": z3.Const("store_2", store_sort),
+            "Reference": lambda i: Reference.Reference(i),
         }
         expected = expand_variables(expected, Registrar, local_vals=local_vals)
     _get_expression = partial(get_expression, Registrar, line, depth=depth)
@@ -123,8 +124,8 @@ def test_basic_pair():
     check_expression(
         "x = Pair(1,2)",
         """
-        pyname_x == Any.Reference(0) \
-        and store_1 == Store(store, 0,
+        pyname_x == Any.Reference(Reference(0)) \
+        and store_1 == Store(store, Reference(0),
                              Ref.Pair(Any.Int(1), Any.Int(2)))
         """,
         #         """
@@ -172,8 +173,8 @@ x = Pair(e, f)
         And(
         pyname_e == Any.Int(1),
         pyname_f == Any.Int(2),
-        pyname_x == Any.Reference(0),
-        store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)),
+        pyname_x == Any.Reference(Reference(0)),
+        store_1 == Store(store, Reference(0), Ref.Pair(pyname_e, pyname_f)),
         )
         """,
     )
@@ -191,7 +192,7 @@ def test_unconstrained_variables_into_pair():
         "x = Pair(e, f)",
         """
 store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)) \
-and pyname_x == Any.Reference(0)
+and pyname_x == Any.Reference(Reference(0))
     """,
     )
 
@@ -232,7 +233,7 @@ a = Pair(1, 2)
 x = a.left
         """,
         """
-pyname_a == Any.Reference(0)\
+pyname_a == Any.Reference(Reference(0))\
 and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(1), Any.Int(2)))\
 and pyname_x == Ref.Pair_left(store_1[Any.r(pyname_a)])
         """,
@@ -247,7 +248,7 @@ x = Pair(1,2)
 x.left = 3
     """,
         """
-pyname_x == Any.Reference(0)\
+pyname_x == Any.Reference(Reference(0))\
 and store_1 == Store(store, Any.r(pyname_x), Ref.Pair(Any.Int(1), Any.Int(2)))\
 and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(pyname_x))
     """,

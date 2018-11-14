@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Iterable, List, Optional, Set, Tuple, Union
+from typing import Callable, Iterable, List, NewType, Optional, Set, Tuple, Union, cast
 
 import z3
-from dataclasses import dataclass
 
 Expression = z3.ExprRef
+
+
+class ReferenceT(z3.DatatypeRef):
+    ...
+
+
+class ReferenceSort(z3.DatatypeSortRef):
+    def Reference(self, r: z3.Int) -> ReferenceT:
+        ...
+
+
+def make_ref_type() -> ReferenceSort:
+    reference = z3.Datatype("Reference")
+    reference.declare("Reference", ("r", z3.IntSort()))
+    return cast(ReferenceSort, reference.create())
+
+
+Reference: ReferenceSort = make_ref_type()
 
 
 class AnyT(z3.DatatypeRef):

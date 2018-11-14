@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, List, Optional, Set, cast
+from typing import Generator, List, Optional, cast
 
 import z3
 from dataclasses import dataclass
@@ -11,7 +11,16 @@ from .constrained_expression import ConstrainedExpression as CExpr
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, Sort, SortSet, bool_and, bool_not, bool_or
+from .z3_types import (
+    AnyT,
+    Expression,
+    Reference,
+    Sort,
+    SortSet,
+    bool_and,
+    bool_not,
+    bool_or,
+)
 
 
 @dataclass
@@ -21,7 +30,7 @@ class TypeRegistrar:
 
     def store(self, name: str) -> StoreArray:
         assert self.reftype is not None
-        return cast(StoreArray, z3.Array(name, z3.IntSort(), self.reftype))
+        return cast(StoreArray, z3.Array(name, Reference, self.reftype))
 
     def ref_constructors(self) -> Generator[z3.FuncDeclRef, None, None]:
         if self.reftype is None:
@@ -109,6 +118,8 @@ class TypeRegistrar:
             return self._extract_or_wrap(val, "s", "String")
         if val.sort() == z3.BoolSort():
             return self._extract_or_wrap(val, "b", "Bool")
+        if val.sort() == Reference:
+            return self._extract_or_wrap(val, "r", "Reference")
         if val.sort() == self.anytype:
             # This can happen if we already have a wrapped type, or if
             # the type is a non-wrapper type
