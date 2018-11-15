@@ -15,6 +15,7 @@ import z3
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr
 from .expandable_type_union import ExpandableTypeUnion
+from .expression_type_union import ExpressionTypeUnion
 from .magic import Magic, magic_tag as magic
 from .store import Store
 from .type_manager import TypeManager
@@ -96,7 +97,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
         dereferenced = self.dereference(value)
         component = Magic.m(self.registrar.reftype)(accessor)(dereferenced)
-        return self.registrar.expand_reference(component)
+        return ExpressionTypeUnion(
+            component.expressions, component.sorts, self.registrar
+        )
 
     def visit_Name(self, node: n.Name) -> VariableTypeUnion:
         # TODO: Can any of this be replaced with make_any
