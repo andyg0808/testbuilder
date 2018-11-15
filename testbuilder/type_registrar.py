@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Generator, List, Optional, cast
+from typing import Generator, List, Optional, Tuple, cast
 
 import z3
 from dataclasses import dataclass
 from typeassert import assertify
 from z3 import DatatypeRef
 
-from .constrained_expression import ConstrainedExpression as CExpr
+from .constrained_expression import ConstrainedExpression as CExpr, VarConstraint
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
@@ -75,14 +75,55 @@ class TypeRegistrar:
                 set is empty, does not restrict the variable at all.
         """
         var = self.make_any(name)
+        exprs, sorts = self.expand_anytype_val(name, var, types)
+        return TypeUnion(exprs, sorts)
+
+    def expand_reference(
+        self, union: TypeUnion, types: SortSet = set(), name: Optional[str] = None
+    ) -> TypeUnion:
+        """
+        This function is the equivalent of `expand` but for full TypeUnions. It expands the values in each
+        Arguments:
+            union: A type union to expand values in
+            types: A set of sorts to restrict the results to. If the
+                set is empty, does not restrict the results at all.
+        """
+        assert self.reftype is not None
+        exprs = []
+        sorts: SortSet = set()
+        for orig_cexpr in union.expressions:
+            val = orig_cexpr.expr
+            # Support non-anytype values
+            if val.sort() != self.anytype:
+                exprs.append(orig_cexpr)
+                sorts.add(orig_cexpr.expr.sort())
+                continue
+            if name is None:
+                local_name = str(val)
+            else:
+                local_name = name
+            expr_exprs, expr_sorts = self.expand_anytype_val(
+                local_name, cast(AnyT, val), types, orig_cexpr.constraints
+            )
+            exprs += expr_exprs
+            sorts |= expr_sorts
+        return TypeUnion(exprs, sorts)
+
+    def expand_anytype_val(
+        self,
+        name: str,
+        val: AnyT,
+        types: SortSet = set(),
+        orig_constraints: List[VarConstraint] = [],
+    ) -> Tuple[List[CExpr], SortSet]:
         exprs = []
         sorts: SortSet = set()
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
             if constructor.arity() == 1:
-                expr = self.anytype.accessor(i, 0)(var)
+                expr = self.anytype.accessor(i, 0)(val)
             else:
-                expr = var
+                expr = val
             # Allow restricting the expansion of the variable
             if len(types) > 0:
                 if expr.sort() not in types:
@@ -90,53 +131,12 @@ class TypeRegistrar:
             if len(types) == 1:
                 cexpr = CExpr(expr=expr)
             else:
-                constraint = self.anytype.recognizer(i)(var)
-                constraints = [(name, expr.sort(), constraint)]
+                constraint = self.anytype.recognizer(i)(val)
+                constraints = orig_constraints + [(name, expr.sort(), constraint)]
                 cexpr = CExpr(expr=expr, constraints=constraints)
             exprs.append(cexpr)
             sorts.add(expr.sort())
-        return TypeUnion(exprs, sorts)
-
-    def expand_reference(
-        self, union: TypeUnion, types: SortSet = set(), name: Optional[str] = None
-    ) -> TypeUnion:
-        """
-        Arguments:
-            name: The variable name to expand
-            types: A set of sorts to restrict the variable to. If the
-                set is empty, does not restrict the variable at all.
-        """
-        assert self.reftype is not None
-        exprs = []
-        sorts: SortSet = set()
-        for cexpr in union.expressions:
-            val = cexpr.expr
-            # assert val.sort() == self.reftype
-            if name is None:
-                local_name = str(val)
-            else:
-                local_name = name
-            for i in range(self.anytype.num_constructors()):
-                constructor = self.anytype.constructor(i)
-                if constructor.arity() == 1:
-                    expr = self.anytype.accessor(i, 0)(val)
-                else:
-                    expr = val
-                # Allow restricting the expansion of the variable
-                if len(types) > 0:
-                    if expr.sort() not in types:
-                        continue
-                if len(types) == 1:
-                    cexpr = CExpr(expr=expr)
-                else:
-                    constraint = self.anytype.recognizer(i)(val)
-                    constraints = cexpr.constraints + [
-                        (local_name, expr.sort(), constraint)
-                    ]
-                    cexpr = CExpr(expr=expr, constraints=constraints)
-                exprs.append(cexpr)
-                sorts.add(expr.sort())
-        return TypeUnion(exprs, sorts)
+        return exprs, sorts
 
     def _extract_or_wrap(self, val: Expression, extractor: str, wrapper: str) -> AnyT:
         acc = getattr(self.anytype, extractor, None)
