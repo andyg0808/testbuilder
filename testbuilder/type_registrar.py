@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import Generator, List, Optional, Tuple, cast
 
+from logbook import Logger
+from typeassert import assertify
+
 import z3
 from dataclasses import dataclass
-from typeassert import assertify
 from z3 import DatatypeRef
 
 from .constrained_expression import ConstrainedExpression as CExpr, VarConstraint
+from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
@@ -21,6 +24,8 @@ from .z3_types import (
     bool_not,
     bool_or,
 )
+
+log = Logger("type_registrar")
 
 
 @dataclass
@@ -105,6 +110,7 @@ class TypeRegistrar:
             expr_exprs, expr_sorts = self.expand_anytype_val(
                 local_name, cast(AnyT, val), types, orig_cexpr.constraints
             )
+            log.info(f"Expanded value {val} to {expr_exprs} {expr_sorts}")
             exprs += expr_exprs
             sorts |= expr_sorts
         return TypeUnion(exprs, sorts)
@@ -129,6 +135,7 @@ class TypeRegistrar:
         """
         exprs = []
         sorts: SortSet = set()
+        log.info(f"Restricting expansion to {types}")
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
             if constructor.arity() == 1:
@@ -147,6 +154,7 @@ class TypeRegistrar:
                 cexpr = CExpr(expr=expr, constraints=constraints)
             exprs.append(cexpr)
             sorts.add(expr.sort())
+        log.debug(f"Returning exprs of {exprs}")
         return exprs, sorts
 
     def _extract_or_wrap(self, val: Expression, extractor: str, wrapper: str) -> AnyT:
@@ -173,7 +181,7 @@ class TypeRegistrar:
 
     @assertify
     def assign(self, target: DatatypeRef, value: TypeUnion) -> TypeUnion:
-        if isinstance(value, VariableTypeUnion):
+        if isinstance(value, ExpandableTypeUnion):
             # Special-case for TypeUnions which are already Any variables
             return TypeUnion.wrap(target == value._get_any())
         exprs = []
@@ -192,7 +200,7 @@ class TypeRegistrar:
         applying truthy standards as needed in order to convert
         non-boolean types.
         """
-        if isinstance(value, VariableTypeUnion):
+        if isinstance(value, ExpandableTypeUnion):
             # Always want to work on expanded version, because a
             # VariableTypeUnion is either unconstrained or empty. If
             # unconstrained, we need to expand to get constrained

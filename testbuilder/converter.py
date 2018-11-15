@@ -14,6 +14,7 @@ import z3
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr
+from .expandable_type_union import ExpandableTypeUnion
 from .magic import Magic, magic_tag as magic
 from .store import Store
 from .type_manager import TypeManager
@@ -83,7 +84,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
         value = self.visit(node.value)
-        if isinstance(value, VariableTypeUnion):
+        if isinstance(value, ExpandableTypeUnion):
             value = value.expand()
         attr = node.attr
         assert attr in ["left", "right"]
@@ -196,7 +197,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 cexpr = CExpr(expr=expr)
             exprs.append(cexpr)
             sorts.add(expr.sort())
-        if len(exprs) == 0 and any(isinstance(arg, VariableTypeUnion) for arg in args):
+        if len(exprs) == 0 and any(
+            isinstance(arg, ExpandableTypeUnion) for arg in args
+        ):
             newargs = Magic.expand(args)
             return self.construct_call(constructor, newargs)
         return TypeUnion(expressions=exprs, sorts=sorts)
@@ -255,9 +258,9 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         class EqMagic(Magic):
             def should_expand(self, *args: TypeUnion) -> bool:
                 left, right = args
-                if not isinstance(left, VariableTypeUnion):
+                if not isinstance(left, ExpandableTypeUnion):
                     return True
-                if not isinstance(right, VariableTypeUnion):
+                if not isinstance(right, ExpandableTypeUnion):
                     return True
                 print("not expanding")
                 return False
@@ -278,9 +281,9 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         class NotEqMagic(Magic):
             def should_expand(self, *args: TypeUnion) -> bool:
                 left, right = args
-                if not isinstance(left, VariableTypeUnion):
+                if not isinstance(left, ExpandableTypeUnion):
                     return True
-                if not isinstance(right, VariableTypeUnion):
+                if not isinstance(right, ExpandableTypeUnion):
                     return True
                 return False
 

@@ -22,8 +22,8 @@ import z3
 from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
+from .expandable_type_union import ExpandableTypeUnion
 from .type_union import TypeUnion
-from .variable_type_union import VariableTypeUnion
 from .z3_types import Expression, SortSet
 
 log = Logger("Magic")
@@ -115,13 +115,13 @@ class Magic:
 
     @staticmethod
     def unexpanded(args: Sequence[TypeUnion]) -> bool:
-        return any(isinstance(arg, VariableTypeUnion) for arg in args)
+        return any(isinstance(arg, ExpandableTypeUnion) for arg in args)
 
     @staticmethod
     def expand(args: Sequence[TypeUnion]) -> Sequence[TypeUnion]:
         newargs = []
         for arg in args:
-            if isinstance(arg, VariableTypeUnion):
+            if isinstance(arg, ExpandableTypeUnion):
                 newargs.append(arg.expand())
             else:
                 newargs.append(arg)
@@ -157,8 +157,11 @@ class Magic:
             exprs.append(res)
             sorts.add(res.expr.sort())
         if len(exprs) == 0 and Magic.unexpanded(args):
+            log.info(f"No results for {args} Expanding and retrying.")
             newargs = Magic.expand(args)
             return self(*newargs)
+        else:
+            log.info(f"Results for {args}: {exprs}")
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
