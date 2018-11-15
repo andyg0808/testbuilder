@@ -116,6 +116,17 @@ class TypeRegistrar:
         types: SortSet = set(),
         orig_constraints: List[VarConstraint] = [],
     ) -> Tuple[List[CExpr], SortSet]:
+        """
+        Takes an Any value and extracts all possible results from it,
+        limiting by types.
+
+        Arguments:
+            name: A string to use as the name value for the
+            constraints created during expansion
+            orig_constraints: A list of constraints which might
+            already be placed on the value being passed in. These will
+            be added to each of the new values' constraints list.
+        """
         exprs = []
         sorts: SortSet = set()
         for i in range(self.anytype.num_constructors()):
