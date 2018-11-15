@@ -59,6 +59,7 @@ def check_expression(
     if expected is None:
         assert expr is None
     else:
+        assert expr is not None
         diff = diff_expression(expected, expr)
         if diff is not None:
             print_diff(diff)
@@ -69,6 +70,17 @@ def test_basic_call():
     # TODO: Handle calls correctly
     # What about recursion?
     check_expression("abs(i)", "true")
+
+
+def test_negative_slice():
+    check_expression(
+        """
+x = 24
+y = 25
+        """,
+        "pyname_x == Any.Int(24)",
+        line=-2,
+    )
 
 
 def test_multiplication():

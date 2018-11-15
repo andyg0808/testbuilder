@@ -1,5 +1,4 @@
 # from __future__ import annotations
-import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -14,6 +13,8 @@ from typing import (
 )
 
 from logbook import Logger
+
+import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
@@ -37,7 +38,14 @@ class ComputedLineFilterer(UpdateVisitor):
         super().__init__()
         self.target_line = target_line
 
+    def update_target(self, thing: Any) -> None:
+        if self.target_line < 0:
+            target = self.target_line + sbb.last_line(thing) + 1
+            log.info(f"Updating target line from {self.target_line} to {target}")
+            self.target_line = target
+
     def visit_Module(self, module: sbb.Module) -> sbb.Request:
+        self.update_target(module)
         for func in module.functions.values():
             updated = self.visit_FunctionDef(func)
             if updated is not None:
@@ -52,6 +60,7 @@ class ComputedLineFilterer(UpdateVisitor):
         return sbb.Request(module=module, code=blocktree)
 
     def visit_FunctionDef(self, function: sbb.FunctionDef) -> Optional[sbb.FunctionDef]:
+        self.update_target(function)
         blocktree = self.visit_BlockTree(function.blocks)
         if blocktree is None or blocktree.empty():
             log.notice("Discarding function because it is empty")
@@ -68,6 +77,7 @@ class ComputedLineFilterer(UpdateVisitor):
         pass
 
     def visit_BlockTree(self, blocktree: sbb.BlockTree) -> Optional[sbb.BlockTree]:
+        self.update_target(blocktree)
         target = Discovery(self.target_line)(blocktree.end)
         if target is None:
             return None

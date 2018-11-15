@@ -1,9 +1,9 @@
 import ast
-from dataclasses import dataclass, field
 from functools import reduce, singledispatch
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
+from dataclasses import dataclass, field
 
 from . import nodetree as n
 from .visitor import GatherVisitor
@@ -275,7 +275,13 @@ def line_range(parent: BasicBlock, end: BasicBlock) -> range:
 
 
 def last_line(block: Any) -> int:
-    if isinstance(block, BlockTreeIndex):
+    if isinstance(block, Module):
+        candidates: List[int] = []
+        candidates += [last_line(f) for f in block.functions.values()]
+        candidates += [last_line(c) for c in block.classes.values()]
+        candidates.append(last_line(block.code))
+        return max(candidates)
+    elif isinstance(block, BlockTreeIndex):
         return last_line(block.target)
     elif isinstance(block, BlockTree):
         return last_line(block.end)
@@ -288,7 +294,7 @@ def last_line(block: Any) -> int:
     elif isinstance(block, StartBlock):
         return block.line
     else:
-        raise RuntimeError(f"Unexpected end type: {block}")
+        raise RuntimeError(f"Unexpected end type: {type(block)}")
 
 
 class LineGatherer(GatherVisitor[int]):
