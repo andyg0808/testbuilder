@@ -39,6 +39,7 @@ class TypeUnion:
         return bool_or(boolexprs)
 
     def implications(self) -> z3.Bool:
+        assert not self.empty()
         constraints = [x.constraint() for x in self.expressions if x.constrained()]
         return bool_or(constraints)
 
