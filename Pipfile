@@ -13,7 +13,7 @@ pygments-style-solarized = "==0.1.1"
 logbook = "*"
 toolz = "*"
 injectable = "*"
-typeassert = {git = "ssh://git@gitlab.com/andyg0808/typeassert.git", editable=true}
+typeassert = {git = "ssh://git@gitlab.com/andyg0808/typeassert.git",editable = true}
 
 [dev-packages]
 black = "==18.6b4"
@@ -28,6 +28,7 @@ sphinx = "*"
 termcolor = "*"
 hypothesis = "*"
 pytest-cov = "*"
+pytest-xdist = "*"
 
 [requires]
 python_version = "3.7"

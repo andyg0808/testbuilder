@@ -20,8 +20,14 @@ TESTFILE = testbuilder
 #   --maxfail=n Stop after `n` failed tests. This is useful to get a
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
-PYTEST = pytest -x -ra --ff $(TESTFILE)
+PYTEST_FLAGS = -x -ra --ff
+ifdef parallel
+	PYTEST = pytest $(PYTEST_FLAGS) -n=$(shell nproc) $(TESTFILE)
+else
+	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
+endif
 
+pytest: PYTEST_FLAGS += --looponfail
 pytest:
 	pipenv run $(PYTEST) | rainbow.py --colorize
 
