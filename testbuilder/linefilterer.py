@@ -84,7 +84,6 @@ class ComputedLineFilterer(UpdateVisitor):
         filterer = Filter(self.target_line)
         filtered: sbb.BasicBlock = result(filterer(target), blocktree.start)
         tree: sbb.BasicBlock = ConditionalElimination()(filtered)
-        # print("Visited nodes", [type(node) for node in filterer.visited_nodes.values()])
         start_block = blocktree.start
         return sbb.BlockTree(
             start=start_block,
@@ -153,23 +152,14 @@ class Filter(GenericVisitor[Coroutine]):
     ) -> Coroutine:
         if code is stop:
             return (yield)
-        print("-------------\nvisiting code block")
         lines: List[n.stmt] = []
         # We have to work up from the bottom
         for line in reversed(code.code):
-            print("targets", targets)
             target = target_finder(line)
-            print("target", target)
             if line.line == self.target_line or target in targets:
-                # print("target info", target in targets, target, targets)
-                # assert target is not None
                 deps = self.dep_finder(line)
-                print("deps on line", line.line, deps)
                 lines.insert(0, line)
                 targets.replace(target, deps)
-                print("new targets", targets)
-            else:
-                print("Line discarded", line, target, targets, self.target_line)
                 continue
 
         parent = yield from self.visit(code.parent, stop, targets)

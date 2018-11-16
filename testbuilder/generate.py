@@ -61,7 +61,6 @@ def generate_tests(
             PhiFilterer(),
             FunctionSubstitute(),
             ExprStripper(),
-            WriteDot("generate.dot"),
             _ssa_to_expression,
         )
         solution: Optional[Solution] = solve(registrar, expr)

@@ -60,7 +60,7 @@ class TypeRegistrar:
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
             }
 
-            print(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
+            log.debug(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
             expressions: List[CExpr] = []
         else:
             sorts = set()
@@ -135,7 +135,6 @@ class TypeRegistrar:
         """
         exprs = []
         sorts: SortSet = set()
-        log.info(f"Restricting expansion to {types}")
         for i in range(self.anytype.num_constructors()):
             constructor = self.anytype.constructor(i)
             if constructor.arity() == 1:
@@ -145,6 +144,9 @@ class TypeRegistrar:
             # Allow restricting the expansion of the variable
             if len(types) > 0:
                 if expr.sort() not in types:
+                    log.debug(
+                        f"Expansion restricted to {types}; discarding {constructor.name()}"
+                    )
                     continue
             if len(types) == 1:
                 cexpr = CExpr(expr=expr)

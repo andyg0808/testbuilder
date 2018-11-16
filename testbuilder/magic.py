@@ -200,7 +200,7 @@ class Magic:
             raise RuntimeError("Unexpected type for func_key: not TagType")
 
         for registration in self.funcref:
-            log.info(f"Checking {registration.types} against {args}")
+            log.info(f"Checking if {registration.types} implements for {args}")
             if all(sort_compare(*tu) for tu in zip(args, registration.types)):
                 return registration
         return None

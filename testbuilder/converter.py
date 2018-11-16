@@ -9,6 +9,7 @@ import operator
 import re
 from typing import Any, Callable, Mapping, Optional, Sequence, cast
 
+from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
@@ -26,6 +27,8 @@ from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import Expression, Reference, SortSet, bool_and, bool_or
+
+log = Logger("converter")
 
 OpFunc = Callable[..., TypeUnion]
 TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
@@ -167,17 +170,16 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return v
 
     def visit_Call(self, node: n.Call) -> TypeUnion:
-        print("call node", node)
-        print(f"type of function: {type(node)}")
+        log.info(f"Found call to {node.func}")
         if isinstance(node.func, n.Name):
             function = node.func.id
             for constructor in self.registrar.ref_constructors():
-                print(f"trying {constructor.name()} on {function}")
+                log.debug(f"Trying {constructor.name()} on {function}")
                 if constructor.name() == function:
                     args = [self.visit(v) for v in node.args]
                     assert len(node.keywords) == 0
                     union = self.construct_call(constructor, args)
-                    print("union is ", union)
+                    log.debug(f"Constructed result is {union}")
                     return union
 
         # Treat functions as true which we couldn't substitute
