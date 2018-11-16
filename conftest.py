@@ -25,7 +25,16 @@ def pytest_runtest_logstart():
     null_handler.push_application()
 
     if os.environ.get("VERBOSE", False) or verbosity:
-        StderrHandler().push_application()
+        flag = os.environ.get("VERBOSE", False)
+        ignores = os.environ.get("IGNORE", "").split(",")
+        if flag and not flag.isalpha():
+            StderrHandler(
+                filter=lambda r, h: r.channel not in ignores
+            ).push_application()
+        elif flag and flag.isalpha():
+            StderrHandler(filter=lambda r, h: r.channel == flag).push_application()
+        else:
+            StderrHandler().push_application()
         return
 
     stderr_handler = StderrHandler(level="WARNING")
