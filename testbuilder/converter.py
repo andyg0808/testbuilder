@@ -1,6 +1,7 @@
 """
-Converts an expression from Python AST into a z3 expression. The structural
-aspects of converting Python are handled by the code in expression_builder.
+Converts an expression from Python AST into a z3 expression. The
+structural aspects of converting Python are handled by the code in
+`ssa_to_expression`.
 """
 from __future__ import annotations
 
