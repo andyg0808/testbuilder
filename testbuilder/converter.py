@@ -89,8 +89,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
         value = self.visit(node.value)
-        if isinstance(value, ExpandableTypeUnion):
-            value = value.expand()
         attr = node.attr
         assert attr in ["left", "right"]
         assert (
