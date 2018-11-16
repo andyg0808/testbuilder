@@ -2,6 +2,7 @@ from functools import singledispatch
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
+from logbook import Logger
 from toolz import mapcat, pipe
 
 import z3
@@ -13,12 +14,13 @@ from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
 from .store import Store
-from .test_utils import write_dot
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .visitor import GatherVisitor, SimpleVisitor
 from .z3_types import bool_all, bool_any, bool_true
+
+log = Logger("ssa_to_expression")
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -221,6 +223,7 @@ def ssa_lines_to_expression(
     registrar: TypeRegistrar, target_line: int, module: sbb.Module
 ) -> Optional[sbb.TestData]:
     request = filter_lines(target_line, module)
+    log.debug("Filtered request {}", request)
     if request is None:
         return None
     repaired_request: sbb.Request = pipe(
