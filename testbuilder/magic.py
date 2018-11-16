@@ -150,8 +150,8 @@ class Magic:
             functions.append((func, cast(Tuple, arg_tuple)))
         exprs = []
         sorts: SortSet = set()
-        for func, args in functions:
-            res = self.__call_on_exprs(func.function, args)
+        for func, arg_tuple in functions:
+            res = self.__call_on_exprs(func.function, arg_tuple)
             if res is None:
                 continue
             exprs.append(res)
