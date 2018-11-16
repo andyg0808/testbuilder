@@ -12,11 +12,12 @@ from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .line_splitter import LineSplitter
+from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .renderer import prompt_and_render_test
 from .solver import Solution, solve
 from .ssa_repair import repair
-from .ssa_to_expression import filter_lines, ssa_to_expression
+from .ssa_to_expression import ssa_to_expression
 from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
 from .utils import WriteDot
