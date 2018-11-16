@@ -180,6 +180,14 @@ class LValue:
 
 @dataclass
 class Attribute(expr, LValue):
+    """
+    Because writing to an attribute requires a read-modify-write on
+    the original contents of the `value` expression, we store a rvalue
+    version of it in `e`. Thus, `value` is the `LValue` to store to
+    while `e` is an rvalue from which to do any reading necessary.
+    """
+
+    e: LValue
     value: LValue
     attr: str
 

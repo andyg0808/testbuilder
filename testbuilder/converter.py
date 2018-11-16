@@ -142,7 +142,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             return self.registrar.assign(var, value)
         elif isinstance(target, n.Attribute):
             if target.attr == "left":
-                right_val: TypeUnion = self.visit(n.Attribute(target.value, "right"))
                 left_val: TypeUnion = value
 
                 def assign_left(
@@ -158,6 +157,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
                 assignment = Magic.m(z3.SortRef, z3.SortRef)(assign_left)
                 return self.assign(target.value, assignment(left_val, right_val))
+                right_val: TypeUnion = self.visit(
+                    n.Attribute(e=target.e, value=target.e, attr="right")
+                )
             print("variable name is", var_name)
 
         crash()

@@ -1,5 +1,4 @@
 import ast
-import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -11,6 +10,8 @@ from typing import (
     Union,
     cast,
 )
+
+import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
@@ -376,7 +377,9 @@ class StatementVisitor(GenericVisitor):
             return var
         elif isinstance(node, ast.Attribute):
             return n.Attribute(
-                value=self.get_target_variable(node.value), attr=node.attr
+                e=self.visit(node.value),
+                value=self.get_target_variable(node.value),
+                attr=node.attr,
             )
         else:
             raise RuntimeError("Unknown target type")
@@ -438,6 +441,10 @@ class AstBuilder(GenericVisitor):
     def visit_Name(self, node: ast.Name) -> n.Name:
         idx = self.variables.get(node.id)
         return n.Name(node.id, idx)
+
+    def visit_Attribute(self, node: ast.Attribute) -> n.Attribute:
+        value = self.visit(node.value)
+        return n.Attribute(e=value, value=value, attr=node.attr)
 
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v
