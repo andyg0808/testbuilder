@@ -11,16 +11,12 @@ from toolz import pipe
 import z3
 
 from .ast_to_ssa import ast_to_ssa
-from .basic_block import BasicBlock
 from .ssa_basic_blocks import TestData
 from .ssa_to_expression import ssa_lines_to_expression
 from .type_registrar import TypeRegistrar
 from .utils import pipe_print
 
 NULL = z3.DeclareSort("None")
-
-
-StopBlock = Optional[BasicBlock]
 
 
 def get_expression(
