@@ -38,6 +38,13 @@ def generate_tests(
     ) -> str:
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
+        if request is None:
+            logger.error(
+                f"Couldn't generate a test for line {target_line};"
+                " it likely is either dead code or a line number"
+                " which doesn't exist."
+            )
+            return ""
         if isinstance(request.code, sbb.BlockTree):
             logger.error(
                 f"Couldn't generate a test for line {target_line};"

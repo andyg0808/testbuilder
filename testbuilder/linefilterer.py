@@ -44,7 +44,7 @@ class ComputedLineFilterer(UpdateVisitor):
             log.info(f"Updating target line from {self.target_line} to {target}")
             self.target_line = target
 
-    def visit_Module(self, module: sbb.Module) -> sbb.Request:
+    def visit_Module(self, module: sbb.Module) -> Optional[sbb.Request]:
         self.update_target(module)
         for func in module.functions.values():
             updated = self.visit_FunctionDef(func)
@@ -55,7 +55,7 @@ class ComputedLineFilterer(UpdateVisitor):
                 log.notice(f"Throwing out `{func.name}` because no lines were kept")
         blocktree = self.visit_BlockTree(module.code)
         if blocktree is None:
-            raise RuntimeError("No code lines selected")
+            return None
         assert isinstance(blocktree, sbb.BlockTree)
         return sbb.Request(module=module, code=blocktree)
 
@@ -277,7 +277,7 @@ class Filter(GenericVisitor[Coroutine]):
         return v.__class__(**results)
 
 
-def filter_lines(target_line: int, module: sbb.Module) -> sbb.Request:
+def filter_lines(target_line: int, module: sbb.Module) -> Optional[sbb.Request]:
     log.info(f"Filtering starting at line {target_line}")
     filtered = ComputedLineFilterer(target_line).visit_Module(module)
     return filtered

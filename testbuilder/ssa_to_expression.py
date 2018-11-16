@@ -219,10 +219,11 @@ def ssa_to_expression(registrar: TypeRegistrar, request: sbb.Request) -> sbb.Tes
 
 def ssa_lines_to_expression(
     registrar: TypeRegistrar, target_line: int, module: sbb.Module
-) -> sbb.TestData:
+) -> Optional[sbb.TestData]:
     write_dot(module, "showdot.dot")
     request = filter_lines(target_line, module)
-
+    if request is None:
+        return None
     repaired_request: sbb.Request = pipe(
         request, repair, PhiFilterer(), FunctionSubstitute()
     )
