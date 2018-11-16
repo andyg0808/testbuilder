@@ -124,7 +124,14 @@ class DepFinder(GatherVisitor[SSAName]):
         return [(name.id, name.set_count)]
 
     def visit_Set(self, assign: n.Set) -> List[SSAName]:
-        return self.visit(assign.e)
+        deps = self.visit(assign.e)
+        if isinstance(assign.target, n.Attribute):
+            log.debug("adding target of attribute {}", assign.target)
+            name = self.visit(assign.target.e)
+            log.debug("found {} from attribute", name)
+            deps += name
+
+        return deps
 
 
 @singledispatch

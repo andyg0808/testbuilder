@@ -226,7 +226,6 @@ and Not(Ref.Pair_left(pyname_b) != Any.Int(2))
     )
 
 
-@pytest.mark.xfail
 def test_read_pair():
     check_expression(
         """
@@ -235,13 +234,12 @@ x = a.left
         """,
         """
 pyname_a == Any.Reference(Reference(0))\
-and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(1), Any.Int(2)))\
+and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2)))\
 and pyname_x == Ref.Pair_left(store_1[Any.r(pyname_a)])
         """,
     )
 
 
-@pytest.mark.xfail
 def test_modify_pair():
     check_expression(
         """
@@ -250,7 +248,7 @@ x.left = 3
     """,
         """
 pyname_x == Any.Reference(Reference(0))\
-and store_1 == Store(store, Any.r(pyname_x), Ref.Pair(Any.Int(1), Any.Int(2)))\
-and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(pyname_x))
+and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2)))\
+and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(store_1[Any.r(pyname_x)])))
     """,
     )

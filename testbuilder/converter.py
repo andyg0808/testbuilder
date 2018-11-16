@@ -26,7 +26,15 @@ from .type_union import TypeUnion
 from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
-from .z3_types import Expression, Reference, SortSet, bool_and, bool_or
+from .z3_types import (
+    BOOL_TRUE,
+    Expression,
+    Reference,
+    ReferenceT,
+    SortSet,
+    bool_and,
+    bool_or,
+)
 
 log = Logger("converter")
 
@@ -130,36 +138,64 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return self.registrar.AllTypes(variable)
 
     def visit_Set(self, node: n.Set) -> TypeUnion:
+        log.debug("Visiting a set {}", node)
         value = self.visit(node.e)
         return self.assign(node.target, value)
 
     def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
         if isinstance(target, n.Name):
+            log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
             var_expr = self.visit(target)
             var_name = cast(VariableTypeUnion, var_expr).name
             self.type_manager.put(var_name, value.sorts)
             var = self.registrar.make_any(var_name)
             return self.registrar.assign(var, value)
         elif isinstance(target, n.Attribute):
+            log.debug(f"Assigning {value} to {target.value}.{target.attr}")
             if target.attr == "left":
                 left_val: TypeUnion = value
-
-                def assign_left(
-                    left: Expression, right: Expression
-                ) -> Optional[Expression]:
-                    if left.sort() != right.sort():
-                        return None
-                    pair = getattr(self.registrar.anytype, "Pair", None)
-                    if pair is not None:
-                        return cast(Expression, pair(left, right))
-                    else:
-                        return None
-
-                assignment = Magic.m(z3.SortRef, z3.SortRef)(assign_left)
-                return self.assign(target.value, assignment(left_val, right_val))
                 right_val: TypeUnion = self.visit(
                     n.Attribute(e=target.e, value=target.e, attr="right")
                 )
+                dest = self.visit(target.e)
+                if isinstance(dest, ExpandableTypeUnion):
+                    dest = dest.expand()
+                print("dest union", dest)
+
+                pair = getattr(self.registrar.reftype, "Pair")
+
+                wrap = self.registrar.wrap
+                store = self.store
+
+                class UpdateMagic(Magic):
+                    @magic(Reference, object, object)
+                    def write(
+                        self, dest: ReferenceT, left: Expression, right: Expression
+                    ) -> z3.Bool:
+                        print("magic update for ", dest, "with", left, right)
+                        left_val = wrap(left)
+                        right_val = wrap(right)
+                        store._set(dest, pair(left_val, right_val))
+                        return BOOL_TRUE
+
+                return UpdateMagic()(dest, left_val, right_val)
+                # def write(d: Expression) -> None:
+                #     print("writing", d, left_val, right_val)
+                #     self.store._set(accessor(d), pair(left_val, right_val))
+
+                #     write(dest.unwrap())
+                # def assign_left(
+                #     left: Expression, right: Expression
+                # ) -> Optional[Expression]:
+                #     if left.sort() != right.sort():
+                #         return None
+                #     wrapped_left = self.registrar.wrap(left)
+                #     wrapped_right = self.registrar.wrap(right)
+                #     return cast(Expression, pair(wrapped_left, wrapped_right))
+
+                # assignment = Magic.m(z3.SortRef, z3.SortRef)(assign_left)
+                # return self.assign(target.value, assignment(left_val, right_val)
+                # )
             print("variable name is", var_name)
 
         crash()
