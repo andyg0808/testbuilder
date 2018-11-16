@@ -197,7 +197,9 @@ class Magic:
                 return fuzzy_sort_equality(arg_sort, func_key)
             elif isinstance(func_key, type):
                 return isinstance(arg_sort, func_key)
-            raise RuntimeError("Unexpected type for func_key: not TagType")
+            raise RuntimeError(
+                f"Unexpected type for func_key: {type(func_key)} is not a TagType"
+            )
 
         for registration in self.funcref:
             log.info(f"Checking if {registration.types} implements for {args}")
