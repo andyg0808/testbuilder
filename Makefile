@@ -20,7 +20,7 @@ TESTFILE = testbuilder
 #   --maxfail=n Stop after `n` failed tests. This is useful to get a
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
-PYTEST_FLAGS = -x -ra --ff
+PYTEST_FLAGS = -x -ra --ff -Wignore
 ifdef parallel
 	PYTEST = pytest $(PYTEST_FLAGS) -n=$(shell nproc) $(TESTFILE)
 else
