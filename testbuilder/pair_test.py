@@ -69,7 +69,7 @@ def check_expression(
         diff = diff_expression(expected, expr)
         if diff is not None:
             print_diff(diff)
-        assert diff is None
+            raise AssertionError("Expressions differ")
 
 
 @pytest.mark.skip(
