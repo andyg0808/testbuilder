@@ -34,14 +34,14 @@ build:
 
 pytest: PYTEST_FLAGS += --looponfail
 pytest:
-	pipenv run $(PYTEST) | rainbow.py --colorize
+	pipenv run $(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
 
 mypy:
 	pipenv run $(MYPY)
 
 fastbuild:
 	$(MYPY)
-	$(PYTEST) | rainbow.py --colorize
+	$(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
 	./runtests
 
 livetest:
