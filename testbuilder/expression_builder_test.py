@@ -96,6 +96,20 @@ def test_gte():
     )
 
 
+def test_neq():
+    check_expression(
+        "i != 4",
+        """
+        Or(
+          And(Any.i(pyname_i) != 4,
+              Any.is_Int(pyname_i)),
+          Any.is_Bool(pyname_i),
+          Any.is_String(pyname_i)
+        )
+        """,
+    )
+
+
 def test_lte():
     check_expression(
         "return i <= 4",
