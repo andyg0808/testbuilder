@@ -181,7 +181,6 @@ x = Pair(e, f)
     )
 
 
-@pytest.mark.xfail
 def test_unconstrained_variables_into_pair():
     """
     Create a pair from two unconstrained variables. We want the pair
@@ -192,8 +191,8 @@ def test_unconstrained_variables_into_pair():
     check_expression(
         "x = Pair(e, f)",
         """
-store_1 == Store(store, 0, Ref.Pair(pyname_e, pyname_f)) \
-and pyname_x == Any.Reference(Reference(0))
+pyname_x == Any.Reference(Reference(0)) \
+and store_1 == Store(store, Reference(0), Ref.Pair(pyname_e, pyname_f))
     """,
     )
 
