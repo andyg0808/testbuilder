@@ -198,12 +198,12 @@ and pyname_x == Any.Reference(Reference(0))
     )
 
 
-@pytest.mark.xfail
 def test_ints_into_pair():
     check_expression(
         "x = Pair(1, 2)",
         """
-pyname_x == Ref.Pair(Any.Int(1), Any.Int(2))
+pyname_x == Any.Reference(Reference(0)) \
+and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2)))
 """,
     )
 
