@@ -3,8 +3,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple, Union
 
-from logbook import Logger
 from toolz import concat, pipe
+
+from logbook import Logger
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
@@ -22,7 +23,7 @@ from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
 from .utils import WriteDot
 
-logger = Logger("generator")
+log = Logger("generator")
 
 
 def generate_tests(
@@ -40,14 +41,14 @@ def generate_tests(
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
         if request is None:
-            logger.error(
+            log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " it likely is either dead code or a line number"
                 " which doesn't exist."
             )
             return ""
         if isinstance(request.code, sbb.BlockTree):
-            logger.error(
+            log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " it is not in a function"
             )
@@ -65,11 +66,11 @@ def generate_tests(
         )
         solution: Optional[Solution] = solve(registrar, expr)
         if not solution:
-            logger.error(
+            log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
-            logger.debug(f"Couldn't solve {expr}")
+            log.debug(f"Couldn't solve {expr}")
             return ""
         _filter_inputs = partial(filter_inputs, function)
         _render_test = partial(
@@ -113,7 +114,7 @@ def generate_tests(
         else:
             return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
 
-    print("lines", LineSplitter()(module))
+    log.debug("Splitting on lines", LineSplitter()(module))
     return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)
 
 
