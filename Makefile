@@ -27,17 +27,17 @@ else
 	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
 endif
 
+build:
+	pipenv run $(MYPY)
+	pipenv run $(PYTEST)
+	./runtests
+
 pytest: PYTEST_FLAGS += --looponfail
 pytest:
 	pipenv run $(PYTEST) | rainbow.py --colorize
 
 mypy:
 	pipenv run $(MYPY)
-
-build:
-	pipenv run $(MYPY)
-	pipenv run $(PYTEST)
-	./runtests
 
 fastbuild:
 	$(MYPY)
