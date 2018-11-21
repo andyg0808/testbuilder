@@ -1,4 +1,5 @@
 # from __future__ import annotations
+import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -13,8 +14,6 @@ from typing import (
 )
 
 from logbook import Logger
-
-import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
@@ -31,6 +30,7 @@ A = TypeVar("A", bound=sbb.BasicBlock)
 B = TypeVar("B", bound=sbb.BasicBlock)
 BlockMapping = MMapping[int, sbb.BasicBlock]
 StopBlock = Optional[sbb.BasicBlock]
+StoreMutation = ("StoreMutation", 0)
 
 
 class ComputedLineFilterer(UpdateVisitor):
@@ -141,6 +141,14 @@ def target_finder(obj: Any) -> Optional[SSAName]:
 
 @target_finder.register(n.Set)
 def find_Set_target(obj: n.Set) -> SSAName:
+    if isinstance(obj.target, n.Attribute):
+        # This is a hack to treat all attribute stores as desired
+        # lines, due to aliasing problems.  If we don't do this, an
+        # aliased name for a dependent variable appears not to be a
+        # dependency, even though it can change the value of the
+        # dependent variable.
+        log.debug("Returning store mutation")
+        return StoreMutation
     name = obj.target.find_name()
     return (name.id, name.set_count)
 
@@ -152,7 +160,7 @@ class Filter(GenericVisitor[Coroutine]):
         self.dep_finder = DepFinder()
 
     def __call__(self, v: Any, *args: Any, **kwargs: Any) -> Coroutine:
-        return self.visit(v, None, TargetManager(), *args, **kwargs)
+        return self.visit(v, None, TargetManager({StoreMutation}), *args, **kwargs)
 
     def visit_Code(
         self, code: sbb.Code, stop: StopBlock, targets: TargetManager
@@ -166,7 +174,10 @@ class Filter(GenericVisitor[Coroutine]):
             if line.line == self.target_line or target in targets:
                 deps = self.dep_finder(line)
                 lines.insert(0, line)
-                targets.replace(target, deps)
+                if target != StoreMutation:
+                    targets.replace(target, deps)
+                else:
+                    targets.replace(None, deps)
                 continue
 
         parent = yield from self.visit(code.parent, stop, targets)
