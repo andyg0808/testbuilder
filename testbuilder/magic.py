@@ -161,7 +161,10 @@ class Magic:
             newargs = Magic.expand(args)
             return self(*newargs)
         else:
-            log.info(f"Results for {args}: {exprs}")
+            arg_lines = ",\n".join(str(x) for x in args)
+            arg_lines = f"({arg_lines})"
+            log.info(f"Results below for args\n{arg_lines}")
+            log.info(f"Results\n{exprs}")
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
