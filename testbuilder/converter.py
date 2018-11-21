@@ -9,10 +9,10 @@ import operator
 import re
 from typing import Any, Callable, Mapping, Optional, Sequence, cast
 
-from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
+from logbook import Logger
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr
@@ -116,7 +116,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         variable = get_variable(node.id, node.set_count)
         sorts = self.type_manager.get(variable)
         if sorts is not None:
-            print(f"looked up {variable} and got sorts {sorts}")
+            log.debug(f"Looked up {variable} and got sorts {sorts}")
             return self.registrar.AllTypes(variable, sorts)
         self.type_manager.put(variable)
         return self.registrar.AllTypes(variable)

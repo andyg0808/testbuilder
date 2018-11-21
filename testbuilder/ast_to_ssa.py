@@ -1,4 +1,5 @@
 import ast
+import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -11,12 +12,14 @@ from typing import (
     cast,
 )
 
-import dataclasses
+from logbook import Logger
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
 from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
+
+log = Logger("ast_to_ssa")
 
 StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
@@ -426,7 +429,7 @@ class AstBuilder(GenericVisitor):
             return n.BinOp(l, n.And(), r)
 
         res = reduce(all_pairs, binops)
-        print(f"converting {ast.dump(node)} to {res}")
+        log.debug(f"converting {ast.dump(node)} to {res}")
         return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:

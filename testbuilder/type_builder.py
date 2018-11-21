@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Optional, cast
 
 import z3
+from logbook import Logger
 
 from .type_registrar import TypeRegistrar
 from .z3_types import AnySort, Reference
+
+log = Logger("type_builder")
 
 
 class TypeBuilder:
@@ -14,7 +17,7 @@ class TypeBuilder:
     def __init__(self, name_part: str = "") -> None:
         TypeBuilder.any_index += 1
         self.index = TypeBuilder.any_index
-        print(f"Starting new TypeBuilder with index {self.index}")
+        log.debug(f"Starting new TypeBuilder with index {self.index}")
         if name_part:
             name = f"{name_part}_{self.index}"
         else:
