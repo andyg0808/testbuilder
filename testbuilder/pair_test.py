@@ -222,7 +222,8 @@ and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2))) \
 and pyname_b == pyname_a \
 and store_2 == Store(store_1, Any.r(pyname_a),
           Ref.Pair(Any.Int(2), Ref.Pair_right(store_1[Any.r(pyname_a)]))) \
-and Not(Ref.Pair_left(store_2[Any.r(pyname_b)]) != Any.Int(2))
+and And(Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2),
+        Any.is_Int(Ref.Pair_left(store_2[Any.r(pyname_b)])))
         """,
     )
 
