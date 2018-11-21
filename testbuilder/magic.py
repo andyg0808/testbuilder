@@ -195,5 +195,6 @@ class Magic:
         for registration in self.funcref:
             log.info(f"Checking if {registration.types} implements for {args}")
             if all(sort_compare(*tu) for tu in zip(args, registration.types)):
+                log.info(f"Yes, {registration} implements for {args}")
                 return registration
         return None
