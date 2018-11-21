@@ -208,7 +208,6 @@ pyname_x == Ref.Pair(Any.Int(1), Any.Int(2))
     )
 
 
-@pytest.mark.xfail
 def test_alias_pair():
     check_expression(
         """
@@ -218,10 +217,12 @@ a.left = 2
 not (b.left != 2)
         """,
         """
-pyname_a == Ref.Pair(Any.Int(1), Any.Int(2))\
-and pyname_b == pyname_a\
-and pyname_a_1 == Ref.Pair(Any.Int(2), Ref.Pair_right(pyname_a))\
-and Not(Ref.Pair_left(pyname_b) != Any.Int(2))
+pyname_a == Any.Reference(Reference(0)) \
+and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2))) \
+and pyname_b == pyname_a \
+and store_2 == Store(store_1, Any.r(pyname_a),
+          Ref.Pair(Any.Int(2), Ref.Pair_right(store_1[Any.r(pyname_a)]))) \
+and Not(Ref.Pair_left(store_2[Any.r(pyname_b)]) != Any.Int(2))
         """,
     )
 
