@@ -14,9 +14,12 @@ import sys
 from pathlib import Path
 
 from docopt import docopt
-from logbook import NullHandler, StderrHandler
 
+import typeassert
+from logbook import NullHandler, StderrHandler
 from testbuilder.generate import generate_tests
+
+typeassert.log.setLevel("ERROR")
 
 
 def main(filename: str) -> None:
