@@ -1,11 +1,15 @@
 from typing import Optional, cast
 
+from logbook import Logger
+
 import z3
 from dataclasses import dataclass
 
 from .store_array import ArrayKey, ArrayVal, StoreArray
 from .type_registrar import TypeRegistrar
 from .z3_types import Reference
+
+log = Logger("store")
 
 
 @dataclass
@@ -43,6 +47,7 @@ class Store:
         return self.written_number < self.store_number
 
     def write(self) -> z3.Bool:
+        log.info(f"Writing store {self.store_number} to replace {self.written_number}")
         self.written_number = self.store_number
         name = f"store_{self.written_number}"
         array_var = self.registrar.store(name)
