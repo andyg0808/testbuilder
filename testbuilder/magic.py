@@ -183,18 +183,9 @@ class Magic:
     def __select(self, args: Sequence[z3.SortRef]) -> Optional[MagicRegistration]:
         log.info(f"Selecting implementation using {args}")
 
-        def fuzzy_sort_equality(sub: z3.SortRef, parent: z3.SortRef) -> bool:
-            return parent == sub or parent.subsort(sub)
-
-        def fuzziest(left: z3.SortRef, right: z3.SortRef) -> z3.SortRef:
-            if fuzzy_sort_equality(left, right):
-                return right
-            else:
-                return left
-
         def sort_compare(arg_sort: z3.SortRef, func_key: TagType) -> bool:
             if isinstance(func_key, z3.SortRef):
-                return fuzzy_sort_equality(arg_sort, func_key)
+                return arg_sort == func_key
             elif isinstance(func_key, type):
                 return isinstance(arg_sort, func_key)
             raise RuntimeError(
