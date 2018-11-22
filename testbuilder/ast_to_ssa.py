@@ -379,11 +379,8 @@ class StatementVisitor(GenericVisitor):
             var.set_count = self.variables.get_target(node.id)
             return var
         elif isinstance(node, ast.Attribute):
-            return n.Attribute(
-                e=self.visit(node.value),
-                value=self.get_target_variable(node.value),
-                attr=node.attr,
-            )
+            val = self.visit(node.value)
+            return n.Attribute(e=val, value=val, attr=node.attr)
         else:
             raise RuntimeError("Unknown target type")
 
