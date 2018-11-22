@@ -156,52 +156,57 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         elif isinstance(target, n.Attribute):
             log.debug(f"Assigning {value} to {target.value}.{target.attr}")
             if target.attr == "left":
-                left_val: TypeUnion = value
-                right_val: TypeUnion = self.visit(
-                    n.Attribute(e=target.e, value=target.e, attr="right")
-                )
-                dest = self.visit(target.e)
-                if isinstance(dest, ExpandableTypeUnion):
-                    dest = dest.expand()
-                print("dest union", dest)
+                other_attr = "right"
+            elif target.attr == "right":
+                other_attr = "left"
+            else:
+                raise RuntimeError(f"Unexpected attribute {target.attr}")
 
-                pair = getattr(self.registrar.reftype, "Pair")
+            other_value: TypeUnion = self.visit(
+                n.Attribute(e=target.e, value=target.e, attr=other_attr)
+            )
+            this_value: TypeUnion = self.visit(
+                n.Attribute(e=target.e, value=target.e, attr=target.attr)
+            )
+            dest = self.visit(target.e)
+            # print("updating type manager from", self.type_manager)
+            # self.type_manager.put(
+            #     cast(VariableTypeUnion, self.visit(target.e.find_name())).name,
+            #     {Reference},
+            # )
+            # self.type_manager.put(
+            #     str(this_value.unwrap(choice=Reference)), {value.sorts}
+            # )
+            # print("updated type manager to", self.type_manager)
+            if isinstance(dest, ExpandableTypeUnion):
+                dest = dest.expand()
+            pair = getattr(self.registrar.reftype, "Pair")
+            wrap = self.registrar.wrap
+            store = self.store
 
-                wrap = self.registrar.wrap
-                store = self.store
+            if target.attr == "left":
+                left_value = value
+                right_value = other_value
+            else:
+                left_value = other_value
+                right_value = value
 
-                class UpdateMagic(Magic):
-                    @magic(Reference, object, object)
-                    def write(
-                        self, dest: ReferenceT, left: Expression, right: Expression
-                    ) -> z3.Bool:
-                        print("magic update for ", dest, "with", left, right)
-                        left_val = wrap(left)
-                        right_val = wrap(right)
-                        store._set(dest, pair(left_val, right_val))
-                        return BOOL_TRUE
+            class UpdateMagic(Magic):
+                @magic(Reference, object, object)
+                def write(
+                    self, dest: ReferenceT, left: Expression, right: Expression
+                ) -> z3.Bool:
+                    print("magic update for ", dest, "with", left, right)
+                    left_val = wrap(left)
+                    right_val = wrap(right)
+                    store._set(dest, pair(left_val, right_val))
+                    return BOOL_TRUE
 
-                return UpdateMagic()(dest, left_val, right_val)
-                # def write(d: Expression) -> None:
-                #     print("writing", d, left_val, right_val)
-                #     self.store._set(accessor(d), pair(left_val, right_val))
+            return UpdateMagic()(dest, left_value, right_value)
 
-                #     write(dest.unwrap())
-                # def assign_left(
-                #     left: Expression, right: Expression
-                # ) -> Optional[Expression]:
-                #     if left.sort() != right.sort():
-                #         return None
-                #     wrapped_left = self.registrar.wrap(left)
-                #     wrapped_right = self.registrar.wrap(right)
-                #     return cast(Expression, pair(wrapped_left, wrapped_right))
-
-                # assignment = Magic.m(z3.SortRef, z3.SortRef)(assign_left)
-                # return self.assign(target.value, assignment(left_val, right_val)
-                # )
-            print("variable name is", var_name)
-
-        crash()
+        raise RuntimeError(
+            f"Unexpected target type {type(target)} of assign target {target}"
+        )
 
     def visit_Expr(self, node: n.Expr) -> TypeUnion:
         v = self.visit(node.value)

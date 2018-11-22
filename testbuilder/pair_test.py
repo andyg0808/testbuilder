@@ -229,6 +229,36 @@ and And(Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2),
     )
 
 
+@pytest.mark.xfail
+def test_right_field():
+    check_expression(
+        """
+a.right = 3
+a.right < 23
+        """,
+        """
+Any.is_Reference(pyname_a) \
+and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Ref.Pair_left(store[Any.r(pyname_a)]), Any.Int(3))) \
+and Any.i(Ref.Pair_right(store_1[Any.r(pyname_a)])) < 23
+        """,
+    )
+
+
+@pytest.mark.xfail(reason="Next work")
+def test_left_field():
+    check_expression(
+        """
+a.left = 3
+a.left < 23
+        """,
+        """
+Any.is_Reference(pyname_a) \
+        and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(3), Ref.Pair_right(store[Any.r(pyname_a)]))) \
+and Any.i(Ref.Pair_left(store_1[Any.r(pyname_a)])) < 23
+        """,
+    )
+
+
 def test_read_pair():
     check_expression(
         """
