@@ -143,8 +143,8 @@ def test_read_inferred_pair():
         "x.left > 0",
         """
 And(Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0,
-    And(Any.is_Reference(pyname_x),
-        Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)]))))
+    And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)])),
+        Any.is_Reference(pyname_x)))
         """,
     )
 

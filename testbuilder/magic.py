@@ -180,7 +180,7 @@ class Magic:
             raise RuntimeError(
                 f"Problem running {func}({', '.join(str(a) for a in args)})"
             ) from e
-        constraints = list(concat(arg.constraints for arg in args))
+        constraints = set(concat(arg.constraints for arg in args))
         return CExpr(expr=res, constraints=constraints)
 
     def __select(self, args: Sequence[z3.SortRef]) -> Optional[MagicRegistration]:

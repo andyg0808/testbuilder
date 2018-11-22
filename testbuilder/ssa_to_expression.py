@@ -2,10 +2,10 @@ from functools import singledispatch
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
-from logbook import Logger
 from toolz import mapcat, pipe
 
 import z3
+from logbook import Logger
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -64,10 +64,11 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         if union.is_bool():
             exprs: List[Expression] = [union.to_expr()]
         else:
-            # The union is not a boolean; the only supported case this
-            # could happen would be a bare expression, and the only
-            # side-effectful expression is yield, which is
-            # unsupported.
+            # The expression is not a boolean. This can happen when
+            # assigning to an attribute, since the actual assignment
+            # occurs in the store, not to the variable itself. If the
+            # variable storing the reference did not already exist,
+            # however, it will be restricted to a reference.
             exprs = [union.implications()]
         if self.store.pending():
             exprs.append(self.store.write())

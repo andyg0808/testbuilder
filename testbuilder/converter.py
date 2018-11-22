@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import operator
 import re
-from typing import Any, Callable, Mapping, Optional, Sequence, cast
+from functools import reduce
+from typing import Any, Callable, Mapping, Sequence, cast
 
 from toolz import groupby, mapcat
 
@@ -15,7 +16,7 @@ import z3
 from logbook import Logger
 
 from . import nodetree as n
-from .constrained_expression import ConstrainedExpression as CExpr
+from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
 from .expandable_type_union import ExpandableTypeUnion
 from .expression_type_union import ExpressionTypeUnion
 from .magic import Magic, magic_tag as magic
@@ -72,7 +73,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_BinOp(self, node: n.BinOp) -> TypeUnion:
         op = self.visit_oper(node.op)
         expr = op(self.visit(node.left), self.visit(node.right))
-        var_constraints = mapcat(lambda e: e.constraints, expr.expressions)
+        var_constraints: ConstraintSet = reduce(
+            lambda c, e: c | e.constraints, expr.expressions, set()
+        )
         var_updates = groupby(lambda c: c[0], var_constraints)
         for varname, constraints in var_updates.items():
             self.type_manager.put(varname, {c[1] for c in constraints})
@@ -232,9 +235,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
             expr = self.store.add(cast(z3.DatatypeRef, target))
-            constraints = list(mapcat(lambda x: x.constraints, arg_tuple))
+            constraints = set(mapcat(lambda x: x.constraints, arg_tuple))
             if len(constraints) > 0:
-                cexpr = CExpr(expr=expr, constraints=list(constraints))
+                cexpr = CExpr(expr=expr, constraints=constraints)
             else:
                 cexpr = CExpr(expr=expr)
             exprs.append(cexpr)

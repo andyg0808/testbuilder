@@ -1,29 +1,19 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
+import z3
 from logbook import Logger
 from typeassert import assertify
-
-import z3
-from dataclasses import dataclass
 from z3 import DatatypeRef
 
-from .constrained_expression import ConstrainedExpression as CExpr, VarConstraint
+from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
 from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import (
-    AnyT,
-    Expression,
-    Reference,
-    Sort,
-    SortSet,
-    bool_and,
-    bool_not,
-    bool_or,
-)
+from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_not, bool_or
 
 log = Logger("type_registrar")
 
@@ -120,7 +110,7 @@ class TypeRegistrar:
         name: str,
         val: AnyT,
         types: SortSet = set(),
-        orig_constraints: List[VarConstraint] = [],
+        orig_constraints: ConstraintSet = set(),
     ) -> Tuple[List[CExpr], SortSet]:
         """
         Takes an Any value and extracts all possible results from it,
@@ -152,7 +142,7 @@ class TypeRegistrar:
                 cexpr = CExpr(expr=expr)
             else:
                 constraint = self.anytype.recognizer(i)(val)
-                constraints = orig_constraints + [(name, expr.sort(), constraint)]
+                constraints = orig_constraints | {(name, expr.sort(), constraint)}
                 cexpr = CExpr(expr=expr, constraints=constraints)
             exprs.append(cexpr)
             sorts.add(expr.sort())
