@@ -149,16 +149,18 @@ And(Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0,
     )
 
 
-@pytest.mark.xfail
 def test_write_inferred_pair():
     """
     Test that writing a
     variable.
     """
     check_expression(
-        "x.left > 0",
+        "x.left = 0",
         """
-Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0
+And(Any.is_Reference(pyname_x),
+    store_1 == Store(store, Any.r(pyname_x),
+                     Ref.Pair(Any.Int(0), Ref.Pair_right(store[Any.r(pyname_x)]))),
+)
         """,
     )
 
