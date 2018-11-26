@@ -1,13 +1,11 @@
 from io import StringIO
 from pathlib import Path
 
-import pytest
-
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
 from .generate import generate_tests
-from .hypothesis_entities import function_names, functions
+from .hypothesis_entities import functions
 from .renderer import render_test
 
 # def test_generation():
@@ -86,7 +84,7 @@ def test_generate_basic(op, a, b):
         expected=function_expectation,
     )
     expected = f"""
-from mycode import {op.__name__}
+{op.__name__} = import_module("mycode").{op.__name__}
 def test_{op.__name__}():
     a = {a}
     b = {b}
@@ -109,7 +107,7 @@ def test_generate_list_handler():
         expected=function_expectation,
     )
     expected = """
-from mycode import min
+min = import_module("mycode").min
 def test_min():
     a = [1, 2, 3]
     actual = min(a)
@@ -155,7 +153,7 @@ def caller(fishy):
     """
     expected = {
         """
-from boring import boring
+boring = import_module("boring").boring
 def test_boring():
     fishy = 1234567890
     actual = boring(fishy)
@@ -163,9 +161,9 @@ def test_boring():
     assert actual == expected
     """,
         """
-from boring import caller
+caller = import_module("boring").caller
 def test_caller():
-    fishy = 0
+    fishy = None
     actual = caller(fishy)
     expected = 36
     assert actual == expected

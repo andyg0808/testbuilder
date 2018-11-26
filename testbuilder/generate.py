@@ -13,14 +13,17 @@ from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .line_splitter import LineSplitter
+from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .renderer import prompt_and_render_test
 from .solver import Solution, solve
 from .ssa_repair import repair
-from .ssa_to_expression import filter_lines, ssa_to_expression
+from .ssa_to_expression import ssa_to_expression
+from .type_builder import TypeBuilder
+from .type_registrar import TypeRegistrar
 from .utils import WriteDot
 
-logger = Logger("generator")
+log = Logger("generator")
 
 
 def generate_tests(
@@ -32,17 +35,26 @@ def generate_tests(
     depth: int = 10,
     lines: Optional[Set[int]] = None,
 ) -> List[str]:
-    def generate_test(module: sbb.Module, target_info: Tuple[int, int]) -> str:
+    def generate_test(
+        registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
+    ) -> str:
         test_number, target_line = target_info
         request = filter_lines(target_line, module)
+        if request is None:
+            log.error(
+                f"Couldn't generate a test for line {target_line};"
+                " it likely is either dead code or a line number"
+                " which doesn't exist."
+            )
+            return ""
         if isinstance(request.code, sbb.BlockTree):
-            logger.error(
+            log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " it is not in a function"
             )
             return ""
         function = request.code
-        _filter_inputs = partial(filter_inputs, function)
+        _ssa_to_expression = partial(ssa_to_expression, registrar)
 
         expr: sbb.TestData = pipe(
             request,
@@ -50,16 +62,17 @@ def generate_tests(
             PhiFilterer(),
             FunctionSubstitute(),
             ExprStripper(),
-            WriteDot("generate.dot"),
-            ssa_to_expression,
+            _ssa_to_expression,
         )
-        solution: Optional[Solution] = solve(expr)
+        solution: Optional[Solution] = solve(registrar, expr)
         if not solution:
-            logger.error(
+            log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
+            log.debug(f"Couldn't solve {expr}")
             return ""
+        _filter_inputs = partial(filter_inputs, function)
         _render_test = partial(
             prompt_and_render_test,
             source,
@@ -88,7 +101,9 @@ def generate_tests(
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
-    _generate_test = partial(generate_test, module)
+    builder = TypeBuilder()
+    registrar = builder.construct()
+    _generate_test = partial(generate_test, registrar, module)
 
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
         if lines is not None:
@@ -99,7 +114,7 @@ def generate_tests(
         else:
             return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
 
-    print("lines", LineSplitter()(module))
+    log.debug("Splitting on lines", LineSplitter()(module))
     return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)
 
 

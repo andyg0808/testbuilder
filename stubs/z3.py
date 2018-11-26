@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, List, Tuple, TypeVar
+from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union
 
 
 class AstRef:
@@ -28,7 +28,7 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
         ...
 
-    def constructor(self, i: int) -> Callable[[ExprRef], T]:
+    def constructor(self, i: int) -> FuncDeclRef:
         ...
 
     def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
@@ -39,11 +39,15 @@ class Datatype:
     def __init__(self, name: str) -> None:
         ...
 
-    def declare(self, name: str, *args: Tuple[str, SortRef]) -> None:
+    def declare(self, name: str, *args: Tuple[str, Union[SortRef, Datatype]]) -> None:
         ...
 
     def create(self) -> DatatypeSortRef:
         ...
+
+
+class ArraySortRef(SortRef):
+    ...
 
 
 class ArithSortRef(SortRef):
@@ -104,6 +108,12 @@ class FuncDeclRef:
     def name(self) -> str:
         ...
 
+    def __call__(self, *args: ExprRef) -> ExprRef:
+        ...
+
+    def arity(self) -> int:
+        ...
+
 
 class FuncInterp:
     # This isn't quite accurate, but handling the types correctly is too much
@@ -113,6 +123,9 @@ class FuncInterp:
         ...
 
     def as_string(self) -> str:
+        ...
+
+    def as_list(self) -> List[Any]:
         ...
 
 
@@ -166,6 +179,15 @@ class SeqRef(ExprRef):
     pass
 
 
+K = TypeVar("K", bound=ExprRef)
+V = TypeVar("V", bound=ExprRef)
+
+
+class ArrayRef(ExprRef, Generic[K, V]):
+    def __getitem__(self, arg: K) -> V:
+        ...
+
+
 class String(SeqRef):
     def __init__(self, name: str) -> None:
         ...
@@ -213,6 +235,22 @@ def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
 
 
 def Concat(left: String, right: String) -> String:
+    ...
+
+
+def CreateDatatypes(*types: Datatype) -> Tuple[DatatypeSortRef, ...]:
+    ...
+
+
+def ArraySort(key: SortRef, value: SortRef) -> ArraySortRef:
+    ...
+
+
+def Store(array: ArrayRef[K, V], key: K, value: V) -> ArrayRef[K, V]:
+    ...
+
+
+def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
     ...
 
 

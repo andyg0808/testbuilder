@@ -1,5 +1,4 @@
 import ast
-from copy import copy
 from typing import Optional
 
 import z3
@@ -8,9 +7,13 @@ from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
 from .converter import ExpressionConverter
 from .ssa_repair import repair
+from .store import Store
+from .type_builder import TypeBuilder
 from .type_manager import TypeManager
 from .variable_expander import expand_variables
-from .z3_types import Any as AnyType, diff_expression, make_any, print_diff
+from .z3_types import diff_expression, print_diff
+
+Registrar = TypeBuilder().wrappers().build()
 
 Bool = z3.BoolSort()
 Int = z3.IntSort()
@@ -30,7 +33,7 @@ def conversion_assert(
     if isinstance(expected, str):
         if code_string is None:
             code_string = expected
-        expected = expand_variables(expected)
+        expected = expand_variables(expected, registrar=Registrar)
     code = ast.parse(code_string)
     tree = ast_to_ssa(2, variables, code)
     # Make variable assignment counts sensible
@@ -44,8 +47,8 @@ def conversion_assert(
     assert len(tree.code) == 1
     tree = tree.code[0]
     if expected_constraint is not None:
-        expected_constraint = expand_variables(expected_constraint)
-    result = ExpressionConverter(TypeManager())(tree)
+        expected_constraint = expand_variables(expected_constraint, registrar=Registrar)
+    result = ExpressionConverter(Registrar, TypeManager(), Store(Registrar))(tree)
     if get_boolean:
         assert result.is_bool(), "Expected boolean result!"
         result = result.to_expr()
@@ -111,6 +114,19 @@ def test_eq():
     conversion_assert("4 == 4")
 
 
+def test_var_eq():
+    conversion_assert("pyname_a == pyname_b", "a == b")
+
+
+def test_implicit_bool_negation():
+    conversion_assert(
+        "Not(Any.b(pyname_a))",
+        "not a",
+        expected_type=Bool,
+        expected_constraint="Any.is_Bool(pyname_a)",
+    )
+
+
 def test_bounding():
     expected = z3.And(z3.IntVal(1) < z3.IntVal(2), z3.IntVal(2) < z3.IntVal(3))
     conversion_assert(expected, "1 < 2 < 3")
@@ -150,13 +166,13 @@ def test_negative():
 
 
 def test_return():
-    print("expansion", type(expand_variables("ret == Any.Int(2)")))
+    print("expansion", type(expand_variables("ret == Any.Int(2)", Registrar)))
     conversion_assert("ret == Any.Int(2)", "return 2")
 
 
 def test_variable():
     conversion_assert(
-        AnyType.i(make_any("pyname_a")),
+        Registrar.anytype.i(Registrar.make_any("pyname_a")),
         "a",
         expected_type=Int,
         expected_constraint="Any.is_Int(pyname_a)",

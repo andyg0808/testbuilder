@@ -23,7 +23,8 @@ class PhiFilterer(UpdateVisitor):
 
     def visit_PhiSet(self, phiset: n.PhiSet, seen: TargetManager) -> Optional[n.PhiSet]:
         target = phiset.target
-        if (target.id, target.set_count) in seen:
+        name = target.find_name()
+        if (name.id, name.set_count) in seen:
             return phiset
         else:
             return None

@@ -17,23 +17,31 @@ TESTFILE = testbuilder
 #        tests.
 #   --ff Run failed tests before other tests.
 #   -x   Stop after first failed test. Speeds up testing runs with failures
+#   --maxfail=n Stop after `n` failed tests. This is useful to get a
+#        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
-PYTEST = pytest -x -ra --ff $(TESTFILE)
-
-pytest:
-	pipenv run $(PYTEST) | rainbow.py --colorize
-
-mypy:
-	pipenv run $(MYPY)
+PYTEST_FLAGS = -x -ra --ff -Wignore
+ifdef parallel
+	PYTEST = pytest $(PYTEST_FLAGS) -n=$(shell nproc) $(TESTFILE)
+else
+	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
+endif
 
 build:
 	pipenv run $(MYPY)
 	pipenv run $(PYTEST)
 	./runtests
 
+pytest: PYTEST_FLAGS += --looponfail
+pytest:
+	pipenv run $(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
+
+mypy:
+	pipenv run $(MYPY)
+
 fastbuild:
 	$(MYPY)
-	$(PYTEST) | rainbow.py --colorize
+	$(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
 	./runtests
 
 livetest:

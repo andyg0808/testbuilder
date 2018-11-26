@@ -2,10 +2,11 @@ import ast
 import inspect
 import sys
 from pprint import pprint
-from typing import Any, TypeVar
-from .test_utils import write_dot
+from typing import Any, NoReturn, TypeVar
 
 from termcolor import cprint
+
+from .test_utils import write_dot
 
 
 def print_locations(node: ast.AST) -> None:
@@ -20,7 +21,7 @@ def print_locations(node: ast.AST) -> None:
             )
 
 
-def crash(reason: str = "") -> None:
+def crash(reason: str = "") -> NoReturn:
     if reason:
         print("Crashing because" + reason, file=sys.stderr)
     print("Crashing!", file=sys.stderr)

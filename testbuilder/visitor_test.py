@@ -69,7 +69,7 @@ def check_tree_equal(left, right):
 
 
 @given(node)
-def test_gather_visitor(tree):
+def test_update_visitor(tree):
     class Updater(UpdateVisitor):
         def visit_Int(self, node: int) -> int:
             return 2 * node

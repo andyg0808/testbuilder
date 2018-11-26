@@ -1,5 +1,4 @@
 import ast
-import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -12,10 +11,16 @@ from typing import (
     cast,
 )
 
+from logbook import Logger
+
+import dataclasses
+
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
 from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
+
+log = Logger("ast_to_ssa")
 
 StmtList = List[ast.stmt]
 MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
@@ -47,14 +52,31 @@ class AstToSSABasicBlocks(SimpleVisitor):
 
     def visit_Module(self, node: ast.Module) -> sbb.Module:
         functions: MMapping[str, sbb.FunctionDef] = {}
+        classes: MMapping[str, sbb.ClassDef] = {}
         code = []
         for line in node.body:
             if isinstance(line, ast.FunctionDef):
                 functions[line.name] = self.visit(line)
+            elif isinstance(line, ast.ClassDef):
+                classes[line.name] = self.visit(line)
             else:
                 code.append(line)
         blocktree = self.body_visit(code)
-        return sbb.Module(functions, blocktree)
+        return sbb.Module(functions=functions, classes=classes, code=blocktree)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> sbb.ClassDef:
+        functions = [
+            self.visit(line) for line in node.body if isinstance(line, ast.FunctionDef)
+        ]
+        first_line = functions[0].first_line
+        last_line = functions[-1].last_line
+        return sbb.ClassDef(
+            first_line=first_line,
+            last_line=last_line,
+            name=node.name,
+            variables=[],
+            functions=functions,
+        )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
@@ -257,6 +279,9 @@ class AstToSSABasicBlocks(SimpleVisitor):
         tree = self.append_code(tree, ret)
         return tree.return_target()
 
+    def visit_Raise(self, node: ast.Raise, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
+        return tree.return_target()
+
     def append_lines(
         self, tree: sbb.BlockTreeIndex, lines: Sequence[n.stmt]
     ) -> sbb.BlockTreeIndex:
@@ -352,11 +377,14 @@ class StatementVisitor(GenericVisitor):
         target = self.get_target_variable(node.targets[0])
         return n.Set(line=node.lineno, target=target, e=expr)
 
-    def get_target_variable(self, node: ast.expr) -> n.Name:
+    def get_target_variable(self, node: ast.expr) -> n.LValue:
         if isinstance(node, ast.Name):
             var: n.Name = self.expr_visitor.visit_Name(node)
             var.set_count = self.variables.get_target(node.id)
             return var
+        elif isinstance(node, ast.Attribute):
+            val = self.visit(node.value)
+            return n.Attribute(e=val, value=val, attr=node.attr)
         else:
             raise RuntimeError("Unknown target type")
 
@@ -402,7 +430,7 @@ class AstBuilder(GenericVisitor):
             return n.BinOp(l, n.And(), r)
 
         res = reduce(all_pairs, binops)
-        print(f"converting {ast.dump(node)} to {res}")
+        log.debug(f"converting {ast.dump(node)} to {res}")
         return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
@@ -417,6 +445,10 @@ class AstBuilder(GenericVisitor):
     def visit_Name(self, node: ast.Name) -> n.Name:
         idx = self.variables.get(node.id)
         return n.Name(node.id, idx)
+
+    def visit_Attribute(self, node: ast.Attribute) -> n.Attribute:
+        value = self.visit(node.value)
+        return n.Attribute(e=value, value=value, attr=node.attr)
 
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v

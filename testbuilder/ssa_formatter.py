@@ -18,6 +18,14 @@ class SSAVisitor(SimpleVisitor[str]):
         op = self.visit(node.op)
         return f"{left} {op} {right}"
 
+    def visit_UnaryOp(self, node: n.UnaryOp) -> str:
+        op = self.visit(node.op)
+        value = self.visit(node.operand)
+        return f"{op}{value}"
+
+    def visit_Attribute(self, node: n.Attribute) -> str:
+        return f"{self.visit(node.value)}.{node.attr}"
+
     def visit_Name(self, node: n.Name) -> str:
         return f"${node.id}_{node.set_count}"
 
@@ -56,6 +64,12 @@ class SSAVisitor(SimpleVisitor[str]):
 
     def visit_Eq(self, node: n.Eq) -> str:
         return "=="
+
+    def visit_NotEq(self, node: n.NotEq) -> str:
+        return "!="
+
+    def visit_Not(self, node: n.Not) -> str:
+        return "not"
 
     def visit_Set(self, node: n.Set) -> str:
         target = self.visit(node.target)

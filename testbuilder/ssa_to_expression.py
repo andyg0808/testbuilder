@@ -1,23 +1,26 @@
 from functools import singledispatch
-from typing import Callable, List, Optional, Tuple, Union, cast
+from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
-
-import z3
 from toolz import mapcat, pipe
 
+import z3
+from logbook import Logger
+
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
-from .converter import to_boolean
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .ssa_repair import repair
-from .test_utils import write_dot
-from .type_inferencer import TypeInferencer
+from .store import Store
 from .type_manager import TypeManager
+from .type_registrar import TypeRegistrar
+from .type_union import TypeUnion
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import TypeUnion, bool_all, bool_any, bool_true
+from .z3_types import bool_all, bool_any, bool_true
+
+log = Logger("ssa_to_expression")
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
@@ -25,10 +28,14 @@ ExprList = List[Expression]
 
 
 class SSAVisitor(SimpleVisitor[ExprList]):
-    def __init__(self, module: sbb.Module) -> None:
+    def __init__(self, registrar: TypeRegistrar, module: sbb.Module) -> None:
         self.module = module
         self.type_manager = TypeManager()
-        self.expression = converter.ExpressionConverter(self.type_manager)
+        self.registrar = registrar
+        self.store = Store(self.registrar)
+        self.expression = converter.ExpressionConverter(
+            self.registrar, self.type_manager, self.store
+        )
 
     def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -55,13 +62,17 @@ class SSAVisitor(SimpleVisitor[ExprList]):
     def visit_Stmt(self, node: n.stmt) -> ExprList:
         union = self.expression(node)
         if union.is_bool():
-            return [union.to_expr()]
+            exprs: List[Expression] = [union.to_expr()]
         else:
-            # The union is not a boolean; the only supported case this
-            # could happen would be a bare expression, and the only
-            # side-effectful expression is yield, which is
-            # unsupported.
-            return [union.implications()]
+            # The expression is not a boolean. This can happen when
+            # assigning to an attribute, since the actual assignment
+            # occurs in the store, not to the variable itself. If the
+            # variable storing the reference did not already exist,
+            # however, it will be restricted to a reference.
+            exprs = [union.implications()]
+        if self.store.pending():
+            exprs.append(self.store.write())
+        return exprs
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
         return self.visit(node.end, None)
@@ -101,7 +112,16 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             res = self.visit(branch, node.parent)
             types.append(self.type_manager.pop())
             if res is not None:
-                branches.append(res)
+                if len(res) == 0:
+                    # This can happen if no assignments occur in a
+                    # loop. Then the bypass doesn't even have a
+                    # phi-fixing assignment, and it ends up completely
+                    # empty. By using True as a result, we avoid
+                    # making `bool_all` angry when deciding what to do
+                    # with this branch.
+                    branches.append([bool_true()])
+                else:
+                    branches.append(res)
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
             self.type_manager.merge_and_update(types)
@@ -115,7 +135,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(self.expression(node.conditional))]
+        return code + [self.to_boolean(self.expression(node.conditional))]
 
     def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -123,7 +143,13 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        return code + [to_boolean(self.expression(node.conditional), invert=True)]
+        return code + [self.to_boolean(self.expression(node.conditional), invert=True)]
+
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.Bool:
+        if value.is_bool():
+            return value.to_expr(invert)
+        else:
+            return self.registrar.to_boolean(value, invert).to_expr()
 
 
 @singledispatch
@@ -184,22 +210,24 @@ def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
 
 
-def ssa_to_expression(request: sbb.Request) -> sbb.TestData:
+def ssa_to_expression(registrar: TypeRegistrar, request: sbb.Request) -> sbb.TestData:
     assert isinstance(request, sbb.Request)
     # TODO: I think this is right?
-    v = SSAVisitor(request.module)
+    v = SSAVisitor(registrar, request.module)
     assert isinstance(request.code, sbb.BlockTree) or isinstance(
         request.code, sbb.FunctionDef
     )
     return process(request.code, v)
 
 
-def ssa_lines_to_expression(target_line: int, module: sbb.Module) -> sbb.TestData:
-    write_dot(module, "showdot.dot")
+def ssa_lines_to_expression(
+    registrar: TypeRegistrar, target_line: int, module: sbb.Module
+) -> Optional[sbb.TestData]:
     request = filter_lines(target_line, module)
-
+    log.debug("Filtered request {}", request)
+    if request is None:
+        return None
     repaired_request: sbb.Request = pipe(
         request, repair, PhiFilterer(), FunctionSubstitute()
     )
-    write_dot(repaired_request, "showdot.dot")
-    return ssa_to_expression(repaired_request)
+    return ssa_to_expression(registrar, repaired_request)

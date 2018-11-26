@@ -1,4 +1,5 @@
 # from __future__ import annotations
+import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -8,15 +9,11 @@ from typing import (
     List,
     MutableMapping as MMapping,
     Optional,
-    Set,
     Tuple,
     TypeVar,
-    cast,
 )
 
 from logbook import Logger
-
-import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
@@ -33,6 +30,7 @@ A = TypeVar("A", bound=sbb.BasicBlock)
 B = TypeVar("B", bound=sbb.BasicBlock)
 BlockMapping = MMapping[int, sbb.BasicBlock]
 StopBlock = Optional[sbb.BasicBlock]
+StoreMutation = ("StoreMutation", 0)
 
 
 class ComputedLineFilterer(UpdateVisitor):
@@ -40,7 +38,14 @@ class ComputedLineFilterer(UpdateVisitor):
         super().__init__()
         self.target_line = target_line
 
-    def visit_Module(self, module: sbb.Module) -> sbb.Request:
+    def update_target(self, thing: Any) -> None:
+        if self.target_line < 0:
+            target = self.target_line + sbb.last_line(thing) + 1
+            log.info(f"Updating target line from {self.target_line} to {target}")
+            self.target_line = target
+
+    def visit_Module(self, module: sbb.Module) -> Optional[sbb.Request]:
+        self.update_target(module)
         for func in module.functions.values():
             updated = self.visit_FunctionDef(func)
             if updated is not None:
@@ -50,11 +55,12 @@ class ComputedLineFilterer(UpdateVisitor):
                 log.notice(f"Throwing out `{func.name}` because no lines were kept")
         blocktree = self.visit_BlockTree(module.code)
         if blocktree is None:
-            raise RuntimeError("No code lines selected")
+            return None
         assert isinstance(blocktree, sbb.BlockTree)
         return sbb.Request(module=module, code=blocktree)
 
     def visit_FunctionDef(self, function: sbb.FunctionDef) -> Optional[sbb.FunctionDef]:
+        self.update_target(function)
         blocktree = self.visit_BlockTree(function.blocks)
         if blocktree is None or blocktree.empty():
             log.notice("Discarding function because it is empty")
@@ -71,13 +77,13 @@ class ComputedLineFilterer(UpdateVisitor):
         pass
 
     def visit_BlockTree(self, blocktree: sbb.BlockTree) -> Optional[sbb.BlockTree]:
+        self.update_target(blocktree)
         target = Discovery(self.target_line)(blocktree.end)
         if target is None:
             return None
         filterer = Filter(self.target_line)
         filtered: sbb.BasicBlock = result(filterer(target), blocktree.start)
         tree: sbb.BasicBlock = ConditionalElimination()(filtered)
-        # print("Visited nodes", [type(node) for node in filterer.visited_nodes.values()])
         start_block = blocktree.start
         return sbb.BlockTree(
             start=start_block,
@@ -118,7 +124,14 @@ class DepFinder(GatherVisitor[SSAName]):
         return [(name.id, name.set_count)]
 
     def visit_Set(self, assign: n.Set) -> List[SSAName]:
-        return self.visit(assign.e)
+        deps = self.visit(assign.e)
+        if isinstance(assign.target, n.Attribute):
+            log.debug("adding target of attribute {}", assign.target)
+            name = self.visit(assign.target.e)
+            log.debug("found {} from attribute", name)
+            deps += name
+
+        return deps
 
 
 @singledispatch
@@ -128,7 +141,16 @@ def target_finder(obj: Any) -> Optional[SSAName]:
 
 @target_finder.register(n.Set)
 def find_Set_target(obj: n.Set) -> SSAName:
-    return (obj.target.id, obj.target.set_count)
+    if isinstance(obj.target, n.Attribute):
+        # This is a hack to treat all attribute stores as desired
+        # lines, due to aliasing problems.  If we don't do this, an
+        # aliased name for a dependent variable appears not to be a
+        # dependency, even though it can change the value of the
+        # dependent variable.
+        log.debug("Returning store mutation")
+        return StoreMutation
+    name = obj.target.find_name()
+    return (name.id, name.set_count)
 
 
 class Filter(GenericVisitor[Coroutine]):
@@ -138,30 +160,24 @@ class Filter(GenericVisitor[Coroutine]):
         self.dep_finder = DepFinder()
 
     def __call__(self, v: Any, *args: Any, **kwargs: Any) -> Coroutine:
-        return self.visit(v, None, TargetManager(), *args, **kwargs)
+        return self.visit(v, None, TargetManager({StoreMutation}), *args, **kwargs)
 
     def visit_Code(
         self, code: sbb.Code, stop: StopBlock, targets: TargetManager
     ) -> Coroutine:
         if code is stop:
             return (yield)
-        print("-------------\nvisiting code block")
         lines: List[n.stmt] = []
         # We have to work up from the bottom
         for line in reversed(code.code):
-            print("targets", targets)
             target = target_finder(line)
-            print("target", target)
             if line.line == self.target_line or target in targets:
-                # print("target info", target in targets, target, targets)
-                # assert target is not None
                 deps = self.dep_finder(line)
-                print("deps on line", line.line, deps)
                 lines.insert(0, line)
-                targets.replace(target, deps)
-                print("new targets", targets)
-            else:
-                print("Line discarded", line, target, targets, self.target_line)
+                if target != StoreMutation:
+                    targets.replace(target, deps)
+                else:
+                    targets.replace(None, deps)
                 continue
 
         parent = yield from self.visit(code.parent, stop, targets)
@@ -266,10 +282,10 @@ class Filter(GenericVisitor[Coroutine]):
         parent = getattr(v, "parent", None)
         if parent:
             results["parent"] = yield from self.visit(parent, stop, targets)
-        return cast(sbb.BasicBlock, v.__class__(**results))
+        return v.__class__(**results)
 
 
-def filter_lines(target_line: int, module: sbb.Module) -> sbb.Request:
+def filter_lines(target_line: int, module: sbb.Module) -> Optional[sbb.Request]:
     log.info(f"Filtering starting at line {target_line}")
     filtered = ComputedLineFilterer(target_line).visit_Module(module)
     return filtered

@@ -1,13 +1,14 @@
 import ast
 
-import pytest
-
 import z3
 
 from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
 from .solver import solve
+from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
+
+Registrar = TypeBuilder().wrappers().build()
 
 
 def compare_dicts(actual, expected):
@@ -26,9 +27,9 @@ def compare_dicts(actual, expected):
 
 def check_solve(code, conditions, expected, unroll=1):
     parse = ast.parse(code)
-    testdata = get_expression(-1, parse, depth=unroll)
+    testdata = get_expression(Registrar, -1, parse, depth=unroll)
     if conditions:
-        condition_expression = expand_variables(conditions)
+        condition_expression = expand_variables(conditions, Registrar)
         expression = sbb.TestData(
             name=testdata.name,
             source_text=testdata.source_text,
@@ -38,7 +39,7 @@ def check_solve(code, conditions, expected, unroll=1):
     else:
         expression = testdata
     print("expression", expression)
-    res = solve(expression)
+    res = solve(Registrar, expression)
     if isinstance(expected, spotcheck):
         expected.check(res)
     else:

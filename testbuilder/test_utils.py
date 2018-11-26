@@ -1,19 +1,8 @@
 import subprocess
-from functools import partial, singledispatch
+from functools import singledispatch
 from logging import Logger
 from types import MappingProxyType
-from typing import (
-    Any,
-    Callable,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, List, Mapping, Sequence, Set, Tuple, Union
 
 from . import ssa_basic_blocks as sbb
 from .ssa_formatter import format_tree

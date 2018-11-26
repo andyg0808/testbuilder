@@ -5,8 +5,10 @@ functions for the Python AST.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from abc import abstractmethod
 from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
+
+from dataclasses import dataclass
 
 AddedLine = -1
 
@@ -111,6 +113,10 @@ class USub(UnaryOperator):
     pass
 
 
+class Not(UnaryOperator):
+    pass
+
+
 @dataclass
 class BinOp(expr):
     left: expr
@@ -126,7 +132,7 @@ class UnaryOp(expr):
 
 @dataclass
 class Set(stmt):
-    target: Name
+    target: LValue
     e: expr
 
 
@@ -166,10 +172,36 @@ class NameConstant(expr):
     value: Any
 
 
+class LValue:
+    @abstractmethod
+    def find_name(self) -> Name:
+        ...
+
+
 @dataclass
-class Name(expr):
+class Attribute(expr, LValue):
+    """
+    Because writing to an attribute requires a read-modify-write on
+    the original contents of the `value` expression, we store a rvalue
+    version of it in `e`. Thus, `value` is the `LValue` to store to
+    while `e` is an rvalue from which to do any reading necessary.
+    """
+
+    e: LValue
+    value: LValue
+    attr: str
+
+    def find_name(self) -> Name:
+        return self.value.find_name()
+
+
+@dataclass
+class Name(expr, LValue):
     id: str
     set_count: int
+
+    def find_name(self) -> Name:
+        return self
 
     def __post_init__(self) -> None:
         assert isinstance(self.id, str)

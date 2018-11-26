@@ -1,11 +1,9 @@
-import inspect
 from functools import singledispatch
-from typing import Any, Union
-from .coroutines import result
-
-import pytest
+from typing import Any
 
 from dataclasses import dataclass
+
+from .coroutines import result
 
 
 @dataclass
