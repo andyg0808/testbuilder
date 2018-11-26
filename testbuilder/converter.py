@@ -10,10 +10,10 @@ import re
 from functools import reduce
 from typing import Any, Callable, Mapping, Sequence, cast
 
+from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
-from logbook import Logger
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -24,7 +24,6 @@ from .store import Store
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
-from .utils import crash
 from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import (
