@@ -191,6 +191,11 @@ class BlockTreeIndex(BlockTree, Generic[T]):
         return BlockTreeIndex._construct(start=self.start, end=self.end, target=target)
 
     def return_target(self) -> BlockTree:
+        """
+        Appends the current target of the index to the end block and
+        returns a BlockTree (since there's no longer a target
+        available)
+        """
         end = self.end.append(self.target)
         return BlockTree(start=self.start, end=end)
 

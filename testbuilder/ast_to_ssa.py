@@ -1,5 +1,4 @@
 import ast
-import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -13,6 +12,8 @@ from typing import (
 )
 
 from logbook import Logger
+
+import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
@@ -276,6 +277,9 @@ class AstToSSABasicBlocks(SimpleVisitor):
             value = self.expr_visitor(node.value)
         ret = n.Return(line=node.lineno, value=value)
         tree = self.append_code(tree, ret)
+        return tree.return_target()
+
+    def visit_Raise(self, node: ast.Raise, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
         return tree.return_target()
 
     def append_lines(
