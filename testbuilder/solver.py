@@ -1,15 +1,105 @@
 import re
-from typing import Any, Mapping, Optional
+from typing import Any, List, Mapping, MutableMapping as MMapping, Optional
+
+from logbook import Logger
+from typeassert import assertify
 
 import z3
-from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
 from .type_registrar import TypeRegistrar
+from .z3_types import Expression, Reference
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 
 Solution = Mapping[str, Any]
+
+StoreParser = re.compile(r"store|store_(\d+)")
+
+log = Logger("solver")
+
+DEFAULT_STORE = -1
+
+
+class Z3PythonConverter:
+    def __init__(self, model: z3.ModelRef, registrar: TypeRegistrar) -> None:
+        self.registrar = registrar
+
+        # Mapping from variable names to Python values
+        self._standardized: MMapping[str, Any] = {}
+
+        # Stores list of variable names which contain References
+        self.refkeys: List[str] = []
+
+        # The largest number store which has been discovered
+        self.max_store = DEFAULT_STORE
+
+        for k in model.decls():
+            key = VAR_NAME.fullmatch(k.name())
+            value = model[k]
+
+            if key:
+                store_key = key[1]
+            else:
+                store_key = k.name()
+
+            self._standardized[store_key] = self._z3_to_python(store_key, value)
+
+        if self.max_store == DEFAULT_STORE:
+            assert len(self.refkeys) == 0
+        else:
+            self.final_store = Mapper(self._standardized[f"store_{self.max_store}"])
+
+            for refkey in self.refkeys:
+                ref = self._standardized[refkey]
+                value = self.final_store[ref]
+                print("found value", refkey, ref, value)
+
+    def solution(self) -> Solution:
+        return self._standardized
+
+    def _z3_to_python(self, store_key: str, value: z3.FuncInterp) -> Any:
+        if isinstance(value, z3.DatatypeRef):
+            if value.sort() == self.registrar.anytype:
+                value = self.registrar.unwrap(value)
+        if z3.is_int(value):
+            return value.as_long()
+        elif z3.is_string(value):
+            strvalue = value.as_string()
+            return strvalue[1:-1]
+        elif z3.is_bool(value):
+            return bool(value)
+        elif isinstance(value, z3.DatatypeRef):
+            if value.sort() == self.registrar.anytype:
+                if value.decl() == self.registrar.anytype.none.decl():
+                    return None
+            elif value.sort() == Reference:
+                self.refkeys.append(store_key)
+                return value
+        elif isinstance(value, z3.FuncInterp):
+            match = StoreParser.match(store_key)
+            if match is not None:
+                if match[1] is None:
+                    number = 0
+                else:
+                    number = int(match[1])
+
+                print("found store variable", number)
+                print("store for")
+                self.max_store = number
+                return value
+            else:
+                log.warn(
+                    f"Unknown function interp {value} for key {store_key}; ignoring"
+                )
+                return value
+        log.error(
+            f"Couldn't find adapter for {store_key}; "
+            "{value} has type {type(value)}, "
+            "decl {value.decl()}, "
+            "and sort {value.sort()}"
+        )
+        raise TypeError(f"Couldn't find adapter for {type(value)}")
 
 
 @assertify
@@ -19,41 +109,18 @@ def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
     res = solver.check()
     if res == z3.unsat:
         return None
-    # print("model", solver.model())
-    # print("decls", solver.decls())
-    standardized = {}
     model = solver.model()
-    for k in model.decls():
-        key = VAR_NAME.fullmatch(k.name())
-        value = model[k]
+    converter = Z3PythonConverter(model, registrar)
+    return converter.solution()
 
-        if key:
-            store_key = key[1]
-        else:
-            store_key = k.name()
 
-        pyvalue: Any
-        if isinstance(value, z3.DatatypeRef):
-            if value.sort() == registrar.anytype:
-                value = registrar.unwrap(value)
-        if z3.is_int(value):
-            pyvalue = value.as_long()
-        elif z3.is_string(value):
-            pyvalue = value.as_string()
-            pyvalue = pyvalue[1:-1]
-        elif z3.is_bool(value):
-            pyvalue = bool(value)
-        elif isinstance(value, z3.DatatypeRef) and value.sort() == registrar.anytype:
-            if value.decl() == registrar.anytype.none.decl():
-                pyvalue = None
-            else:
-                print("word", registrar.anytype.none.sort())
-                raise TypeError(
-                    f"Couldn't extract Python value from {value} {value.decl()} {value.sort()}"
-                )
-        else:
-            raise TypeError(f"Couldn't find adapter for {type(value)}")
+class Mapper:
+    def __init__(self, func: z3.FuncInterp) -> None:
+        self.lookup: MMapping[Any, Any] = {}
+        self._else = func.else_value()
 
-        standardized[store_key] = pyvalue
+    def __getitem__(self, key: Any) -> Any:
+        pass
 
-    return standardized
+    def elsevalue(self) -> Any:
+        return self._else
