@@ -1,0 +1,12 @@
+source "./testing.tcl"
+file delete pair_test.py
+spawn python3 ./run.py pair.py
+
+expect -re {expected.*\{.*: ([-\d]+), .*: (\d+)\}}
+set value [expr $expect_out(1,string) * $expect_out(2,string)]
+send -- "$value\n"
+expect "Couldn't generate a test for line 8"
+expect expected
+send "None\n"
+system pytest pair_test.py
+file delete pair_test.py
