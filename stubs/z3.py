@@ -128,6 +128,9 @@ class FuncInterp:
     def as_list(self) -> List[Any]:
         ...
 
+    def else_value(self) -> ExprRef:
+        ...
+
 
 class ModelRef:
     def decls(self) -> List[FuncDeclRef]:
