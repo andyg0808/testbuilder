@@ -43,11 +43,6 @@ TypeRegex = re.compile(r"^(?:([A-Z])_)?(.+)$", re.IGNORECASE)
 TypeConstructor = Callable[[str], Expression]
 
 
-Constants: Mapping[Any, TypeUnion] = {
-    True: TypeUnion.wrap(z3.BoolVal(True)),
-    False: TypeUnion.wrap(z3.BoolVal(False)),
-}
-
 IntSort = z3.IntSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
@@ -62,6 +57,13 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self.registrar = registrar
         self.type_manager = type_manager
         self.store = store
+        self.constants: Mapping[Any, TypeUnion] = {
+            True: TypeUnion.wrap(z3.BoolVal(True)),
+            False: TypeUnion.wrap(z3.BoolVal(False)),
+        }
+        none = getattr(self.registrar.anytype, "none", None)
+        if none is not None:
+            self.constants[None] = TypeUnion.wrap(none)
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
@@ -92,7 +94,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             return TypeUnion.wrap(z3.BoolVal(True))
 
     def visit_NameConstant(self, node: n.NameConstant) -> TypeUnion:
-        return Constants[node.value]
+        return self.constants[node.value]
 
     def dereference(self, val: TypeUnion) -> TypeUnion:
         return Magic.m(Reference)(self.store.get)(val)
