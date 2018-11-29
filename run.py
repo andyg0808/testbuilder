@@ -8,15 +8,16 @@ Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
     --lines=<line,line,line>  Lines to generate tests for
     --verbose=<level>  Output all logging information for <level> and above
+    --ignore=<file,file>  Ignore all logging from the specified files
 """
 
 import sys
 from pathlib import Path
 
 from docopt import docopt
+from logbook import NullHandler, StderrHandler
 
 import typeassert
-from logbook import NullHandler, StderrHandler
 from testbuilder.generate import generate_tests
 
 typeassert.log.setLevel("ERROR")
@@ -48,11 +49,21 @@ def main(filename: str) -> None:
 if __name__ == "__main__":
     opts = docopt(__doc__)
 
-    verbosity = opts["--verbose"]
     NullHandler().push_application()
-    if verbosity:
-        StderrHandler(level=verbosity).push_application()
+
+    ignores_s = opts["--ignore"]
+    if ignores_s:
+        ignores = set(ignores_s.split(","))
     else:
-        StderrHandler(level="NOTICE").push_application()
+        ignores = set()
+
+    def ignore_filter(r, h):
+        return r.channel not in ignores
+
+    verbosity = opts["--verbose"]
+    if verbosity:
+        StderrHandler(level=verbosity, filter=ignore_filter).push_application()
+    else:
+        StderrHandler(level="NOTICE", filter=ignore_filter).push_application()
 
     main(opts["<source.py>"])
