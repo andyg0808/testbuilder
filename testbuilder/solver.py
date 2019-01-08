@@ -33,6 +33,7 @@ class Z3PythonConverter:
 
         # The largest number store which has been discovered
         self.max_store = DEFAULT_STORE
+        self.max_store_name = ""
 
         for k in model.decls():
             key = VAR_NAME.fullmatch(k.name())
@@ -48,7 +49,7 @@ class Z3PythonConverter:
         if self.max_store == DEFAULT_STORE:
             assert len(self.refkeys) == 0
         else:
-            self.final_store = Mapper(self._standardized[f"store_{self.max_store}"])
+            self.final_store = Mapper(self._standardized[self.max_store_name])
 
             for refkey in self.refkeys:
                 ref = self._standardized[refkey]
@@ -86,7 +87,9 @@ class Z3PythonConverter:
 
                 print("found store variable", number)
                 print("store for")
-                self.max_store = number
+                if number > self.max_store:
+                    self.max_store = number
+                    self.max_store_name = store_key
                 return value
             else:
                 log.warn(
