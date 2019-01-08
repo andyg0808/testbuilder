@@ -11,7 +11,7 @@ def pytest_configure(config):
     verbosity = config.getoption("--verbose")
 
 
-FILES = {"linefilterer": logbook.DEBUG, "conditional_elimination": logbook.INFO}
+FILES = {"conditional_elimination": logbook.INFO}
 
 
 def should_write(r, h):
