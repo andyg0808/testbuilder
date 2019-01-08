@@ -47,14 +47,28 @@ class Z3PythonConverter:
             self._standardized[store_key] = self._z3_to_python(store_key, value)
 
         if self.max_store == DEFAULT_STORE:
-            assert len(self.refkeys) == 0
+            # Z3 has chosen to make some references when there is no
+            # store. Return `None` for all the references
+            for refkey in self.refkeys:
+                self._standardized[refkey] = None
         else:
             self.final_store = Mapper(self._standardized[self.max_store_name])
 
+            # Dereference all references from the final store
             for refkey in self.refkeys:
                 ref = self._standardized[refkey]
-                value = self.final_store[ref]
+                value = ref
+                while self.is_reftype(value):
+                    value = self.final_store[value]
                 print("found value", refkey, ref, value)
+                self._standardized[refkey] = value
+
+    def is_reftype(self, value: z3.FuncInterp) -> bool:
+        if self.registrar.reftype is None:
+            return False
+        if not isinstance(value, z3.DatatypeRef):
+            return False
+        return value.sort() == self.registrar.reftype
 
     def solution(self) -> Solution:
         return self._standardized
