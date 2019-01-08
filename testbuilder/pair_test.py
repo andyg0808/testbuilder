@@ -220,3 +220,22 @@ and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2)))\
 and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(store_1[Any.r(pyname_x)])))
     """,
     )
+
+
+def test_infer_modify_pair():
+    check_expression(
+        """
+def test(a):
+    a.left = a.left + 32
+    return a
+    """,
+        """
+And(And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_a)])),
+        Any.is_Reference(pyname_a)),
+    store_1 == Store(store, Any.r(pyname_a),
+                     Ref.Pair(Any.Int(Any.i(Ref.Pair_left(store[Any.r(pyname_a)])) + 32),\
+                              Ref.Pair_right(store[Any.r(pyname_a)]))),
+    ret == pyname_a
+)
+""",
+    )
