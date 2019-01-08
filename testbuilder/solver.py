@@ -50,6 +50,9 @@ class Z3PythonConverter:
             # Z3 has chosen to make some references when there is no
             # store. Return `None` for all the references
             for refkey in self.refkeys:
+                log.info(
+                    "Assigning None to reference {} because no store exists", refkey
+                )
                 self._standardized[refkey] = None
         else:
             self.final_store = Mapper(self._standardized[self.max_store_name])
@@ -60,7 +63,7 @@ class Z3PythonConverter:
                 value = ref
                 while self.is_reftype(value):
                     value = self.final_store[value]
-                print("found value", refkey, ref, value)
+                log.info(f"Dereferenced {refkey} with ref {ref} to {value}")
                 self._standardized[refkey] = value
 
     def is_reftype(self, value: z3.FuncInterp) -> bool:
@@ -121,6 +124,7 @@ class Z3PythonConverter:
 
 @assertify
 def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
+    log.info("Solving expression {}", data.expression)
     solver = z3.Solver()
     solver.add(data.expression)
     res = solver.check()

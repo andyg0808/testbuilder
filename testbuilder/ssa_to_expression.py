@@ -75,7 +75,9 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return exprs
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
-        return self.visit(node.end, None)
+        exprs = self.visit(node.end, None)
+        assert not self.store.pending(), "Store pending at highest level"
+        return exprs
 
     def visit_Conditional(self, node: sbb.Conditional, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:

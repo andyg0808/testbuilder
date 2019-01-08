@@ -4,9 +4,12 @@ calls.
 """
 from typing import Optional
 
+from logbook import Logger
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .visitor import UpdateVisitor
+
+log = Logger("expr_stripper")
 
 
 class ExprStripper(UpdateVisitor):
@@ -27,6 +30,7 @@ class ExprStripper(UpdateVisitor):
 
     def visit_Expr(self, expr: n.Expr) -> Optional[n.Expr]:
         if not isinstance(expr.value, n.Call):
+            log.debug(f"Discarding {expr}")
             # Discard code which is not a call site
             return None
         return self.generic_visit(expr)
