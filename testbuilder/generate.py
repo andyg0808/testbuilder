@@ -3,9 +3,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple, Union
 
-from toolz import concat, pipe
-
 from logbook import Logger
+from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
@@ -21,7 +20,6 @@ from .ssa_repair import repair
 from .ssa_to_expression import ssa_to_expression
 from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
-from .utils import WriteDot
 
 log = Logger("generator")
 
@@ -56,14 +54,15 @@ def generate_tests(
         function = request.code
         _ssa_to_expression = partial(ssa_to_expression, registrar)
 
-        expr: sbb.TestData = pipe(
-            request,
-            repair,
-            PhiFilterer(),
-            FunctionSubstitute(),
-            ExprStripper(),
-            _ssa_to_expression,
+        cleaned_expr: sbb.TestData = pipe(
+            request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
         )
+        log.debug(
+            "\n=====Cleaned expression=====\n"
+            + str(cleaned_expr)
+            + "\n=====END cleaned expression====="
+        )
+        expr = _ssa_to_expression(cleaned_expr)
         solution: Optional[Solution] = solve(registrar, expr)
         if not solution:
             log.error(
@@ -101,6 +100,7 @@ def generate_tests(
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
+    log.debug("\n=====SSA module=====\n{}\n=====END SSA module=====", module)
     builder = TypeBuilder()
     registrar = builder.construct()
     _generate_test = partial(generate_test, registrar, module)
