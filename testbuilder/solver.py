@@ -2,9 +2,9 @@ import re
 from typing import Any, List, Mapping, MutableMapping as MMapping, Optional
 
 from logbook import Logger
-from typeassert import assertify
 
 import z3
+from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
 from .type_registrar import TypeRegistrar

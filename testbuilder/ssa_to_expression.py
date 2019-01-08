@@ -2,10 +2,10 @@ from functools import singledispatch
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
+from logbook import Logger
 from toolz import mapcat, pipe
 
 import z3
-from logbook import Logger
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
