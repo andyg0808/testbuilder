@@ -81,11 +81,11 @@ def bool_not(expr: z3.Bool) -> z3.Bool:
 
 
 def bool_or(exprs: Iterable[z3.Bool]) -> z3.Bool:
-    return _simplify_logical(exprs, True, z3.Or)
+    return _simplify_logical(exprs, False, z3.Or)
 
 
 def bool_and(exprs: Iterable[z3.Bool]) -> z3.Bool:
-    return _simplify_logical(exprs, False, z3.And)
+    return _simplify_logical(exprs, True, z3.And)
 
 
 def bool_all(exprs: Iterable[z3.Bool]) -> z3.Bool:
@@ -109,7 +109,7 @@ def bool_true() -> Expression:
 
 
 def _simplify_logical(
-    exprs: Iterable[z3.Bool], eliminate: bool, function: Callable[..., z3.Bool]
+    exprs: Iterable[z3.Bool], identity: bool, function: Callable[..., z3.Bool]
 ) -> z3.Bool:
     exprs = list(exprs)
     if len(exprs) == 0:
@@ -117,14 +117,14 @@ def _simplify_logical(
     # `eliminate_bool` is the value which, if present in exprs, would
     # make the entire expression evaluate to itself. For `and`, this
     # is `False`; for `or`, this is `True`.
-    eliminate_bool = z3.BoolVal(eliminate)
+    eliminate_bool = z3.BoolVal(not identity)
     # Similarly to `eliminate_bool`, `combine_bool` is the value
     # which, if all the elements of `exprs` are it, would make the
     # whole expression equal to itself. For `and`, this is `True`; for
     # `or`, this is `False`. Note that, if not every value in `exprs`
     # is this value, any occurances of it can simply be deleted
     # without changing the value of the expression.
-    combine_bool = z3.BoolVal(not eliminate)
+    combine_bool = z3.BoolVal(identity)
     if any(z3.eq(eliminate_bool, e) for e in exprs):
         return eliminate_bool
     if all(z3.eq(combine_bool, e) for e in exprs):
