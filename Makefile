@@ -1,4 +1,4 @@
-.PHONY: build docs pytest mypy
+.PHONY: build pytest mypy
 
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
@@ -56,21 +56,11 @@ watch:
 test:
 	./runtests
 
-# The rest of this makefile is taken from the default Makefile Sphinx makes
-# Minimal makefile for Sphinx documentation
-#
-
-# You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = pipenv run sphinx-build
-SPHINXPROJ    = TestBuilder
-SOURCEDIR     = docs
-BUILDDIR      = build
-
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+.PHONY: docs
 docs:
-	@$(SPHINXBUILD) -M Makefile "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	pipenv run sphinx-apidoc --separate --force --o docs/api testbuilder
+	pipenv run sphinx-build -b html docs build
+
+.PHONY: doc-server
+doc-server:
+	python -m http.server --directory build
