@@ -76,8 +76,8 @@ def test_read_inferred_pair():
         "x.left > 0",
         """
 And(Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0,
-    And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)])),
-        Any.is_Reference(pyname_x)))
+    Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)])),
+        Any.is_Reference(pyname_x))
         """,
     )
 
@@ -156,8 +156,8 @@ and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2))) \
 and pyname_b == pyname_a \
 and store_2 == Store(store_1, Any.r(pyname_a),
           Ref.Pair(Any.Int(2), Ref.Pair_right(store_1[Any.r(pyname_a)]))) \
-and And(Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2),
-        Any.is_Int(Ref.Pair_left(store_2[Any.r(pyname_b)])))
+and Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2)\
+and Any.is_Int(Ref.Pair_left(store_2[Any.r(pyname_b)]))
         """,
     )
 
@@ -171,9 +171,9 @@ a.right < 23
         """
 Any.is_Reference(pyname_a) \
 and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Ref.Pair_left(store[Any.r(pyname_a)]), Any.Int(3))) \
-and And(Any.i(Ref.Pair_right(store_1[Any.r(pyname_a)])) < 23,
-        And(Any.is_Int(Ref.Pair_right(store_1[Any.r(pyname_a)])),
-        Any.is_Reference(pyname_a)))
+and Any.i(Ref.Pair_right(store_1[Any.r(pyname_a)])) < 23 \
+and Any.is_Int(Ref.Pair_right(store_1[Any.r(pyname_a)])) \
+and Any.is_Reference(pyname_a)
         """,
     )
 
@@ -186,10 +186,10 @@ a.left < 23
         """,
         """
 Any.is_Reference(pyname_a) \
-        and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(3), Ref.Pair_right(store[Any.r(pyname_a)]))) \
-and And(Any.i(Ref.Pair_left(store_1[Any.r(pyname_a)])) < 23,
-        And(Any.is_Int(Ref.Pair_left(store_1[Any.r(pyname_a)])),
-        Any.is_Reference(pyname_a)))
+and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(3), Ref.Pair_right(store[Any.r(pyname_a)]))) \
+and Any.i(Ref.Pair_left(store_1[Any.r(pyname_a)])) < 23\
+and Any.is_Int(Ref.Pair_left(store_1[Any.r(pyname_a)]))\
+and Any.is_Reference(pyname_a)
         """,
     )
 
@@ -230,8 +230,8 @@ def test(a):
     return a
     """,
         """
-And(And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_a)])),
-        Any.is_Reference(pyname_a)),
+And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_a)])),
+    Any.is_Reference(pyname_a),
     store_1 == Store(store, Any.r(pyname_a),
                      Ref.Pair(Any.Int(Any.i(Ref.Pair_left(store[Any.r(pyname_a)])) + 32),\
                               Ref.Pair_right(store[Any.r(pyname_a)]))),
