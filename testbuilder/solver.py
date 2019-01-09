@@ -14,7 +14,7 @@ VAR_NAME = re.compile(r"pyname_(.*)")
 
 Solution = Mapping[str, Any]
 
-StoreParser = re.compile(r"store|store_(\d+)")
+StoreParser = re.compile(r"^store$|^store_(\d+)$")
 
 log = Logger("solver")
 
