@@ -257,4 +257,8 @@ def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
     ...
 
 
+def set_param(key: str, value: str) -> None:
+    ...
+
+
 DeclareSort = ...  # type: Any

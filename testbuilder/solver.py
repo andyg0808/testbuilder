@@ -8,7 +8,9 @@ from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
 from .type_registrar import TypeRegistrar
-from .z3_types import Expression, Reference
+from .z3_types import Reference
+
+z3.set_param("model_compress", "false")
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 
