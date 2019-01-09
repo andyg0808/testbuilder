@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
 from itertools import product
 from typing import (
     Callable,
@@ -16,10 +15,11 @@ from typing import (
     cast,
 )
 
+from logbook import Logger
 from toolz import concat
 
 import z3
-from logbook import Logger
+from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
 from .expandable_type_union import ExpandableTypeUnion

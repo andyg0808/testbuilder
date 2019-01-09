@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-import z3
 from logbook import Logger
+
+import z3
 
 from .type_registrar import TypeRegistrar
 from .z3_types import AnySort, Reference
