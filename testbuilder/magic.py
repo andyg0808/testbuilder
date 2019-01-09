@@ -58,7 +58,7 @@ class Magic:
     Function overloading and abstract type handling.
 
     A `Magic` is a callable object which accepts any number of
-    `TypeUnion`s as arguments. It searches for registered handler
+    `TypeUnion`\ s as arguments. It searches for registered handler
     functions for each element of the Cartesian product of all the
     expressions in each `TypeUnion`. It discards those n-tuples of
     types which do not have defined handlers. For those which do have
