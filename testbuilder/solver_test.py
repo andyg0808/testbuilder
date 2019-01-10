@@ -21,6 +21,8 @@ def compare_dicts(actual, expected):
     for k in keys:
         left = actual[k]
         right = expected[k]
+        print("expected", right)
+        print("actual", left)
         assert type(left) == type(right)
         assert left == right
 
@@ -199,4 +201,6 @@ class spotcheck:
 
     def check(self, actual):
         for k, v in self.spots.items():
+            print("expected", v)
+            print("actual", actual[k])
             assert actual[k] == v
