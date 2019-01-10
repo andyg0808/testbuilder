@@ -26,6 +26,16 @@ def compare_dicts(actual, expected):
 
 
 def check_solve(code, conditions, expected, unroll=1):
+    """
+    Args:
+        code (str): A string of source code to check
+        conditions (str): Additional code establishing constraints
+                          which should be added to the solver. This
+                          allows some control over the solution which
+                          is found.
+        expected (dict): A dict of the expected values for each solver
+                         variable.
+    """
     parse = ast.parse(code)
     testdata = get_expression(Registrar, -1, parse, depth=unroll)
     if conditions:
