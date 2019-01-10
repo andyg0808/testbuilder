@@ -197,7 +197,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 def write(
                     self, dest: ReferenceT, left: Expression, right: Expression
                 ) -> z3.Bool:
-                    print("magic update for ", dest, "with", left, right)
+                    log.debug("Magic update for {} with {} {}", dest, left, right)
                     left_val = wrap(left)
                     right_val = wrap(right)
                     store._set(dest, pair(left_val, right_val))
