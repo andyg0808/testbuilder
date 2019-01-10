@@ -95,6 +95,10 @@ def Const(name: str, sort: SortRef) -> ExprRef:
     ...
 
 
+def Var(idx: int, sort: SortRef) -> ExprRef:
+    ...
+
+
 class CheckSatResult:
     ...
 
@@ -137,7 +141,21 @@ class ModelRef:
         ...
 
     # This definition is known incomplete; this just gives us the ones we need
-    def __getitem__(self, idx: FuncDeclRef) -> FuncInterp:
+    def __getitem__(self, idx: FuncDeclRef) -> Union[FuncInterp, QuantifierRef]:
+        ...
+
+
+class QuantifierRef:
+    def is_lambda(self) -> bool:
+        ...
+
+    def var_name(self, idx: int) -> str:
+        ...
+
+    def var_sort(self, idx: int) -> SortRef:
+        ...
+
+    def body(self) -> DatatypeRef:
         ...
 
 
@@ -258,6 +276,10 @@ def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
 
 
 def set_param(key: str, value: str) -> None:
+    ...
+
+
+def substitute(expr: ExprRef, *pairs: Tuple[ExprRef, ExprRef]) -> ExprRef:
     ...
 
 
