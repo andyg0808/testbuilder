@@ -8,7 +8,7 @@ from .solver import solve
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
 
-Registrar = TypeBuilder().wrappers().build()
+Registrar = TypeBuilder().wrappers().references().structures().build()
 
 
 def compare_dicts(actual, expected):
@@ -81,6 +81,18 @@ def test(r):
     )
 
 
+def test_bool_force():
+    check_solve(
+        """
+def test(r):
+    if r == False:
+        return 42
+        """,
+        "",
+        {"ret": 42, "r": False},
+    )
+
+
 def test_loop_unrolling_case():
     check_solve(
         """
@@ -137,6 +149,30 @@ def print_all(s_thing):
     """,
         "ret == Any.Int(1)",
         {"ret": 1, "s_thing": "a"},
+    )
+
+
+def test_dereference():
+    check_solve(
+        """
+def test(a):
+    if a.left == 3 and a.right == 4:
+        return 22
+        """,
+        "ret == Any.Int(22)",
+        spotcheck({"a": (3, 4)}),
+    )
+
+
+def test_store_mutation():
+    check_solve(
+        """
+def test(a):
+    a.left += 3
+    return a.left
+        """,
+        "ret == Any.Int(2)",
+        spotcheck({"a": (2, False)}),
     )
 
 

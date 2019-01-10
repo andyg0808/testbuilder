@@ -29,7 +29,7 @@ def render_test(
     source: Path, name: str, test_number: int, args: Mapping[str, Any], expected: Any
 ) -> str:
     keys = [x for x in sorted(args.keys()) if x != "ret"]
-    arg_strings = [f"{key} = {args[key]}" for key in keys]
+    arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
     args_string = "\n    ".join(arg_strings)
     call_args_string = ", ".join(keys)
     call_string = f"{name}({call_args_string})"
