@@ -33,9 +33,9 @@ class TypeBuilder:
         self.datatype.declare("String", ("s", z3.StringSort()))
         return self
 
-    def none(self) -> TypeBuilder:
-        self.datatype.declare("none")
-        return self
+    # def none(self) -> TypeBuilder:
+    #     self.datatype.declare("none")
+    #     return self
 
     def references(self) -> TypeBuilder:
         self.datatype.declare("Reference", ("r", Reference))
@@ -60,7 +60,7 @@ class TypeBuilder:
             return TypeRegistrar(anytype, reftype)
 
     def construct(self) -> TypeRegistrar:
-        self.none()
+        # self.none()
         self.references()
         self.wrappers()
         self.structures()
