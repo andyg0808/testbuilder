@@ -1,5 +1,6 @@
 import ast
 
+import dataclasses
 import z3
 
 from . import ssa_basic_blocks as sbb
@@ -43,11 +44,8 @@ def check_solve(code, conditions, expected, unroll=1):
     testdata = get_expression(Registrar, -1, parse, depth=unroll)
     if conditions:
         condition_expression = expand_variables(conditions, Registrar)
-        expression = sbb.TestData(
-            name=testdata.name,
-            source_text=testdata.source_text,
-            free_variables=testdata.free_variables,
-            expression=z3.And(testdata.expression, condition_expression),
+        expression = dataclasses.replace(
+            testdata, expression=z3.And(testdata.expression, condition_expression)
         )
     else:
         expression = testdata

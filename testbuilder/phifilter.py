@@ -1,6 +1,8 @@
 from copy import copy
 from typing import Optional
 
+import dataclasses
+
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .target_manager import TargetManager
 from .visitor import UpdateVisitor
@@ -13,8 +15,8 @@ class PhiFilterer(UpdateVisitor):
     """
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
-        return sbb.Request(
-            module=request.module, code=self.visit(request.code, TargetManager())
+        return dataclasses.replace(
+            request, code=self.visit(request.code, TargetManager())
         )
 
     def visit_Name(self, name: n.Name, seen: TargetManager) -> n.Name:

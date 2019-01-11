@@ -1,5 +1,7 @@
 from typing import Any, Generator, List, Optional
 
+import dataclasses
+
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .variable_manager import VAR_START_VALUE
 from .visitor import CoroutineVisitor, UpdateVisitor
@@ -12,7 +14,7 @@ class FunctionSubstitute(UpdateVisitor):
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
         code = self.generic_visit(request.code, module=request.module)
-        return sbb.Request(module=request.module, code=code)
+        return dataclasses.replace(request, code=code)
 
     def visit_Code(
         self, node: sbb.Code, start_line: int = 0, **kwargs: Any
