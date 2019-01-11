@@ -16,6 +16,14 @@ class TypeUnion:
 
     @staticmethod
     def wrap(expr: Expression) -> TypeUnion:
+        """
+        Wrap `expr` in an unconstrained `CExpr` and a `TypeUnion`,
+        using the result of `expr.sort()` as the sort present in the
+        `TypeUnion`.
+
+        Args:
+            expr: An expression to put into a type union
+        """
         cexpr = CExpr(expr=expr)
         return TypeUnion([cexpr], {expr.sort()})
 
