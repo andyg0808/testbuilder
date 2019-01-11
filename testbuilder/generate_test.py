@@ -4,6 +4,7 @@ from pathlib import Path
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
+from . import ssa_basic_blocks as sbb
 from .generate import generate_tests
 from .hypothesis_entities import functions
 from .renderer import render_test
@@ -77,9 +78,14 @@ def test_generate_basic(op, a, b):
     function_args = {"a": a, "b": b}
     function_expectation = op(a, b)
     function = render_test(
-        source=Path("mycode.py"),
-        name=function_name,
         test_number=0,
+        test=sbb.TestData(
+            filepath=Path("mycode.py"),
+            name=function_name,
+            source_text="",
+            free_variables=[sbb.Variable("a"), sbb.Variable("b")],
+            expression=None,
+        ),
         args=function_args,
         expected=function_expectation,
     )
@@ -101,9 +107,14 @@ def test_generate_list_handler():
     function_args = {"a": [1, 2, 3]}
     function_expectation = 1
     function = render_test(
-        source=Path("mycode.py"),
-        name=function_name,
         test_number=0,
+        test=sbb.TestData(
+            filepath=Path("mycode.py"),
+            name=function_name,
+            source_text="",
+            free_variables=[sbb.Variable("a")],
+            expression=None,
+        ),
         args=function_args,
         expected=function_expectation,
     )

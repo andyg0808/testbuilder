@@ -1,38 +1,31 @@
-from pathlib import Path
 from typing import Any, Mapping
 
 from .ssa_basic_blocks import TestData
 
 
 def prompt_and_render_test(
-    source: Path,
-    name: str,
-    io: Any,
-    prompt: str,
-    text: str,
-    test: TestData,
-    test_number: int,
-    args: Mapping[str, Any],
+    io: Any, prompt: str, test: TestData, test_number: int, args: Mapping[str, Any]
 ) -> str:
     print("=================================================")
-    # print(text)
     print(test.source_text)
     if prompt == "":
-        print(f"What is the expected output of {name} from these arguments? {args}")
+        print(
+            f"What is the expected output of {test.name} from these arguments? {args}"
+        )
     else:
         print(prompt)
     expected = io.readline()
-    return render_test(source, name, test_number, args, expected)
+    return render_test(test=test, test_number=test_number, args=args, expected=expected)
 
 
 def render_test(
-    source: Path, name: str, test_number: int, args: Mapping[str, Any], expected: Any
+    test: TestData, test_number: int, args: Mapping[str, Any], expected: Any
 ) -> str:
-    keys = [x for x in sorted(args.keys()) if x != "ret"]
+    keys = [x.id for x in test.free_variables]
     arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
     args_string = "\n    ".join(arg_strings)
     call_args_string = ", ".join(keys)
-    call_string = f"{name}({call_args_string})"
+    call_string = f"{test.name}({call_args_string})"
     expected = str(expected).strip()
     print("Test number", test_number)
     if test_number > 0:
@@ -43,9 +36,9 @@ def render_test(
     # This allows correct importing of modules with unacceptable
     # Python names
     return f"""
-{name} = import_module("{source.stem}").{name}
-def test_{name}{number_str}():
 from testbuilder.pair import Pair
+{test.name} = import_module("{test.filepath.stem}").{test.name}
+def test_{test.name}{number_str}():
     {args_string}
     actual = {call_string}
     expected = {expected}

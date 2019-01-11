@@ -1,7 +1,7 @@
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, List, Mapping, Optional, Set, Tuple, Union
 
 from logbook import Logger
 from toolz import concat, pipe
@@ -52,7 +52,7 @@ def generate_tests(
             )
             return ""
         function = request.code
-        _ssa_to_expression = partial(ssa_to_expression, registrar)
+        _ssa_to_expression = partial(ssa_to_expression, source, registrar)
 
         cleaned_expr: sbb.TestData = pipe(
             request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
@@ -62,26 +62,22 @@ def generate_tests(
             + str(cleaned_expr)
             + "\n=====END cleaned expression====="
         )
-        expr = _ssa_to_expression(cleaned_expr)
-        solution: Optional[Solution] = solve(registrar, expr)
+        testdata = _ssa_to_expression(cleaned_expr)
+        solution: Optional[Solution] = solve(registrar, testdata)
         if not solution:
             log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
-            log.debug(f"Couldn't solve {expr}")
+            log.debug(f"Couldn't solve {testdata.expression}")
             return ""
         _filter_inputs = partial(filter_inputs, function)
-        _render_test = partial(
-            prompt_and_render_test,
-            source,
-            function.name,
-            io,
-            prompt,
-            text,
-            expr,
-            test_number,
-        )
+
+        def _render_test(args: Mapping[str, Any]) -> str:
+            return prompt_and_render_test(
+                io=io, prompt=prompt, test=testdata, test_number=test_number, args=args
+            )
+
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
 

@@ -1,4 +1,5 @@
 from functools import singledispatch
+from pathlib import Path
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
@@ -155,7 +156,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
 
 @singledispatch
-def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
+def process(filepath: Path, node: object, visitor: SSAVisitor) -> sbb.TestData:
     """
     Convert a node to a TestData description
 
@@ -165,7 +166,9 @@ def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
 
 
 @process.register(sbb.FunctionDef)
-def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
+def process_fut(
+    node: sbb.FunctionDef, filepath: Path, visitor: SSAVisitor
+) -> sbb.TestData:
     if node.blocks.empty():
         expression = bool_true()
     else:
@@ -175,6 +178,7 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
         expression = bool_all(cast(List[z3.Bool], expressions))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
+        filepath=filepath,
         name=node.name,
         free_variables=free_variables,
         expression=expression,
@@ -183,13 +187,16 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
 
 
 @process.register(sbb.BlockTree)
-def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
+def process_sut(
+    code: sbb.BlockTree, filepath: Path, visitor: SSAVisitor
+) -> sbb.TestData:
     if code.empty():
         expression = bool_true()
     else:
         expression = bool_all(cast(List[z3.Bool], visitor.visit(code)))
     free_variables = find_variables(code)
     return sbb.TestData(
+        filepath=filepath,
         name="code",
         free_variables=free_variables,
         expression=expression,
@@ -212,18 +219,20 @@ def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
 
 
-def ssa_to_expression(registrar: TypeRegistrar, request: sbb.Request) -> sbb.TestData:
+def ssa_to_expression(
+    filepath: Path, registrar: TypeRegistrar, request: sbb.Request
+) -> sbb.TestData:
     assert isinstance(request, sbb.Request)
     # TODO: I think this is right?
     v = SSAVisitor(registrar, request.module)
     assert isinstance(request.code, sbb.BlockTree) or isinstance(
         request.code, sbb.FunctionDef
     )
-    return process(request.code, v)
+    return process(request.code, filepath, v)
 
 
 def ssa_lines_to_expression(
-    registrar: TypeRegistrar, target_line: int, module: sbb.Module
+    filepath: Path, registrar: TypeRegistrar, target_line: int, module: sbb.Module
 ) -> Optional[sbb.TestData]:
     request = filter_lines(target_line, module)
     log.debug("Filtered request {}", request)
@@ -232,4 +241,4 @@ def ssa_lines_to_expression(
     repaired_request: sbb.Request = pipe(
         request, repair, PhiFilterer(), FunctionSubstitute()
     )
-    return ssa_to_expression(registrar, repaired_request)
+    return ssa_to_expression(filepath, registrar, repaired_request)

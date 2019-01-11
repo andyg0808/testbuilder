@@ -4,6 +4,7 @@ value at a given line.
 """
 import ast
 from functools import partial
+from pathlib import Path
 from typing import Optional
 
 from toolz import pipe
@@ -20,8 +21,8 @@ NULL = z3.DeclareSort("None")
 
 
 def get_expression(
-    registrar: TypeRegistrar, line: int, code: ast.AST, depth: int = 1
+    registrar: TypeRegistrar, filepath: Path, line: int, code: ast.AST, depth: int = 1
 ) -> Optional[TestData]:
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
-    _ssa_to_expression = partial(ssa_lines_to_expression, registrar, line)
+    _ssa_to_expression = partial(ssa_lines_to_expression, filepath, registrar, line)
     return pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)

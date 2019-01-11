@@ -1,5 +1,6 @@
 import ast
 from functools import reduce, singledispatch
+from pathlib import Path
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
@@ -240,7 +241,6 @@ class Variable:
 
 @dataclass
 class TestData:
-    # filepath: Path
     # line: int
     name: str
     # statements: Dependency
@@ -249,6 +249,7 @@ class TestData:
     # function: Optional[FunctionDef] = None
     free_variables: List[Variable]
     expression: Expression
+    filepath: Path
 
 
 @singledispatch

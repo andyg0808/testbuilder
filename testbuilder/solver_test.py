@@ -1,4 +1,5 @@
 import ast
+from pathlib import Path
 
 import dataclasses
 import z3
@@ -41,7 +42,7 @@ def check_solve(code, conditions, expected, unroll=1):
                          variable.
     """
     parse = ast.parse(code)
-    testdata = get_expression(Registrar, -1, parse, depth=unroll)
+    testdata = get_expression(Registrar, Path("<source>"), -1, parse, depth=unroll)
     if conditions:
         condition_expression = expand_variables(conditions, Registrar)
         expression = dataclasses.replace(
