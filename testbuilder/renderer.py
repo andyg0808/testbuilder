@@ -45,6 +45,7 @@ def render_test(
     return f"""
 {name} = import_module("{source.stem}").{name}
 def test_{name}{number_str}():
+from testbuilder.pair import Pair
     {args_string}
     actual = {call_string}
     expected = {expected}

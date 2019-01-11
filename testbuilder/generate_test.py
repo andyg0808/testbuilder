@@ -84,6 +84,7 @@ def test_generate_basic(op, a, b):
         expected=function_expectation,
     )
     expected = f"""
+from testbuilder.pair import Pair
 {op.__name__} = import_module("mycode").{op.__name__}
 def test_{op.__name__}():
     a = {a}
@@ -107,6 +108,7 @@ def test_generate_list_handler():
         expected=function_expectation,
     )
     expected = """
+from testbuilder.pair import Pair
 min = import_module("mycode").min
 def test_min():
     a = [1, 2, 3]
@@ -153,6 +155,7 @@ def caller(fishy):
     """
     expected = {
         """
+from testbuilder.pair import Pair
 boring = import_module("boring").boring
 def test_boring():
     fishy = 1234567890
@@ -161,6 +164,7 @@ def test_boring():
     assert actual == expected
     """,
         """
+from testbuilder.pair import Pair
 caller = import_module("boring").caller
 def test_caller():
     fishy = None

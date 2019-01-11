@@ -4,6 +4,7 @@ import z3
 
 from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
+from .pair import Pair
 from .solver import solve
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
@@ -172,7 +173,7 @@ def test(a):
         return 22
         """,
         "ret == Any.Int(22)",
-        spotcheck({"a": (3, 4)}),
+        spotcheck({"a": Pair(3, 4)}),
     )
 
 
@@ -181,10 +182,11 @@ def test_store_mutation():
         """
 def test(a):
     a.left += 3
+    assert a.right == False
     return a.left
         """,
         "ret == Any.Int(2)",
-        spotcheck({"a": (2, False)}),
+        spotcheck({"a": Pair(-1, False)}),
     )
 
 

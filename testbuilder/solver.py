@@ -7,6 +7,7 @@ import z3
 from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
+from .pair import Pair
 from .type_registrar import TypeRegistrar
 from .z3_types import Reference
 
@@ -105,7 +106,7 @@ class Z3PythonConverter:
                 if value.decl() == self.registrar.reftype.Pair:
                     left, right = value.children()
                     # Invent store keys for now; we don't need them for non-reference values.
-                    return (
+                    return Pair(
                         self._z3_to_python(store_key + ".left", left),
                         self._z3_to_python(store_key + ".right", right),
                     )
