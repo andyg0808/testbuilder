@@ -30,7 +30,7 @@ def compare_dicts(actual, expected):
         assert left == right
 
 
-def check_solve(code, conditions, expected, unroll=1):
+def check_solve(code, conditions, expected, unroll=1, slice=True):
     """
     Args:
         code (str): A string of source code to check
@@ -42,7 +42,9 @@ def check_solve(code, conditions, expected, unroll=1):
                          variable.
     """
     parse = ast.parse(code)
-    testdata = get_expression(Registrar, Path("<source>"), -1, parse, depth=unroll)
+    testdata = get_expression(
+        Registrar, Path("<source>"), -1, parse, depth=unroll, slice=slice
+    )
     if conditions:
         condition_expression = expand_variables(conditions, Registrar)
         expression = dataclasses.replace(
