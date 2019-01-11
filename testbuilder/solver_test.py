@@ -14,6 +14,19 @@ from .variable_expander import expand_variables
 Registrar = TypeBuilder().wrappers().references().structures().build()
 
 
+def compare_values(expected, actual, actual_dict):
+    if callable(expected):
+        print("actual", actual)
+        print("dict", actual_dict)
+        print("expected", expected)
+        assert expected(actual, actual_dict)
+    else:
+        print("expected", expected)
+        print("actual", actual)
+        assert type(expected) == type(actual)
+        assert expected == actual
+
+
 def compare_dicts(actual, expected):
     if expected is None:
         assert actual is None
@@ -22,12 +35,7 @@ def compare_dicts(actual, expected):
         assert actual is not None
     keys = actual.keys() | expected.keys()
     for k in keys:
-        left = actual[k]
-        right = expected[k]
-        print("expected", right)
-        print("actual", left)
-        assert type(left) == type(right)
-        assert left == right
+        compare_values(expected[k], actual[k], actual)
 
 
 def check_solve(code, conditions, expected, unroll=1, slice=True):
@@ -58,6 +66,15 @@ def check_solve(code, conditions, expected, unroll=1, slice=True):
         expected.check(res)
     else:
         compare_dicts(res, expected)
+
+
+class spotcheck:
+    def __init__(self, spots):
+        self.spots = spots
+
+    def check(self, actual):
+        for k, v in self.spots.items():
+            compare_values(v, actual[k], actual)
 
 
 def test_basic_solution():
@@ -196,14 +213,3 @@ def merge(*dicts):
     for d in dicts:
         merged.update(d)
     return merged
-
-
-class spotcheck:
-    def __init__(self, spots):
-        self.spots = spots
-
-    def check(self, actual):
-        for k, v in self.spots.items():
-            print("expected", v)
-            print("actual", actual[k])
-            assert actual[k] == v
