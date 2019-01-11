@@ -1,0 +1,6 @@
+source "./testing.tcl"
+file delete clements_example_test.py
+spawn python3 ./run.py --lines=10 clements_example.py
+
+expect "Couldn't generate a test"
+file delete clements_example_test.py
