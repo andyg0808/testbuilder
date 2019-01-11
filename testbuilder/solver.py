@@ -162,19 +162,9 @@ def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
 class Mapper:
     def __init__(self, func: z3.QuantifierRef) -> None:
         self.lookup: MMapping[Any, Any] = {}
-        # self._else = func.else_value()
         self.func = func
-        self._else = func.body()
-        print("type", type(func.body()))
 
     def __getitem__(self, key: z3.ExprRef) -> z3.ExprRef:
-        # print("getitem")
-        # val = self.lookup.get(key, self._else)
-        # return val
-        subst = z3.substitute(self.func.body(), (z3.Var(0, self.func.var_sort(0)), key))
-        # embed()
+        lambda_var = z3.Var(0, self.func.var_sort(0))
+        subst = z3.substitute(self.func.body(), (lambda_var, key))
         return z3.simplify(subst)
-
-    def elsevalue(self) -> Any:
-        print("elsevalue")
-        return self._else

@@ -208,6 +208,32 @@ def test(a):
     )
 
 
+def test_solve_invalid_reference():
+    check_solve(
+        """
+def test(a):
+    return a
+        """,
+        "Any.is_Reference(pyname_a)",
+        {"ret": None, "a": None},
+    )
+
+
+def test_solve_invalid_reference_with_store():
+    check_solve(
+        """
+def example(a):
+    b.left = 42
+    return a
+        """,
+        "Any.is_Reference(pyname_a)",
+        spotcheck(
+            {"ret": lambda ret, d: d["a"] == ret, "a": lambda a, d: d["ret"] == a}
+        ),
+        slice=False,
+    )
+
+
 def merge(*dicts):
     merged = {}
     for d in dicts:
