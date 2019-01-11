@@ -131,6 +131,12 @@ class UnaryOp(expr):
 
 
 @dataclass
+class Assert(stmt):
+    test: expr
+    msg: str
+
+
+@dataclass
 class Set(stmt):
     target: LValue
     e: expr

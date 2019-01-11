@@ -171,7 +171,7 @@ class Filter(GenericVisitor[Coroutine]):
         # We have to work up from the bottom
         for line in reversed(code.code):
             target = target_finder(line)
-            if line.line == self.target_line or target in targets:
+            if self.keep_line(line, target in targets):
                 deps = self.dep_finder(line)
                 lines.insert(0, line)
                 if target != StoreMutation:
@@ -190,6 +190,9 @@ class Filter(GenericVisitor[Coroutine]):
             parent=parent,
             code=lines,
         )
+
+    def keep_line(self, line: n.stmt, in_targets: bool) -> bool:
+        return line.line == self.target_line or in_targets or isinstance(line, n.Assert)
 
     def visit_StartBlock(
         self, start: sbb.StartBlock, stop: StopBlock, targets: TargetManager

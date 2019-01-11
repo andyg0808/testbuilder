@@ -146,6 +146,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         value = self.visit(node.e)
         return self.assign(node.target, value)
 
+    def visit_Assert(self, node: n.Assert) -> TypeUnion:
+        expr = self.visit(node.test)
+        return expr
+
     def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
         if isinstance(target, n.Name):
             log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
