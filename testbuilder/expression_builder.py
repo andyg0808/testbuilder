@@ -21,8 +21,15 @@ NULL = z3.DeclareSort("None")
 
 
 def get_expression(
-    registrar: TypeRegistrar, filepath: Path, line: int, code: ast.AST, depth: int = 1
+    registrar: TypeRegistrar,
+    filepath: Path,
+    line: int,
+    code: ast.AST,
+    depth: int = 1,
+    slice: bool = True,
 ) -> Optional[TestData]:
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
-    _ssa_to_expression = partial(ssa_lines_to_expression, filepath, registrar, line)
+    _ssa_to_expression = partial(
+        ssa_lines_to_expression, filepath, registrar, line, slice
+    )
     return pipe(code, _ast_to_ssa, pipe_print, _ssa_to_expression)

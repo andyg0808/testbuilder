@@ -232,9 +232,13 @@ def ssa_to_expression(
 
 
 def ssa_lines_to_expression(
-    filepath: Path, registrar: TypeRegistrar, target_line: int, module: sbb.Module
+    filepath: Path,
+    registrar: TypeRegistrar,
+    target_line: int,
+    slice: bool,
+    module: sbb.Module,
 ) -> Optional[sbb.TestData]:
-    request = filter_lines(target_line, module)
+    request = filter_lines(target_line, module, slice)
     log.debug("Filtered request {}", request)
     if request is None:
         return None
