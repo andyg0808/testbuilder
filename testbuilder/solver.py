@@ -1,5 +1,14 @@
 import re
-from typing import Any, List, Mapping, MutableMapping as MMapping, Optional, Union, cast
+from typing import (
+    Any,
+    List,
+    Mapping,
+    MutableMapping as MMapping,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 from logbook import Logger
 
@@ -37,8 +46,7 @@ class Z3PythonConverter:
         self.refkeys: List[str] = []
 
         # The largest number store which has been discovered
-        self.max_store = DEFAULT_STORE
-        self.max_store_name = ""
+        self.stores: List[Tuple[int, Any]] = []
 
         for k in model.decls():
             key = VAR_NAME.fullmatch(k.name())
@@ -51,7 +59,7 @@ class Z3PythonConverter:
 
             self._standardized[store_key] = self._z3_to_python(store_key, value)
 
-        if self.max_store == DEFAULT_STORE:
+        if not self.stores:
             # Z3 has chosen to make some references when there is no
             # store. Return `None` for all the references
             for refkey in self.refkeys:
@@ -60,14 +68,16 @@ class Z3PythonConverter:
                 )
                 self._standardized[refkey] = None
         else:
-            self.final_store = Mapper(self._standardized[self.max_store_name])
+            self.stores.sort(key=lambda x: x[0])
+            first_store = self.stores[0][1]
+            store = Mapper(first_store)
 
             # Dereference all references from the final store
             for refkey in self.refkeys:
                 ref = self._standardized[refkey]
                 value = ref
                 while self.is_reftype(value):
-                    value = self.final_store[value]  # type: ignore
+                    value = store[value]  # type: ignore
                 log.info(f"Dereferenced {refkey} with ref {ref} to {value}")
                 self._standardized[refkey] = self._z3_to_python(refkey, value)
 
@@ -122,9 +132,7 @@ class Z3PythonConverter:
                     number = int(match[1])
 
                 log.debug("Found store variable {}", number)
-                if number > self.max_store:
-                    self.max_store = number
-                    self.max_store_name = store_key
+                self.stores.append((number, value))
                 return value
             else:
                 log.warn(
