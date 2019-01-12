@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+import pytest
+
 import dataclasses
 import z3
 
@@ -233,14 +235,19 @@ def example(a):
     )
 
 
+@pytest.mark.xfail(reference="In progress")
 def test_solve_multilayer():
     check_solve(
         """
 def example(a):
     a.left.right.left.left.right.right = 22
-    return a.left.right.right.left.left
+    if a.left.right.right.left.left:
+        return a.left.right.right.left.left
+    else:
+        assert a.left.right.right.left.right == 454
+        return a.left.right.right.left.right
         """,
         False,
-        spotcheck({}),
+        spotcheck({"ret": 454}),
         slice=False,
     )
