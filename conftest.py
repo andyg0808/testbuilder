@@ -3,7 +3,7 @@ import re
 
 import logbook
 
-LoggerName = re.compile(r"\w+")
+LoggerName = re.compile(r"")
 
 
 def pytest_configure(config):
@@ -30,9 +30,9 @@ def pytest_runtest_logstart():
     if os.environ.get("VERBOSE", False) or verbosity:
         flag = os.environ.get("VERBOSE", False)
         ignores = os.environ.get("IGNORE", "").split(",")
-        if flag and not LoggerName.match(flag):
+        if flag and flag.isnumeric():
             StderrHandler(
-                filter=lambda r, h: r.channel not in ignores
+                level=int(flag), filter=lambda r, h: r.channel not in ignores
             ).push_application()
         elif flag and LoggerName.match(flag):
             print(f"Only logging from {flag}")
