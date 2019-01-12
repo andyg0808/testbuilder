@@ -64,3 +64,7 @@ docs:
 .PHONY: doc-server
 doc-server:
 	python -m http.server --directory build
+
+.PHONY: clean
+clean:
+	rm -r build
