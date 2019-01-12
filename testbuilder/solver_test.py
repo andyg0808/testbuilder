@@ -4,7 +4,6 @@ from pathlib import Path
 import dataclasses
 import z3
 
-from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
 from .pair import Pair
 from .solver import solve
@@ -234,8 +233,14 @@ def example(a):
     )
 
 
-def merge(*dicts):
-    merged = {}
-    for d in dicts:
-        merged.update(d)
-    return merged
+def test_solve_multilayer():
+    check_solve(
+        """
+def example(a):
+    a.left.right.left.left.right.right = 22
+    return a.left.right.right.left.left
+        """,
+        False,
+        spotcheck({}),
+        slice=False,
+    )

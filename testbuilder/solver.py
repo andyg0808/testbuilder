@@ -34,62 +34,30 @@ log = Logger("solver")
 DEFAULT_STORE = -1
 
 
+Store = z3.QuantifierRef
+
+
 class Z3PythonConverter:
     def __init__(self, model: z3.ModelRef, registrar: TypeRegistrar) -> None:
+        self.store: Union[Mapper, NoneMapper]
+
         log.info(f"Converting model {model}")
         self.registrar = registrar
 
         # Mapping from variable names to Python values
         self._standardized: MMapping[str, Any] = {}
 
-        # Stores list of variable names which contain References
-        self.refkeys: List[str] = []
-
-        # The largest number store which has been discovered
-        self.stores: List[Tuple[int, Any]] = []
+        stores = self.gather_stores(model)
+        if stores:
+            first_store = stores[0]
+            self.store = Mapper(first_store)
+        else:
+            self.store = NoneMapper()
 
         for k in model.decls():
-            key = VAR_NAME.fullmatch(k.name())
+            key = store_key(k)
             value = model[k]
-
-            if key:
-                store_key = key[1]
-            else:
-                store_key = k.name()
-
-            self._standardized[store_key] = self._z3_to_python(store_key, value)
-
-        if not self.stores:
-            # Z3 has chosen to make some references when there is no
-            # store. Return `None` for all the references
-            for refkey in self.refkeys:
-                log.notice(
-                    "Assigning None to reference {} because no store exists", refkey
-                )
-                self._standardized[refkey] = None
-        else:
-            self.stores.sort(key=lambda x: x[0])
-            first_store = self.stores[0][1]
-            store = Mapper(first_store)
-
-            # Dereference all references from the final store
-            for refkey in self.refkeys:
-                ref = self._standardized[refkey]
-                value = ref
-                while self.is_reftype(value):
-                    value = store[value]  # type: ignore
-                log.info(f"Dereferenced {refkey} with ref {ref} to {value}")
-                self._standardized[refkey] = self._z3_to_python(refkey, value)
-
-    def is_reftype(self, value: ModelItem) -> bool:
-        if self.registrar.reftype is None:
-            return False
-        if not isinstance(value, z3.DatatypeRef):
-            return False
-        return value.sort() == Reference
-
-    def solution(self) -> Solution:
-        return self._standardized
+            self._standardized[key] = self._z3_to_python(key, value)
 
     def _z3_to_python(self, store_key: str, value: ModelItem) -> Any:
         if isinstance(value, z3.DatatypeRef):
@@ -107,8 +75,15 @@ class Z3PythonConverter:
                 if value.decl() == self.registrar.anytype.none.decl():
                     return None
             elif value.sort() == Reference:
-                self.refkeys.append(store_key)
-                return value
+                updated_value = value
+                while self.is_reftype(updated_value):
+                    updated_value = self.store[updated_value]
+                log.info(
+                    f"Dereferenced {store_key} with ref {value} to {updated_value}"
+                )
+                if updated_value is None:
+                    return None
+                return self._z3_to_python(store_key, updated_value)
             elif (
                 self.registrar.reftype is not None
                 and value.sort() == self.registrar.reftype
@@ -125,25 +100,62 @@ class Z3PythonConverter:
         elif isinstance(value, z3.QuantifierRef):
             match = StoreParser.match(store_key)
             if match is not None:
-                log.debug("match {} {}", store_key, match)
-                if match[1] is None:
-                    number = 0
-                else:
-                    number = int(match[1])
-
-                log.debug("Found store variable {}", number)
-                self.stores.append((number, value))
                 return value
             else:
                 log.warn(
                     f"Unknown function interpretation {value} for"
-                    f"key {store_key}; ignoring"
+                    f"key {store_key}; returning anyway"
                 )
                 return value
         log.error(
             f"Couldn't find adapter for {store_key}; {value} has type {type(value)}"
         )
         raise TypeError(f"Couldn't find adapter for {type(value)}")
+
+    def is_reftype(self, value: ModelItem) -> bool:
+        if not isinstance(value, z3.DatatypeRef):
+            return False
+        return value.sort() == Reference
+
+    def solution(self) -> Solution:
+        return self._standardized
+
+    def gather_stores(self, model: z3.ModelRef) -> List[Store]:
+        """Given a Z3 model, finds all store variables present in it and
+        returns a sorted list of them, starting with the
+        lowest-numbered (i.e., `store`).
+
+        Args:
+            model: A model as produced by Z3's solver.
+
+        Returns:
+            A sorted list of QuantifierRefs. The first item in
+            the list will be the lowest-numbered store found, and the
+            last item will be the highest-numbered store found.
+        """
+        stores: List[Tuple[int, Store]] = []
+        for k in model.decls():
+            value = model[k]
+            if isinstance(value, Store):
+                match = StoreParser.match(store_key(k))
+                if match is not None:
+                    if match[1] is None:
+                        number = 0
+                    else:
+                        number = int(match[1])
+                    log.debug("Found store variable {}", number)
+                    stores.append((number, value))
+        stores.sort(key=lambda x: x[0])
+        return [x[1] for x in stores]
+
+
+def store_key(ref: z3.FuncDeclRef) -> str:
+    key = VAR_NAME.fullmatch(ref.name())
+
+    if key:
+        return key[1]
+    else:
+        return ref.name()
 
 
 @assertify
@@ -168,3 +180,13 @@ class Mapper:
         lambda_var = z3.Var(0, self.func.var_sort(0))
         subst = z3.substitute(self.func.body(), (lambda_var, key))
         return z3.simplify(subst)
+
+
+class NoneMapper:
+    def __getitem__(self, key: z3.ExprRef) -> object:
+        # Z3 has chosen to make some references when there is no
+        # store. Return `None` for all the references
+        log.notice(
+            f"Substituting None for reference in {store_key} because no store exists"
+        )
+        return None
