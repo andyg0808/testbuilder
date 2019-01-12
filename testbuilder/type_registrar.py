@@ -77,7 +77,9 @@ class TypeRegistrar:
         self, union: TypeUnion, types: SortSet = set(), name: Optional[str] = None
     ) -> TypeUnion:
         """
-        This function is the equivalent of `expand` but for full TypeUnions. It expands the values in each
+        This function is the equivalent of `expand` but for full
+        TypeUnions. It expands the values in each
+
         Arguments:
             union: A type union to expand values in
             types: A set of sorts to restrict the results to. If the
