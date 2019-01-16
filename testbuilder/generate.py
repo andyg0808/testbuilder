@@ -14,6 +14,7 @@ from .iter_monad import liftIter
 from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
+from .preprocessor import Preprocessor
 from .renderer import prompt_and_render_test
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -82,7 +83,8 @@ def generate_tests(
         return test
 
     def parse_file(text: str) -> AST:
-        return parse(text, str(source))
+        preprocess = Preprocessor(text)
+        return preprocess(parse(text, str(source)))
 
     def function_splitter(
         module: sbb.Module
