@@ -1,7 +1,11 @@
 from typing import Any, Mapping
 
+from logbook import Logger
+
 from .requester import Requester
 from .ssa_basic_blocks import TestData
+
+log = Logger("renderer")
 
 
 def prompt_and_render_test(
@@ -32,7 +36,7 @@ def render_test(
     call_args_string = ", ".join(keys)
     call_string = f"{test.name}({call_args_string})"
     expected = str(expected).strip()
-    print("Test number", test_number)
+    log.info(f"Building test number {test_number}")
     if test_number > 0:
         number_str = f"_{test_number+1}"
     else:
