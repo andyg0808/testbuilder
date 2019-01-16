@@ -19,8 +19,10 @@ def prompt_and_render_test(
     requester.formatted_output(test.source_text)
     expected = ""
     if prompt == "":
+        requester.output("Suppose we pass the following arguments:")
+        requester.formatted_output(str(args))
         expected = requester.input(
-            f"What is the expected output of {test.name} from these arguments? {args}"
+            f"What is the expected output of {test.name} from these arguments? "
         )
     else:
         expected = requester.input(prompt)

@@ -9,7 +9,7 @@ proc max {a b} {
 }
 
 proc wait_and_respond args {
-    expect -re {expected.*\{.*: ([-\d]+), .*: ([-\d]+)\}.*}
+    expect -re {\{.*: ([-\d]+), .*: ([-\d]+)\}.*expected}
     send "[max $expect_out(1,string) $expect_out(2,string)]\n"
 }
 
