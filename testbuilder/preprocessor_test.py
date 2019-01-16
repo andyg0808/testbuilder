@@ -98,3 +98,22 @@ class Dejavu:
         return name + goats
 """,
     )
+
+
+def test_preprocessing_stop():
+    check_preprocess(
+        """
+#!/usr/bin/env python3
+# Other comment
+# NAME/RENAME: fishes -> goats
+class Jedavu:
+    def func(name):
+        return name + fishes
+# NAME/RENAME: name -> crabs
+    """,
+        """
+class Jedavu:
+    def func(name):
+        return name + goats
+""",
+    )

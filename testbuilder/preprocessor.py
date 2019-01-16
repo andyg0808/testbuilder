@@ -8,6 +8,7 @@ from logbook import Logger
 from dataclasses import dataclass
 
 ActionMarker = re.compile(r"# ([A-Z]+)/([A-Z]+): (.*)")
+CommentLine = re.compile("\s*#|^\s*$")
 log = Logger("preprocessor")
 
 
@@ -30,6 +31,8 @@ class Preprocessor:
                     log.warn(f"Could not find action {match[2]}. Ignoring...")
                     continue
                 self.commands.append(node(action(match[3])))
+            elif not CommentLine.match(line):
+                break
 
     def __call__(self, tree: ast.AST) -> ast.AST:
         for command in self.commands:
