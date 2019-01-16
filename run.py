@@ -11,7 +11,6 @@ Options:
     --ignore=<file,file>  Ignore all logging from the specified files
 """
 
-import sys
 from pathlib import Path
 
 from docopt import docopt
@@ -19,6 +18,7 @@ from logbook import NullHandler, StderrHandler
 
 import typeassert
 from testbuilder.generate import generate_tests
+from testbuilder.requester import Requester
 
 typeassert.log.setLevel("ERROR")
 
@@ -40,7 +40,7 @@ def main(filename: str) -> None:
     else:
         lines = None
 
-    test_cases = generate_tests(filepath, text, sys.stdin, depth=depth, lines=lines)
+    test_cases = generate_tests(filepath, text, Requester(), depth=depth, lines=lines)
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
         tests.write("from importlib import import_module")
         tests.write("\n\n".join(test_cases))

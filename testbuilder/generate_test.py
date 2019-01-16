@@ -1,14 +1,17 @@
-from io import StringIO
 from pathlib import Path
+from unittest.mock import Mock, call, create_autospec
 
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
-from . import ssa_basic_blocks as sbb
+from testbuilder.pair import Pair
+
+from . import requester, ssa_basic_blocks as sbb
 from .generate import generate_tests
 from .hypothesis_entities import functions
 from .renderer import render_test
 
+Requester = create_autospec(requester.Requester)
 # def test_generation():
 #     code = """
 # def maximize(a, b):
@@ -150,8 +153,10 @@ def boring(fishy):
         #     boring(fishy)
         #     """
     ]
-    io = StringIO("")
-    tests = generate_tests(Path("boring.py"), code, io)
+    requester = Requester()
+    requester.input.return_value = ""
+    tests = generate_tests(Path("boring.py"), code, requester)
+    assert requester.input.call_count == 0
     assert tests == expected
 
 
@@ -184,8 +189,10 @@ def test_caller():
     assert actual == expected
     """,
     }
-    io = StringIO("36\n36\n")
-    tests = generate_tests(Path("boring.py"), code, io)
+    requester = Requester()
+    requester.input.side_effect = ["36", "36"]
+    tests = generate_tests(Path("boring.py"), code, requester)
+    assert requester.input.call_count == 2
     assert set(tests) == expected
 
 

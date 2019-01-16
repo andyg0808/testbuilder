@@ -1,20 +1,25 @@
 from typing import Any, Mapping
 
+from .requester import Requester
 from .ssa_basic_blocks import TestData
 
 
 def prompt_and_render_test(
-    io: Any, prompt: str, test: TestData, test_number: int, args: Mapping[str, Any]
+    requester: Requester,
+    prompt: str,
+    test: TestData,
+    test_number: int,
+    args: Mapping[str, Any],
 ) -> str:
-    print("=================================================")
-    print(test.source_text)
+    requester.output("=================================================")
+    requester.formatted_output(test.source_text)
+    expected = ""
     if prompt == "":
-        print(
+        expected = requester.input(
             f"What is the expected output of {test.name} from these arguments? {args}"
         )
     else:
-        print(prompt)
-    expected = io.readline()
+        expected = requester.input(prompt)
     return render_test(test=test, test_number=test_number, args=args, expected=expected)
 
 

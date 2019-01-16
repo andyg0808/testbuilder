@@ -16,6 +16,7 @@ from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import Preprocessor
 from .renderer import prompt_and_render_test
+from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import ssa_to_expression
@@ -28,7 +29,7 @@ log = Logger("generator")
 def generate_tests(
     source: Path,
     text: str,
-    io: Any,
+    requester: Requester,
     *,
     prompt: str = "",
     depth: int = 10,
@@ -76,7 +77,11 @@ def generate_tests(
 
         def _render_test(args: Mapping[str, Any]) -> str:
             return prompt_and_render_test(
-                io=io, prompt=prompt, test=testdata, test_number=test_number, args=args
+                requester=requester,
+                prompt=prompt,
+                test=testdata,
+                test_number=test_number,
+                args=args,
             )
 
         test: str = pipe(solution, _filter_inputs, _render_test)
