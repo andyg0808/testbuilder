@@ -250,3 +250,19 @@ def example(a):
         spotcheck({"ret": 454}),
         slice=False,
     )
+
+
+def test_solve():
+    check_solve(
+        """
+def example(a):
+    a = Pair(1, 2)
+    b = a
+    a = Pair(3, 4)
+    c = a.right
+    return b.left
+        """,
+        None,
+        spotcheck({"ret": 1, "c": 4}),
+        slice=False,
+    )
