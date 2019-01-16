@@ -1,16 +1,6 @@
-import ast
-from functools import partial
-
 import pytest
-from toolz import pipe
-
-import z3
 
 from .check_expression import ExpressionChecker
-from .expression_builder import get_expression
-from .type_builder import TypeBuilder
-from .variable_expander import expand_variables
-from .z3_types import diff_expression, print_diff
 
 check_expression = ExpressionChecker(lambda b: b.wrappers())
 
