@@ -9,6 +9,7 @@ Options:
     --lines=<line,line,line>  Lines to generate tests for
     --verbose=<level>  Output all logging information for <level> and above
     --ignore=<file,file>  Ignore all logging from the specified files
+    --no-color  Do not use color highlighting when printing Python
 """
 
 from pathlib import Path
@@ -18,7 +19,7 @@ from logbook import NullHandler, StderrHandler
 
 import typeassert
 from testbuilder.generate import generate_tests
-from testbuilder.requester import Requester
+from testbuilder.requester import PlainRequester, Requester
 
 typeassert.log.setLevel("ERROR")
 
@@ -40,7 +41,13 @@ def main(filename: str) -> None:
     else:
         lines = None
 
-    test_cases = generate_tests(filepath, text, Requester(), depth=depth, lines=lines)
+    requester = None
+    if opts["--no-color"]:
+        requester = PlainRequester()
+    else:
+        requester = Requester()
+
+    test_cases = generate_tests(filepath, text, requester, depth=depth, lines=lines)
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
         tests.write("from importlib import import_module")
         tests.write("\n\n".join(test_cases))

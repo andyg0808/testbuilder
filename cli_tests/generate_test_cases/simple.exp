@@ -15,7 +15,7 @@ proc wait_and_respond args {
 
 file delete simple_test.py
 
-spawn python3 ./run.py simple.py
+spawn python3 ./run.py --no-color simple.py
 wait_and_respond
 wait_and_respond
 system pytest simple_test.py

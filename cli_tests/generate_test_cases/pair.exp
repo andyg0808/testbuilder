@@ -1,6 +1,6 @@
 source "./testing.tcl"
 file delete pair_test.py
-spawn python3 ./run.py --lines=4,6,11 pair.py
+spawn python3 ./run.py --no-color --lines=4,6,11 pair.py
 
 expect -re {'first': 0, 'a': Pair\((\d+), .*}
 set value [expr $expect_out(1,string) + 32]
