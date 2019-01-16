@@ -235,7 +235,6 @@ def example(a):
     )
 
 
-@pytest.mark.xfail(reference="In progress")
 def test_solve_multilayer():
     check_solve(
         """

@@ -86,6 +86,7 @@ class Store:
         """
         if expr.sort() == Reference:
             ref = cast(ArrayKey, expr)
+            log.info(f"Dereferencing {ref}")
             return self.expr_to_boolean(self.get(ref))
         else:
             return self.registrar.expr_to_boolean(expr)

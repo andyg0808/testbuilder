@@ -202,17 +202,22 @@ class TypeRegistrar:
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
             none = getattr(self.anytype, "none", None)
-            if none is not None and expr.decl() == none:
+            if expr.decl() == none:
                 return z3.BoolVal(False)
             else:
                 # For all anytype values that aren't None, assume they
                 # are true. This will not be the case for some types,
                 # but it's true for our current set of types
                 return z3.BoolVal(True)
-        else:
-            raise UnknownConversionException(
-                f"Can't convert {expr.sort().name()} to boolean"
-            )
+        elif expr.sort() == self.reftype:
+            is_pair = getattr(self.reftype, "is_Pair", None)
+            if is_pair is None:
+                raise RuntimeError("No is_Pair available for reftype")
+            return cast(z3.Bool, is_pair(expr))
+
+        raise UnknownConversionException(
+            f"Can't convert {expr.sort().name()} ({expr.decl().name()}) to boolean"
+        )
 
     def unwrap(self, val: Expression) -> Expression:
         """
