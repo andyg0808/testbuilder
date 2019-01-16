@@ -1,13 +1,16 @@
-from typing import Optional, cast
+from typing import List, Optional, cast
 
 from logbook import Logger
 
 import z3
 from dataclasses import dataclass
 
+from .constrained_expression import ConstrainedExpression as CExpr
+from .expandable_type_union import ExpandableTypeUnion
 from .store_array import ArrayKey, ArrayVal, StoreArray
 from .type_registrar import TypeRegistrar
-from .z3_types import Reference
+from .type_union import TypeUnion
+from .z3_types import Expression, Reference, bool_not
 
 log = Logger("store")
 
@@ -54,3 +57,35 @@ class Store:
         store = self.store
         self.store = array_var
         return array_var == store
+
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> TypeUnion:
+        """
+        Convert all the expressions in this TypeUnion to booleans,
+        applying truthy standards as needed in order to convert
+        non-boolean types.
+        """
+        if isinstance(value, ExpandableTypeUnion):
+            # Always want to work on expanded version, because a
+            # VariableTypeUnion is either unconstrained or empty. If
+            # unconstrained, we need to expand to get constrained
+            # values. If empty, expanding gets the appropriate
+            # constrained values.
+            return self.to_boolean(value.expand(), invert)
+        bools: List[CExpr] = []
+        for cexpr in value.expressions:
+            expr = self.expr_to_boolean(cexpr.expr)
+            if invert:
+                expr = bool_not(expr)
+            bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
+        return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
+
+    def expr_to_boolean(self, expr: Expression) -> z3.Bool:
+        """
+        Apply Python's truthy standards to make a boolean of an
+        expression.
+        """
+        if expr.sort() == Reference:
+            ref = cast(ArrayKey, expr)
+            return self.expr_to_boolean(self.get(ref))
+        else:
+            return self.registrar.expr_to_boolean(expr)

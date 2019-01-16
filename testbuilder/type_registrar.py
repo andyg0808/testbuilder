@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
-import z3
 from logbook import Logger
+
+import z3
+from dataclasses import dataclass
 from typeassert import assertify
 from z3 import DatatypeRef
 
@@ -13,7 +14,7 @@ from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_not, bool_or
+from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_or
 
 log = Logger("type_registrar")
 
@@ -187,27 +188,6 @@ class TypeRegistrar:
                 exprs.append(assign)
 
         return TypeUnion.wrap(bool_or(exprs))
-
-    def to_boolean(self, value: TypeUnion, invert: bool = False) -> TypeUnion:
-        """
-        Convert all the expressions in this TypeUnion to booleans,
-        applying truthy standards as needed in order to convert
-        non-boolean types.
-        """
-        if isinstance(value, ExpandableTypeUnion):
-            # Always want to work on expanded version, because a
-            # VariableTypeUnion is either unconstrained or empty. If
-            # unconstrained, we need to expand to get constrained
-            # values. If empty, expanding gets the appropriate
-            # constrained values.
-            return self.to_boolean(value.expand(), invert)
-        bools: List[CExpr] = []
-        for cexpr in value.expressions:
-            expr = self.expr_to_boolean(cexpr.expr)
-            if invert:
-                expr = bool_not(expr)
-            bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
-        return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
 
     def expr_to_boolean(self, expr: Expression) -> z3.Bool:
         """

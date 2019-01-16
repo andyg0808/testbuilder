@@ -53,7 +53,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, registrar: TypeRegistrar, type_manager: TypeManager, store: Store
     ) -> None:
         super().__init__()
-        self.visit_oper = OperatorConverter(registrar)
+        self.visit_oper = OperatorConverter(store)
         self.registrar = registrar
         self.type_manager = type_manager
         self.store = store
@@ -273,8 +273,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
 
 class OperatorConverter(SimpleVisitor[OpFunc]):
-    def __init__(self, registrar: TypeRegistrar) -> None:
-        self.registrar = registrar
+    def __init__(self, store: Store) -> None:
+        self.store = store
 
     def visit_Add(self, node: n.Add) -> OpFunc:
         class AddMagic(Magic):
@@ -361,7 +361,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
     def visit_Not(self, node: n.Not) -> OpFunc:
         def not_func(value: TypeUnion) -> TypeUnion:
-            return self.registrar.to_boolean(value, invert=True)
+            return self.store.to_boolean(value, invert=True)
 
         return not_func
 

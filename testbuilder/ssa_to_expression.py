@@ -152,7 +152,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         if value.is_bool():
             return value.to_expr(invert)
         else:
-            return self.registrar.to_boolean(value, invert).to_expr()
+            return self.store.to_boolean(value, invert).to_expr()
 
 
 @singledispatch
