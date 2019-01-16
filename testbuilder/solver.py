@@ -39,6 +39,7 @@ Store = z3.QuantifierRef
 
 class Z3PythonConverter:
     def __init__(self, model: z3.ModelRef, registrar: TypeRegistrar) -> None:
+        self.cache: MMapping[str, z3.ExprRef] = {}
         self.store: Union[Mapper, NoneMapper]
 
         log.info(f"Converting model {model}")
@@ -60,6 +61,9 @@ class Z3PythonConverter:
             self._standardized[key] = self._z3_to_python(key, value)
 
     def _z3_to_python(self, store_key: str, value: ModelItem) -> Any:
+        if store_key in self.cache:
+            log.info(f"Found value in cache for {store_key}")
+            return self.cache[store_key]
         if isinstance(value, z3.DatatypeRef):
             if value.sort() == self.registrar.anytype:
                 value = self.registrar.unwrap(value)
@@ -83,7 +87,7 @@ class Z3PythonConverter:
                 )
                 if updated_value is None:
                     return None
-                return self._z3_to_python(store_key, updated_value)
+                return self._z3_to_python(str(value), updated_value)
             elif (
                 self.registrar.reftype is not None
                 and value.sort() == self.registrar.reftype
@@ -91,10 +95,11 @@ class Z3PythonConverter:
                 if value.decl() == self.registrar.reftype.Pair:
                     left, right = value.children()
                     # Invent store keys for now; we don't need them for non-reference values.
-                    return Pair(
-                        self._z3_to_python(store_key + ".left", left),
-                        self._z3_to_python(store_key + ".right", right),
-                    )
+                    pair = Pair(None, None)
+                    self.cache[store_key] = pair
+                    pair.left = self._z3_to_python(store_key + ".left", left)
+                    pair.right = self._z3_to_python(store_key + ".right", right)
+                    return pair
 
             raise TypeError(f"Unknown datatype {value.decl()}")
         elif isinstance(value, z3.QuantifierRef):
