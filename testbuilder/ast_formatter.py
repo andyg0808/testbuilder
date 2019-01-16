@@ -4,6 +4,9 @@ from typing import Any, cast
 
 
 class Formatter(ast.NodeVisitor):
+    def visit_Module(self, node: ast.Module) -> str:
+        return "\n".join(self.visit(s) for s in node.body)
+
     def visit_Assign(self, node: ast.Assign) -> str:
         targets = ", ".join(self.visit(t) for t in node.targets)
         return "{} = {}\n".format(targets, self.visit(node.value))
