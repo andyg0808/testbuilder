@@ -7,7 +7,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 from logbook import Logger
@@ -51,6 +50,7 @@ class Z3PythonConverter:
         stores = self.gather_stores(model)
         if stores:
             first_store = stores[0]
+            log.info("Beginning store:", first_store)
             self.store = Mapper(first_store)
         else:
             self.store = NoneMapper()
