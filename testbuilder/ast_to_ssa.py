@@ -123,6 +123,8 @@ class AstToSSABasicBlocks(SimpleVisitor):
     ) -> sbb.BlockTreeIndex:
         assert isinstance(tree, sbb.BlockTreeIndex)
         expr = self.stmt_visitor(node)
+        if expr is None:
+            return tree
         return self.append_code(tree, expr)
 
     def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> MaybeIndex:
@@ -371,6 +373,12 @@ class StatementVisitor(GenericVisitor):
     def __init__(self, variables: VariableManager) -> None:
         self.variables = variables
         self.expr_visitor = AstBuilder(variables)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        return None
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        return None
 
     def visit_Assign(self, node: ast.Assign) -> n.Set:
         expr = self.expr_visitor(node.value)
