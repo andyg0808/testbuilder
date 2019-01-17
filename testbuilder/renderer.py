@@ -1,9 +1,12 @@
+import re
 from typing import Any, Mapping
 
 from logbook import Logger
 
 from .requester import Requester
 from .ssa_basic_blocks import TestData
+
+ThrowParser = re.compile(r"fail::(\w+)$")
 
 log = Logger("renderer")
 
@@ -30,7 +33,7 @@ def prompt_and_render_test(
 
 
 def render_test(
-    test: TestData, test_number: int, args: Mapping[str, Any], expected: Any
+    test: TestData, test_number: int, args: Mapping[str, Any], expected: str
 ) -> str:
     keys = [x.id for x in test.free_variables]
     arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
@@ -43,10 +46,23 @@ def render_test(
         number_str = f"_{test_number+1}"
     else:
         number_str = ""
-    # See https://stackoverflow.com/a/38813946/2243495
-    # This allows correct importing of modules with unacceptable
-    # Python names
-    return f"""
+    throw_match = ThrowParser.match(expected)
+    if throw_match:
+        exception_name = throw_match[1]
+        return f"""
+import pytest
+from testbuilder.pair import Pair
+{test.name} = import_module("{test.filepath.stem}").{test.name}
+def test_{test.name}{number_str}():
+    {args_string}
+    with pytest.raises({exception_name}):
+        {call_string}
+    """
+    else:
+        # See https://stackoverflow.com/a/38813946/2243495
+        # This allows correct importing of modules with unacceptable
+        # Python names
+        return f"""
 from testbuilder.pair import Pair
 {test.name} = import_module("{test.filepath.stem}").{test.name}
 def test_{test.name}{number_str}():
