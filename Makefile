@@ -1,5 +1,3 @@
-.PHONY: build pytest mypy
-
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
 
@@ -27,34 +25,40 @@ else
 	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
 endif
 
+.PHONY: build
 build:
-	pipenv run $(MYPY)
-	pipenv run $(PYTEST)
-	./runtests
+	pipenv run $(MAKE) $(RUN)
 
-pytest: PYTEST_FLAGS += --looponfail
-pytest:
-	pipenv run $(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
-
-mypy:
-	pipenv run $(MYPY)
-
-fastbuild:
-	$(MYPY)
-	$(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
-	./runtests
-
-livetest:
-	$(MYPY)
-	./runtests
-
-run:
-	expect run.exp
-
+.PHONY: watch
 watch:
 	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
-test:
+
+.PHONY: fastbuild
+fastbuild: mypy pytest runtests snippets
+
+.PHONY: livetest
+livetest: mypy runtests snippets
+
+.PHONY: mypy
+mypy:
+	$(MYPY)
+
+.PHONY: pytest
+pytest: PYTEST_FLAGS += --looponfail
+pytest:
+	$(PYTEST) 2>&1 | unbuffer rainbow.py --colorize
+
+.PHONY: plaintest
+plaintest:
+	$(PYTEST)
+
+.PHONY: runtests
+runtests:
 	./runtests
+
+.PHONY: snippets
+snippets:
+	./run_on_snippets
 
 .PHONY: docs
 docs:
