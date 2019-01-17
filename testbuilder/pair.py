@@ -3,6 +3,18 @@ class Pair:
         self.left = left
         self.right = right
 
+    @property
+    def first(self):  # type: ignore
+        return self.left
+
+    @property
+    def second(self):  # type: ignore
+        return self.right
+
+    @property
+    def rest(self):  # type: ignore
+        return self.right
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pair):
             return False
