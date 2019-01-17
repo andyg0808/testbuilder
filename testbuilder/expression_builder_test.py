@@ -113,19 +113,6 @@ ret == Any.String(z3.Concat(Any.s(pyname_a), Any.s(pyname_b))) and \
     )
 
 
-def test_multiple_functions():
-    check_expression(
-        """
-def first_func(a):
-    return a * 5
-
-def second_func(b):
-    return b + 8
-        """,
-        "ret == Any.Int(Any.i(pyname_b) + 8) and Any.is_Int(pyname_b)",
-    )
-
-
 def test_multiple_lines():
     check_expression(
         """
@@ -887,100 +874,6 @@ def tester(count):
     )
 
 
-def test_simplest_function_call():
-    check_expression(
-        """
-def inner(i):
-    return i
-def outer(i):
-    return inner(i)
-        """,
-        """
-        And(function_inner_1_pyname_i == pyname_i,
-        function_inner_1_return == function_inner_1_pyname_i,
-        ret == function_inner_1_return)
-        """,
-    )
-
-
-def test_function_call():
-    check_expression(
-        """
-def double(i):
-    return i * 2
-
-def call_func(i):
-    return double(i)
-        """,
-        # "ret == 2 * pyname_i",
-        """
-        And(function_double_1_pyname_i == pyname_i,
-        function_double_1_return == Any.Int(Any.i(function_double_1_pyname_i) * 2),
-            Any.is_Int(function_double_1_pyname_i),
-        ret == function_double_1_return)
-        """,
-    )
-
-
-@pytest.mark.xfail
-def test_deep_call():
-    check_expression(
-        """
-def bottom(i):
-    return i * 2
-
-def middle(i):
-    p = bottom(i) + 2
-    return p
-
-def top(i):
-    q = middle(i)
-    q += 23
-    return q * 23
-        """,
-        """
-        And(function_middle_1_pyname_i == pyname_i,
-        function_bottom_1_pyname_i == function_middle_1_pyname_i,
-        function_bottom_1_return == function_bottom_1_pyname_i * 2,
-        function_middle_1_pyname_p == function_bottom_1_return + 2,
-        function_middle_1_return == function_middle_1_pyname_p,
-        pyname_q == function_middle_1_return,
-        pyname_q_1 == pyname_q + 23
-        ret == pyname_q_1 * 23)
-""",
-    )
-
-
-def test_conditional_functions():
-    # TODO: Extract the initial line of each of the innermost `And`s
-    # into the outer `And`.
-    check_expression(
-        """
-def conditioned(i):
-    if i > 4:
-        return 6
-    else:
-        return 14
-
-def run_func(i):
-    return i * conditioned(i)
-        """,
-        """
-        And(
-        Or(And(function_conditioned_1_pyname_i == pyname_i,
-               Any.i(function_conditioned_1_pyname_i) > 4,
-               Any.is_Int(function_conditioned_1_pyname_i),
-               function_conditioned_1_return == Any.Int(6)),
-           And(function_conditioned_1_pyname_i == pyname_i,
-               Not(Any.i(function_conditioned_1_pyname_i) > 4),
-               Any.is_Int(function_conditioned_1_pyname_i),
-               function_conditioned_1_return == Any.Int(14))),
-        ret == Any.Int(Any.i(pyname_i) * Any.i(function_conditioned_1_return)),
-        Any.is_Int(pyname_i))
-        """,
-    )
-
-
 def test_ignorable_conditional():
     check_expression(
         """
@@ -1037,20 +930,6 @@ or\
      and pyname_ret == Any.Int(5),
 ret == pyname_ret)
 """,
-    )
-
-
-@pytest.mark.skip
-def test_function_recursion():
-    check_expression(
-        """
-def zero(i):
-    if i == 0:
-        return 0
-    else:
-        return zero(i-1)
-        """,
-        "ret == 0",
     )
 
 
