@@ -239,3 +239,15 @@ And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_a)])),
 )
 """,
     )
+
+
+def test_pair_with_odd_names():
+    with pytest.raises(RuntimeError):
+        check_expression(
+            """
+def test(a):
+    a.first = 42
+    return a
+        """,
+            None,
+        )
