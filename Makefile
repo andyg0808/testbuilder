@@ -46,7 +46,7 @@ mypy:
 .PHONY: pytest
 pytest: PYTEST_FLAGS += --looponfail
 pytest:
-	$(PYTEST) 2>&1 | unbuffer rainbow.py --colorize
+	$(PYTEST)
 
 .PHONY: plaintest
 plaintest:

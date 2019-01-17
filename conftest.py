@@ -3,6 +3,9 @@ import re
 
 import logbook
 
+import rainbow
+
+Replacer = rainbow.Replacer(colorize=True)
 LoggerName = re.compile(r"")
 
 
@@ -21,8 +24,12 @@ def should_write(r, h):
     return level <= r.level
 
 
+def rainbowize(record):
+    record.message = Replacer.color(record.message)
+
+
 def pytest_runtest_logstart():
-    from logbook import StderrHandler, NullHandler
+    from logbook import StderrHandler, NullHandler, Processor
 
     null_handler = NullHandler()
     null_handler.push_application()
@@ -56,4 +63,6 @@ def pytest_runtest_logstart():
             )
         else:
             stderr_handler = StderrHandler(level=level)
-        stderr_handler.push_application()
+
+            stderr_handler.push_application()
+    Processor(rainbowize).push_application()
