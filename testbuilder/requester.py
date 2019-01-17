@@ -4,6 +4,7 @@ import readline
 # it's unused.
 import rlcompleter  # noqa: F401
 import sys
+from typing import cast
 
 from pygments import highlight  # type: ignore
 from pygments.formatters import TerminalFormatter  # type: ignore
@@ -41,4 +42,4 @@ class PlainRequester(Requester):
 
 
 def format(s: str) -> str:
-    highlight(s, Lexer, Formatter)
+    return cast(str, highlight(s, Lexer, Formatter))
