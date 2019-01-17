@@ -47,6 +47,16 @@ def pipe_print(value: Any, message: str = "") -> Any:
     return value
 
 
+def code_print(value: Any, message: str = "") -> Any:
+    import black  # type: ignore
+    from .requester import format
+    import shutil
+
+    width = shutil.get_terminal_size().columns
+    value = black.format_str(str(value), width)  # type: ignore
+    return pipe_print(format(value), message)
+
+
 A = TypeVar("A")
 
 
