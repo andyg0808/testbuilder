@@ -21,7 +21,7 @@ class Requester:
         return input(prompt)
 
     def formatted_output(self, s: str) -> None:
-        self.output(highlight(s, Lexer, Formatter))
+        self.output(format(s))
 
     def output(self, s: str) -> None:
         print(s)
@@ -38,3 +38,7 @@ class PlainRequester(Requester):
 
     def output(self, s: str) -> None:
         sys.stdout.write(s + "\n")
+
+
+def format(s: str) -> str:
+    highlight(s, Lexer, Formatter)
