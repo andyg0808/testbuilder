@@ -2,9 +2,11 @@ import ast
 import inspect
 import sys
 from pprint import pprint
-from typing import Any, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar, cast
 
 from termcolor import cprint
+
+import rainbow  # type: ignore
 
 from .test_utils import write_dot
 
@@ -47,14 +49,20 @@ def pipe_print(value: Any, message: str = "") -> Any:
     return value
 
 
-def code_print(value: Any, message: str = "") -> Any:
+def code_format(value: Any, message: str = "") -> str:
     import black  # type: ignore
     from .requester import format
     import shutil
 
     width = shutil.get_terminal_size().columns
-    value = black.format_str(str(value), width)  # type: ignore
-    return pipe_print(format(value), message)
+    return black.format_str(str(value), width)  # type: ignore
+
+
+Replacer = rainbow.Replacer(colorize=True)
+
+
+def colorize(code: str) -> str:
+    return cast(str, Replacer.color(code))
 
 
 A = TypeVar("A")
