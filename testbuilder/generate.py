@@ -1,3 +1,4 @@
+import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import Any, List, Mapping, Optional, Set, Tuple, Union
 from logbook import Logger
 from toolz import concat, pipe
 
-from . import ssa_basic_blocks as sbb
+from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
@@ -24,6 +25,8 @@ from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
 
 log = Logger("generator")
+
+ObjString = re.compile(r"<\S+ object at \S+>")
 
 
 def generate_tests(
@@ -61,7 +64,9 @@ def generate_tests(
         )
         log.debug(
             "\n=====Cleaned expression=====\n"
-            + str(cleaned_expr)
+            + utils.colorize(
+                utils.code_format(ObjString.sub(r'"\0"', str(cleaned_expr)))
+            )
             + "\n=====END cleaned expression====="
         )
         testdata = _ssa_to_expression(cleaned_expr)
