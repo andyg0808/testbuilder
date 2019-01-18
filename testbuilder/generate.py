@@ -26,8 +26,6 @@ from .type_registrar import TypeRegistrar
 
 log = Logger("generator")
 
-ObjString = re.compile(r"<\S+ object at \S+>")
-
 
 def generate_tests(
     source: Path,
@@ -64,9 +62,7 @@ def generate_tests(
         )
         log.debug(
             "\n=====Cleaned expression=====\n"
-            + utils.colorize(
-                utils.code_format(ObjString.sub(r'"\0"', str(cleaned_expr)))
-            )
+            + utils.dataclass_dump(cleaned_expr)
             + "\n=====END cleaned expression====="
         )
         testdata = _ssa_to_expression(cleaned_expr)

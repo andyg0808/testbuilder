@@ -18,6 +18,7 @@ from .store import Store
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
+from .utils import dataclass_dump
 from .visitor import GatherVisitor, SimpleVisitor
 from .z3_types import bool_all, bool_any, bool_true
 
@@ -239,7 +240,7 @@ def ssa_lines_to_expression(
     module: sbb.Module,
 ) -> Optional[sbb.TestData]:
     request = filter_lines(target_line, module, slice)
-    log.debug("Filtered request {}", request)
+    log.debug("Filtered request {}", dataclass_dump(request))
     if request is None:
         return None
     repaired_request: sbb.Request = pipe(

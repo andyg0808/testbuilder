@@ -1,14 +1,16 @@
 import ast
 import inspect
+import re
 import sys
 from pprint import pprint
 from typing import Any, NoReturn, TypeVar, cast
 
+import rainbow  # type: ignore
 from termcolor import cprint
 
-import rainbow  # type: ignore
-
 from .test_utils import write_dot
+
+ObjString = re.compile(r"<\S+ object at \S+>")
 
 
 def print_locations(node: ast.AST) -> None:
@@ -63,6 +65,10 @@ Replacer = rainbow.Replacer(colorize=True)
 
 def colorize(code: str) -> str:
     return cast(str, Replacer.color(code))
+
+
+def dataclass_dump(code: Any) -> str:
+    return colorize(code_format(ObjString.sub(r'"\0"', str(code))))
 
 
 A = TypeVar("A")
