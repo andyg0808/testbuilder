@@ -49,6 +49,24 @@ def test_neq():
     )
 
 
+def test_eq():
+    check_expression("1 == 'abc'", "false")
+    check_expression("1 == True", "false")
+    check_expression("'abc' == True", "false")
+
+
+@pytest.mark.skip(reason="This is untypable code, and currently crashes")
+def test_variable_types():
+    check_expression(
+        """
+def f(a):
+    a += 1
+    a += "abc"
+    """,
+        "false",
+    )
+
+
 def test_lte():
     check_expression(
         "return i <= 4",
