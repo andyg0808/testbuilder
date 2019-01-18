@@ -25,7 +25,7 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def num_constructors(self) -> int:
         ...
 
-    def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
+    def recognizer(self, i: int) -> Callable[[ExprRef], BoolRef]:
         ...
 
     def constructor(self, i: int) -> FuncDeclRef:
@@ -64,10 +64,10 @@ class BoolSort(SortRef):
 
 
 class ExprRef(AstRef):
-    def __eq__(self, other: Any) -> Bool:  # type: ignore
+    def __eq__(self, other: Any) -> BoolRef:  # type: ignore
         ...
 
-    def __ne__(self, other: Any) -> Bool:  # type: ignore
+    def __ne__(self, other: Any) -> BoolRef:  # type: ignore
         ...
 
     def sort(self) -> SortRef:
@@ -170,14 +170,16 @@ class Solver:
         ...
 
 
-class Bool(ExprRef):
-    def __init__(self, name: str) -> None:
-        ...
+class BoolRef(ExprRef):
+    ...
 
 
-class BoolVal(Bool):
-    def __init__(self, value: bool) -> None:
-        ...
+def Bool(name: str) -> BoolRef:
+    ...
+
+
+def BoolVal(value: bool) -> BoolRef:
+    ...
 
 
 class Int(ExprRef):
@@ -219,15 +221,15 @@ class StringVal(String):
         ...
 
 
-def And(*values: ExprRef) -> Bool:
+def And(*values: ExprRef) -> BoolRef:
     ...
 
 
-def Or(*values: ExprRef) -> Bool:
+def Or(*values: ExprRef) -> BoolRef:
     ...
 
 
-def Not(value: ExprRef) -> Bool:
+def Not(value: ExprRef) -> BoolRef:
     ...
 
 

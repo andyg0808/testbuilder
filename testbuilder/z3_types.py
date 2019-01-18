@@ -58,22 +58,22 @@ class AnySort(z3.DatatypeSortRef):
     def i(self, v: AnyT) -> z3.Int:
         ...
 
-    def is_Int(self, v: Expression) -> z3.Bool:
+    def is_Int(self, v: Expression) -> z3.BoolRef:
         ...
 
-    def Bool(self, i: z3.Bool) -> AnyT:
+    def Bool(self, i: z3.BoolRef) -> AnyT:
         ...
 
-    def b(self, v: AnyT) -> z3.Bool:
+    def b(self, v: AnyT) -> z3.BoolRef:
         ...
 
-    def is_Bool(self, v: Expression) -> z3.Bool:
+    def is_Bool(self, v: Expression) -> z3.BoolRef:
         ...
 
     def s(self, v: AnyT) -> z3.String:
         ...
 
-    def is_String(self, v: Expression) -> z3.Bool:
+    def is_String(self, v: Expression) -> z3.BoolRef:
         ...
 
 
@@ -83,7 +83,7 @@ Sort = Enum("Sort", ["Reference"])
 SortSet = Set[Union[z3.SortRef, Sort]]
 
 
-def bool_not(expr: z3.Bool) -> z3.Bool:
+def bool_not(expr: z3.BoolRef) -> z3.BoolRef:
     if z3.eq(expr, BOOL_TRUE):
         return BOOL_FALSE
     if z3.eq(expr, BOOL_FALSE):
@@ -91,19 +91,19 @@ def bool_not(expr: z3.Bool) -> z3.Bool:
     return z3.Not(expr)
 
 
-def bool_or(exprs: Iterable[z3.Bool]) -> z3.Bool:
+def bool_or(exprs: Iterable[z3.BoolRef]) -> z3.BoolRef:
     return _simplify_logical(exprs, False, z3.Or)
 
 
-def bool_and(exprs: Iterable[z3.Bool]) -> z3.Bool:
+def bool_and(exprs: Iterable[z3.BoolRef]) -> z3.BoolRef:
     return _simplify_logical(exprs, True, z3.And)
 
 
-def bool_all(exprs: Iterable[z3.Bool]) -> z3.Bool:
+def bool_all(exprs: Iterable[z3.BoolRef]) -> z3.BoolRef:
     return bool_and(exprs)
 
 
-def bool_any(exprs: Iterable[z3.Bool]) -> z3.Bool:
+def bool_any(exprs: Iterable[z3.BoolRef]) -> z3.BoolRef:
     """
     Allow any path in exprs to be taken. If only one path is present,
     it is required. No exprs results in an exception.
@@ -115,13 +115,13 @@ BOOL_TRUE = z3.BoolVal(True)
 BOOL_FALSE = z3.BoolVal(False)
 
 
-def bool_true() -> Expression:
+def bool_true() -> z3.BoolRef:
     return BOOL_TRUE
 
 
 def _simplify_logical(
-    exprs: Iterable[z3.Bool], identity: bool, function: Callable[..., z3.Bool]
-) -> z3.Bool:
+    exprs: Iterable[z3.BoolRef], identity: bool, function: Callable[..., z3.BoolRef]
+) -> z3.BoolRef:
     """
     Args:
         exprs: A list of boolean values to combine with `function`
@@ -132,7 +132,7 @@ def _simplify_logical(
                   with. Expected to take a variable number of
                   arguments, as `exprs` will be splatted into it.
     """
-    expr_list: List[z3.Bool] = list(exprs)
+    expr_list: List[z3.BoolRef] = list(exprs)
     if len(expr_list) == 0:
         raise RuntimeError("Need at least one expression to combine")
     # `eliminate_bool` is the value which, if present in expr_list, would
@@ -155,13 +155,13 @@ def _simplify_logical(
     # the decl of `function`, because it's an actual Python function.
     decl = function().decl()
 
-    new_exprs: List[z3.Bool] = []
+    new_exprs: List[z3.BoolRef] = []
     for expr in expr_list:
         if expr.decl() == decl:
             # This cast is safe because we know `function` operates
             # only on boolean values, so if `expr` has the `decl` of
             # `function`, it must also only operate on boolean values.
-            new_exprs += cast(List[z3.Bool], expr.children())
+            new_exprs += cast(List[z3.BoolRef], expr.children())
         else:
             new_exprs.append(expr)
     expr_list = new_exprs

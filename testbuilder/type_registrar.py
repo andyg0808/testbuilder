@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
-from logbook import Logger
-
 import z3
-from dataclasses import dataclass
+from logbook import Logger
 from typeassert import assertify
 from z3 import DatatypeRef
 
@@ -189,7 +188,7 @@ class TypeRegistrar:
 
         return TypeUnion.wrap(bool_or(exprs))
 
-    def expr_to_boolean(self, expr: Expression) -> z3.Bool:
+    def expr_to_boolean(self, expr: Expression) -> z3.BoolRef:
         """
         Apply Python's truthy standards to make a boolean of an
         expression.
@@ -197,7 +196,7 @@ class TypeRegistrar:
         if z3.is_int(expr):
             return expr != z3.IntVal(0)
         elif z3.is_bool(expr):
-            return cast(z3.Bool, expr)
+            return cast(z3.BoolRef, expr)
         elif z3.is_string(expr):
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
@@ -213,7 +212,7 @@ class TypeRegistrar:
             is_pair = getattr(self.reftype, "is_Pair", None)
             if is_pair is None:
                 raise RuntimeError("No is_Pair available for reftype")
-            return cast(z3.Bool, is_pair(expr))
+            return cast(z3.BoolRef, is_pair(expr))
 
         raise UnknownConversionException(
             f"Can't convert {expr.sort().name()} ({expr.decl().name()}) to boolean"

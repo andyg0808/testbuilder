@@ -33,7 +33,7 @@ class TypeUnion:
     def is_bool(self) -> bool:
         return self.sorts == {z3.BoolSort()}
 
-    def to_expr(self, invert: bool = False) -> z3.Bool:
+    def to_expr(self, invert: bool = False) -> z3.BoolRef:
         """
         Creates a boolean expression allowing execution to procede down
         any of the possible expressions in this TypeUnion
@@ -41,12 +41,12 @@ class TypeUnion:
         assert (
             self.is_bool()
         ), "Cannot convert non-boolean TypeUnion to boolean expression"
-        boolexprs: List[z3.Bool] = [
-            cast(z3.Bool, x.to_expr(invert)) for x in self.expressions
+        boolexprs: List[z3.BoolRef] = [
+            cast(z3.BoolRef, x.to_expr(invert)) for x in self.expressions
         ]
         return bool_or(boolexprs)
 
-    def implications(self) -> z3.Bool:
+    def implications(self) -> z3.BoolRef:
         assert not self.empty()
         constraints = [x.constraint() for x in self.expressions if x.constrained()]
         return bool_or(constraints)

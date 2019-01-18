@@ -1,9 +1,8 @@
+from dataclasses import dataclass
 from typing import List, Optional, cast
 
-from logbook import Logger
-
 import z3
-from dataclasses import dataclass
+from logbook import Logger
 
 from .constrained_expression import ConstrainedExpression as CExpr
 from .expandable_type_union import ExpandableTypeUnion
@@ -49,7 +48,7 @@ class Store:
     def pending(self) -> bool:
         return self.written_number < self.store_number
 
-    def write(self) -> z3.Bool:
+    def write(self) -> z3.BoolRef:
         log.info(f"Writing store {self.store_number} to replace {self.written_number}")
         self.written_number = self.store_number
         name = f"store_{self.written_number}"
@@ -79,7 +78,7 @@ class Store:
             bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
         return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
 
-    def expr_to_boolean(self, expr: Expression) -> z3.Bool:
+    def expr_to_boolean(self, expr: Expression) -> z3.BoolRef:
         """
         Apply Python's truthy standards to make a boolean of an
         expression.

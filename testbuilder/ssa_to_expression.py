@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
-from logbook import Logger
-from toolz import mapcat, pipe
 
 import z3
+from logbook import Logger
+from toolz import mapcat, pipe
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -55,7 +55,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             return self.visit(node.parents[0], stop)
         exprs = []
         for parent in node.parents:
-            parent_exprs = cast(List[z3.Bool], self.visit(parent, stop))
+            parent_exprs = cast(List[z3.BoolRef], self.visit(parent, stop))
             exprs.append(bool_all(parent_exprs))
 
         return [bool_any(exprs)]
@@ -124,7 +124,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
                     # with this branch.
                     branches.append([bool_true()])
                 else:
-                    branches.append(res)
+                    branches.append(cast(List[z3.BoolRef], res))
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
             self.type_manager.merge_and_update(types)
@@ -148,7 +148,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return code + [self.to_boolean(self.expression(node.conditional), invert=True)]
 
-    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.Bool:
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.BoolRef:
         if value.is_bool():
             return value.to_expr(invert)
         else:
@@ -175,7 +175,7 @@ def process_fut(
         expressions = visitor.visit(node.blocks)
         for expr in expressions:
             assert z3.is_bool(expr), f"{expr} is not boolean"
-        expression = bool_all(cast(List[z3.Bool], expressions))
+        expression = bool_all(cast(List[z3.BoolRef], expressions))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
         filepath=filepath,
@@ -193,7 +193,7 @@ def process_sut(
     if code.empty():
         expression = bool_true()
     else:
-        expression = bool_all(cast(List[z3.Bool], visitor.visit(code)))
+        expression = bool_all(cast(List[z3.BoolRef], visitor.visit(code)))
     free_variables = find_variables(code)
     return sbb.TestData(
         filepath=filepath,

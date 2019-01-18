@@ -10,10 +10,9 @@ import re
 from functools import reduce
 from typing import Any, Callable, Mapping, Sequence, cast
 
+import z3
 from logbook import Logger
 from toolz import groupby, mapcat
-
-import z3
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -200,7 +199,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 @magic(Reference, object, object)
                 def write(
                     self, dest: ReferenceT, left: Expression, right: Expression
-                ) -> z3.Bool:
+                ) -> z3.BoolRef:
                     log.debug("Magic update for {} with {} {}", dest, left, right)
                     left_val = wrap(left)
                     right_val = wrap(right)
@@ -321,7 +320,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
                 return False
 
             @magic(z3.SortRef, z3.SortRef)
-            def equality(self, left: Expression, right: Expression) -> z3.Bool:
+            def equality(self, left: Expression, right: Expression) -> z3.BoolRef:
                 left_sort = left.sort()
                 right_sort = right.sort()
                 if left_sort == right_sort:
@@ -343,7 +342,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
                 return False
 
             @magic(z3.SortRef, z3.SortRef)
-            def inequality(self, left: Expression, right: Expression) -> z3.Bool:
+            def inequality(self, left: Expression, right: Expression) -> z3.BoolRef:
                 left_sort = left.sort()
                 right_sort = right.sort()
                 if left_sort == right_sort:
