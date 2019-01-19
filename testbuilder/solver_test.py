@@ -134,9 +134,9 @@ def print_all(count):
         print(count)
     return count
     """,
-        "pyname_count == Any.Int(20)",
+        "pyname_count == Any.Int(10)",
         spotcheck({"ret": 0}),
-        unroll=20,
+        unroll=10,
     )
 
 
