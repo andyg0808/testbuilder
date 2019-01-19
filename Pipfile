@@ -29,6 +29,7 @@ termcolor = "*"
 hypothesis = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
+pytest-ordering = "*"
 
 [requires]
 python_version = "3.7"
