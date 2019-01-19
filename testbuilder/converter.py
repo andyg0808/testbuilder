@@ -28,6 +28,7 @@ from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
     Expression,
+    Nil,
     Reference,
     ReferenceT,
     SortSet,
@@ -59,10 +60,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self.constants: Mapping[Any, TypeUnion] = {
             True: TypeUnion.wrap(z3.BoolVal(True)),
             False: TypeUnion.wrap(z3.BoolVal(False)),
+            Nil: TypeUnion.wrap(Nil),
         }
-        none = getattr(self.registrar.anytype, "none", None)
-        if none is not None:
-            self.constants[None] = TypeUnion.wrap(none)
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))

@@ -17,7 +17,7 @@ from typeassert import assertify
 from . import ssa_basic_blocks as sbb
 from .pair import Pair
 from .type_registrar import TypeRegistrar
-from .z3_types import Reference
+from .z3_types import NilSort, Reference
 
 # z3.set_param("model_compress", "false")
 ModelItem = Union[z3.FuncInterp, z3.QuantifierRef]
@@ -75,10 +75,7 @@ class Z3PythonConverter:
         elif z3.is_bool(value) and not isinstance(value, z3.QuantifierRef):
             return bool(value)
         elif isinstance(value, z3.DatatypeRef):
-            if value.sort() == self.registrar.anytype:
-                if value.decl() == self.registrar.anytype.none.decl():
-                    return None
-            elif value.sort() == Reference:
+            if value.sort() == Reference:
                 updated_value = value
                 while self.is_reftype(updated_value):
                     updated_value = self.store[updated_value]
@@ -88,10 +85,7 @@ class Z3PythonConverter:
                 if updated_value is None:
                     return None
                 return self._z3_to_python(str(value), updated_value)
-            elif (
-                self.registrar.reftype is not None
-                and value.sort() == self.registrar.reftype
-            ):
+            elif value.sort() == self.registrar.reftype:
                 if value.decl() == self.registrar.reftype.Pair:
                     left, right = value.children()
                     # Invent store keys for now; we don't need them for non-reference values.
@@ -112,10 +106,14 @@ class Z3PythonConverter:
                     f"key {store_key}; returning anyway"
                 )
                 return value
+        elif isinstance(value, z3.ExprRef):
+            if value.sort() == NilSort:
+                return None
         log.error(
             f"Couldn't find adapter for {store_key}; {value} has type {type(value)}"
         )
-        raise TypeError(f"Couldn't find adapter for {type(value)}")
+        sortname = str(value.sort())  # type: ignore
+        raise TypeError(f"Couldn't find adapter for {type(value)} with sort {sortname}")
 
     def is_reftype(self, value: ModelItem) -> bool:
         if not isinstance(value, z3.DatatypeRef):

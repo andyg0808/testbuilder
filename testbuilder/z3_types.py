@@ -26,21 +26,22 @@ def make_ref_type() -> ReferenceSort:
 Reference: ReferenceSort = make_ref_type()
 
 
-# class NilT(z3.ExprRef):
-#     ...
+class NilT(z3.ExprRef):
+    ...
 
 
-# class NilSortT(z3.SortRef):
-#     ...
+class NilSortT(z3.SortRef):
+    ...
 
 
-# def make_nil_type() -> NilSortT:
-#     nil = z3.DeclareSort("Nil")
-#     return cast(NilSortT, z3.Const("nil", nil))
+NilSort: NilSortT = z3.DeclareSort("Nil")
 
 
-# NilSort: NilSortT = z3.DeclareSort("Nil")
-# Nil: NilT = make_nil_type()
+def make_nil_type() -> NilT:
+    return cast(NilT, z3.Const("nil", NilSort))
+
+
+Nil: NilT = make_nil_type()
 
 
 class AnyT(z3.DatatypeRef):
