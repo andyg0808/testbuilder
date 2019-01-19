@@ -6,7 +6,7 @@ import z3
 from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
-from .z3_types import Expression, SortSet, bool_or
+from .z3_types import BOOL_TRUE, Expression, SortSet, bool_or
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,8 @@ class TypeUnion:
     def implications(self) -> z3.BoolRef:
         assert not self.empty()
         constraints = [x.constraint() for x in self.expressions if x.constrained()]
+        if not constraints:
+            return BOOL_TRUE
         return bool_or(constraints)
 
     def unwrap(

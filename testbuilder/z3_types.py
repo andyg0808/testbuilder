@@ -116,10 +116,6 @@ BOOL_TRUE = z3.BoolVal(True)
 BOOL_FALSE = z3.BoolVal(False)
 
 
-def bool_true() -> z3.BoolRef:
-    return BOOL_TRUE
-
-
 def _simplify_logical(
     exprs: Iterable[z3.BoolRef], identity: bool, function: Callable[..., z3.BoolRef]
 ) -> z3.BoolRef:

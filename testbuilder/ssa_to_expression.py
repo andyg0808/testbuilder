@@ -20,7 +20,7 @@ from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .utils import dataclass_dump
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import bool_all, bool_any, bool_true
+from .z3_types import BOOL_TRUE, bool_all, bool_any
 
 log = Logger("ssa_to_expression")
 
@@ -123,7 +123,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
                     # empty. By using True as a result, we avoid
                     # making `bool_all` angry when deciding what to do
                     # with this branch.
-                    branches.append([bool_true()])
+                    branches.append([BOOL_TRUE])
                 else:
                     branches.append(cast(List[z3.BoolRef], res))
         if branches:
@@ -171,7 +171,7 @@ def process_fut(
     node: sbb.FunctionDef, filepath: Path, visitor: SSAVisitor
 ) -> sbb.TestData:
     if node.blocks.empty():
-        expression = bool_true()
+        expression = BOOL_TRUE
     else:
         expressions = visitor.visit(node.blocks)
         for expr in expressions:
@@ -192,7 +192,7 @@ def process_sut(
     code: sbb.BlockTree, filepath: Path, visitor: SSAVisitor
 ) -> sbb.TestData:
     if code.empty():
-        expression = bool_true()
+        expression = BOOL_TRUE
     else:
         expression = bool_all(cast(List[z3.BoolRef], visitor.visit(code)))
     free_variables = find_variables(code)
@@ -240,6 +240,7 @@ def ssa_lines_to_expression(
     module: sbb.Module,
 ) -> Optional[sbb.TestData]:
     request = filter_lines(target_line, module, slice)
+
     log.debug("Filtered request {}", dataclass_dump(request))
     if request is None:
         return None

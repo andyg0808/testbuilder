@@ -2,7 +2,7 @@ from pathlib import Path
 
 from . import ssa_basic_blocks as sbb
 from .renderer import render_test
-from .z3_types import bool_true
+from .z3_types import BOOL_TRUE
 
 
 def test_expected_failure():
@@ -10,7 +10,7 @@ def test_expected_failure():
         name="Example",
         source_text="<code>",
         free_variables=[sbb.Variable("fish")],
-        expression=bool_true,
+        expression=BOOL_TRUE,
         filepath=Path("/dev/null"),
     )
     actual = render_test(

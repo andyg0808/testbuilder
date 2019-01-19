@@ -230,7 +230,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                     return union
 
         # Treat functions as true which we couldn't substitute
-        return TypeUnion.wrap(z3.BoolVal(True))
+        return TypeUnion.wrap(BOOL_TRUE)
 
     def construct_call(
         self, constructor: z3.FuncDeclRef, args: Sequence[TypeUnion]
