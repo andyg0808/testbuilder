@@ -18,12 +18,13 @@ TESTFILE = testbuilder
 #   --maxfail=n Stop after `n` failed tests. This is useful to get a
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
-PYTEST_FLAGS = -x -ra --ff -Wignore
+#   --duration=n Show the `n` slowest tests.
+PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5
 ifdef parallel
-	PYTEST = pytest $(PYTEST_FLAGS) -n=$(shell nproc) $(TESTFILE)
-else
-	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
+	PYTEST_FLAGS += --looponfail
+	PYTEST_FLAGS += -n=$(shell nproc)
 endif
+PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
 
 .PHONY: build
 build:
@@ -44,7 +45,6 @@ mypy:
 	$(MYPY)
 
 .PHONY: pytest
-pytest: PYTEST_FLAGS += --looponfail
 pytest:
 	$(PYTEST)
 
