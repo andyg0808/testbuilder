@@ -66,12 +66,12 @@ def dotify(obj: Any, reverse: bool = False) -> List[str]:
     node_strings = []
     link_strings = []
     nodes = [obj]
-    seen: Set[Any] = set()
+    seen: Set[int] = set()
     while len(nodes) > 0:
         node = nodes.pop(0)
         if id(node) in seen:
-            next
-        seen.add(id(obj))
+            continue
+        seen.add(id(node))
         node_strings.append(_label_format(node, _dot_label(node)))
         next_nodes = nexts(node)
         for n in next_nodes:
