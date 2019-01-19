@@ -165,7 +165,7 @@ def store_key(ref: z3.FuncDeclRef) -> str:
 def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
     log.info("Solving expression {}", data.expression)
     solver = z3.Solver()
-    solver.add(data.expression)
+    solver.add(z3.simplify(data.expression))
     res = solver.check()
     if res == z3.unsat:
         return None
