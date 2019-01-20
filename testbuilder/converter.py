@@ -10,9 +10,10 @@ import re
 from functools import reduce
 from typing import Any, Callable, Mapping, Sequence, cast
 
-import z3
 from logbook import Logger
 from toolz import groupby, mapcat
+
+import z3
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -228,6 +229,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                     union = self.construct_call(constructor, args)
                     log.debug(f"Constructed result is {union}")
                     return union
+            return self.registrar.AllTypes("funcdefault_" + node.func.id)
 
         # Treat functions as true which we couldn't substitute
         return TypeUnion.wrap(BOOL_TRUE)
