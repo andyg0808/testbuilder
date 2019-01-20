@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
-
-import z3
 from logbook import Logger
 from toolz import mapcat, pipe
+
+import z3
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -55,10 +55,13 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         if len(node.parents) == 1:
             return self.visit(node.parents[0], stop)
         exprs = []
+        types = []
         for parent in node.parents:
+            self.type_manager.push()
             parent_exprs = cast(List[z3.BoolRef], self.visit(parent, stop))
             exprs.append(bool_all(parent_exprs))
-
+            types.append(self.type_manager.pop())
+        self.type_manager.merge_and_update(types)
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
