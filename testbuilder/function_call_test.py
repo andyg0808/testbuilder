@@ -16,11 +16,11 @@ def called(a):
 def caller(b):
     return called(b)
         """,
-        "",
+        "ret == Ref.Pair_left(store[Any.r(pyname_b)])",
+        simplify=True,
     )
 
 
-@pytest.mark.xfail(reason="Currently having problems with this")
 def test_recursive_call_with_conditional_and_attributes():
     check_expression(
         """
@@ -30,7 +30,29 @@ def func(a, b):
     else:
         return func(a.right, b)
 """,
-        "true",
+        """
+And(
+    Or(
+        And(
+            Not(0 == Any.i(pyname_b)*1),
+            Any.is_Int(pyname_b),
+            function_func_1_pyname_a == Ref.Pair_right(store[Any.r(pyname_a)]),
+            function_func_1_pyname_b == pyname_b,
+            0 == Any.i(function_func_1_pyname_b) * 1,
+            function_func_1_return == Ref.Pair_left(store[Any.r(function_func_1_pyname_a)]),
+        ),
+        And(
+            Not(0 == Any.i(pyname_b)*1),
+            Any.is_Int(pyname_b),
+            function_func_1_pyname_a == Ref.Pair_right(store[Any.r(pyname_a)]),
+            function_func_1_pyname_b == pyname_b,
+            Not(0 == Any.i(function_func_1_pyname_b)*1),
+            function_func_1_return == funcdefault_func
+        )
+    ),
+    ret == function_func_1_return
+)
+""",
     )
 
 
@@ -58,7 +80,7 @@ And(
             Any.is_Int(pyname_a),
             function_func_1_pyname_a == pyname_a,
             Not(1 < Any.i(function_func_1_pyname_a)),
-            function_func_1_return == Any.Bool(true)
+            function_func_1_return == funcdefault_func
         )
     ),
     ret == function_func_1_return
