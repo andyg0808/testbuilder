@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import traceback
 from itertools import product
 from typing import (
     Callable,
@@ -68,6 +69,15 @@ class Magic:
     """
 
     def __init__(self) -> None:
+        stack = traceback.extract_stack()
+        filtered_stack = [s for s in stack if s.filename != __file__]
+        self.definition = filtered_stack[-1]
+        if not hasattr(self, "name"):
+            self.name = (
+                f"{self.__class__} (created at "
+                f"{self.definition.filename}:{self.definition.lineno} "
+                f"in {self.definition.name})"
+            )
         self.funcref: List[MagicRegistration] = []
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
@@ -136,7 +146,7 @@ class Magic:
         to the resulting `TypeUnion`. n-tuples of the Cartesian
         product for which handlers do not exist will be skipped.
         """
-        log.info(f"Called {self.__class__} on {args}")
+        log.info(f"Called {self.name}\non {args}")
         functions = []
         if self.should_expand(*args) and Magic.unexpanded(args):
             log.debug("Expanding {}", args)
@@ -160,6 +170,10 @@ class Magic:
             log.info(f"No results for {args} Expanding and retrying.")
             newargs = Magic.expand(args)
             return self(*newargs)
+        elif len(exprs) == 0:
+            log.info(
+                f"No results for {args}. Could not expand. Returning empty TypeUnion"
+            )
         else:
             arg_lines = ",\n".join(str(x) for x in args)
             arg_lines = f"({arg_lines})"
