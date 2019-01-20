@@ -118,7 +118,7 @@ def test(r):
     if r == False:
         return 42
         """,
-        "",
+        None,
         {"ret": 42, "r": False},
     )
 
