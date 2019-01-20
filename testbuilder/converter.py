@@ -110,6 +110,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
         dereferenced = self.dereference(value)
         component = Magic.m(self.registrar.reftype)(accessor)(dereferenced)
+        assert len(component.expressions) == 1
         return ExpressionTypeUnion(
             component.expressions, component.sorts, self.registrar
         )
