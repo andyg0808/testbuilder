@@ -1,8 +1,6 @@
 import ast
 from pathlib import Path
 
-import pytest
-
 import dataclasses
 import z3
 

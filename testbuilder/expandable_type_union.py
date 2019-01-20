@@ -1,6 +1,5 @@
-from typing import Any as PyAny, cast
-
 from dataclasses import dataclass
+from typing import Any as PyAny, cast
 
 from .type_union import TypeUnion
 from .z3_types import AnyT, Expression

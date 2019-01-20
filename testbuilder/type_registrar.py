@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
-import z3
 from logbook import Logger
+
+import z3
+from dataclasses import dataclass
 from typeassert import assertify
 from z3 import DatatypeRef
 
