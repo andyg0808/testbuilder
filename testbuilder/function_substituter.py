@@ -8,6 +8,10 @@ from .visitor import CoroutineVisitor, UpdateVisitor
 
 
 class FunctionSubstitute(UpdateVisitor):
+    """Finds function calls and replaces them with the function
+    definition.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.call_id = 0
@@ -23,6 +27,7 @@ class FunctionSubstitute(UpdateVisitor):
         for num, line in reversed(lines):
             calls = find_calls(line)
             if calls:
+                # This seems like a restriction that shouldn't be needed
                 assert len(calls) == 1
                 return self.split_code(node, num + start_line, calls[0], **kwargs)
         # If there are no function calls here, move on to the parent node.

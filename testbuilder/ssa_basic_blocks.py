@@ -88,6 +88,10 @@ class TrueBranch(Controlled, Parented):
 
 @dataclass
 class ForcedTrueBranch(TrueBranch):
+    """Represents a `TrueBranch` which causes an exit when taken (e.g., a
+    branch of an `if` with a `return` at the bottom.
+    """
+
     pass
 
 
@@ -98,6 +102,11 @@ class FalseBranch(Controlled, Parented):
 
 @dataclass
 class ForcedFalseBranch(FalseBranch):
+    """Represents a `FalseBranch` which causes an exit when taken (e.g., a
+    branch of an `if` with a `return` at the bottom.
+
+    """
+
     pass
 
 
