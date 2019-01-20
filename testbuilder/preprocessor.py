@@ -8,7 +8,7 @@ from logbook import Logger
 from dataclasses import dataclass
 
 ActionMarker = re.compile(r"# ([A-Z]+)/([A-Z]+): (.*)")
-CommentLine = re.compile("\s*#|^\s*$")
+CommentLine = re.compile(r"\s*#|^\s*$")
 log = Logger("preprocessor")
 
 
