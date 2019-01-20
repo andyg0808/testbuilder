@@ -21,7 +21,6 @@ TESTFILE = testbuilder
 #   --duration=n Show the `n` slowest tests.
 PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5
 ifdef parallel
-	PYTEST_FLAGS += --looponfail
 	PYTEST_FLAGS += -n=$(shell nproc)
 endif
 PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
