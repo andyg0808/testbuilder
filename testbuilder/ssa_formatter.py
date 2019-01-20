@@ -71,6 +71,9 @@ class SSAVisitor(SimpleVisitor[str]):
     def visit_Not(self, node: n.Not) -> str:
         return "not"
 
+    def visit_And(self, node: n.And) -> str:
+        return "and"
+
     def visit_Set(self, node: n.Set) -> str:
         target = self.visit(node.target)
         expr = self.visit(node.e)
@@ -87,6 +90,14 @@ class SSAVisitor(SimpleVisitor[str]):
         args = ", ".join(str_args + str_keywords)
 
         return f"{func}({args})"
+
+    def visit_Assert(self, node: n.Assert) -> str:
+        expr = self.visit(node.test)
+        if node.msg is not None:
+            msg = self.visit(node.msg)
+            return f"assert {expr}, {msg}"
+        else:
+            return f"assert {expr}"
 
     def visit_PrefixedName(self, node: n.PrefixedName) -> str:
         return f"{node.func}_{node.number}_{self.visit_Name(node)}"
