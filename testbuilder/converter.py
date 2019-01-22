@@ -100,7 +100,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
         value = self.visit(node.value)
         attr = node.attr
-        assert attr in ["left", "right"]
+        if attr not in ["left", "right"]:
+            raise RuntimeError(
+                f"Attribute {attr} not `left` or `right`; try rewriting it?"
+            )
         assert (
             self.registrar.reftype is not None
         ), "Need reference types enabled to use attributes"
