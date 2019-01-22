@@ -61,7 +61,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self.constants: Mapping[Any, TypeUnion] = {
             True: TypeUnion.wrap(z3.BoolVal(True)),
             False: TypeUnion.wrap(z3.BoolVal(False)),
-            Nil: TypeUnion.wrap(Nil),
+            None: TypeUnion.wrap(Nil),
         }
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
