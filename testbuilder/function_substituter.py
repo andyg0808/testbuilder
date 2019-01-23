@@ -26,9 +26,10 @@ class FunctionSubstitute(UpdateVisitor):
         lines = list(enumerate(node.code[start_line:]))
         for num, line in reversed(lines):
             calls = find_calls(line)
-            if calls:
-                # This seems like a restriction that shouldn't be needed
-                assert len(calls) == 1
+            if len(calls) == 1:
+                # If there's more than one call, we don't currently
+                # want to try to substitute; not sure why, but not
+                # figuring it out until we need it.
                 return self.split_code(node, num + start_line, calls[0], **kwargs)
         # If there are no function calls here, move on to the parent node.
         return self.generic_visit(node, **kwargs)
