@@ -55,6 +55,12 @@ def test_eq():
     check_expression("'abc' == True", "false")
 
 
+def test_is():
+    check_expression("1 is 'abc'", "false")
+    check_expression("1 is True", "false")
+    check_expression("'abc' is True", "false")
+
+
 @pytest.mark.skip(reason="This is untypable code, and currently crashes")
 def test_variable_types():
     check_expression(

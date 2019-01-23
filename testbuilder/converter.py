@@ -8,11 +8,12 @@ from __future__ import annotations
 import operator
 import re
 from functools import reduce
-from typing import Any, Callable, Mapping, Sequence, cast
+from typing import Any, Callable, Mapping, Optional, Sequence, cast
+
+from toolz import groupby, mapcat
 
 import z3
 from logbook import Logger
-from toolz import groupby, mapcat
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -53,7 +54,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, registrar: TypeRegistrar, type_manager: TypeManager, store: Store
     ) -> None:
         super().__init__()
-        self.visit_oper = OperatorConverter(store)
+        self.visit_oper = OperatorConverter(store, registrar)
         self.registrar = registrar
         self.type_manager = type_manager
         self.store = store
@@ -278,8 +279,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
 
 class OperatorConverter(SimpleVisitor[OpFunc]):
-    def __init__(self, store: Store) -> None:
+    def __init__(self, store: Store, registrar: TypeRegistrar) -> None:
         self.store = store
+        self.registrar = registrar
 
     def visit_Add(self, node: n.Add) -> OpFunc:
         class AddMagic(Magic):
@@ -315,48 +317,16 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return Magic.m(BoolSort, BoolSort)(lambda *a: bool_and([*a]))
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
-        class EqMagic(Magic):
-            def should_expand(self, *args: TypeUnion) -> bool:
-                left, right = args
-                if not isinstance(left, ExpandableTypeUnion):
-                    return True
-                if not isinstance(right, ExpandableTypeUnion):
-                    return True
-                print("not expanding")
-                return False
+        return EqMagic(self.store, self.registrar.reftype)
 
-            @magic(z3.SortRef, z3.SortRef)
-            def equality(self, left: Expression, right: Expression) -> z3.BoolRef:
-                left_sort = left.sort()
-                right_sort = right.sort()
-                if left_sort == right_sort:
-                    return left == right
-                else:
-                    # If the argument sorts are different, the values are different.
-                    return z3.BoolVal(False)
+    def visit_Is(self, node: n.Is) -> OpFunc:
+        return IsMagic()
 
-        return EqMagic()
+    def visit_IsNot(self, node: n.IsNot) -> OpFunc:
+        return IsNotMagic()
 
     def visit_NotEq(self, node: n.NotEq) -> OpFunc:
-        class NotEqMagic(Magic):
-            def should_expand(self, *args: TypeUnion) -> bool:
-                left, right = args
-                if not isinstance(left, ExpandableTypeUnion):
-                    return True
-                if not isinstance(right, ExpandableTypeUnion):
-                    return True
-                return False
-
-            @magic(z3.SortRef, z3.SortRef)
-            def inequality(self, left: Expression, right: Expression) -> z3.BoolRef:
-                left_sort = left.sort()
-                right_sort = right.sort()
-                if left_sort == right_sort:
-                    return left != right
-                else:
-                    return z3.BoolVal(True)
-
-        return NotEqMagic()
+        return NotEqMagic(self.store, self.registrar.reftype)
 
     def visit_Lt(self, node: n.Lt) -> OpFunc:
         return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
@@ -433,3 +403,107 @@ def get_prefixed_variable(prefixed_name: n.PrefixedName) -> str:
     prefix = get_prefix(prefixed_name)
     variable = get_variable(prefixed_name.id, prefixed_name.set_count)
     return prefix + "_" + variable
+
+
+class IsMagic(Magic):
+    def should_expand(self, *args: TypeUnion) -> bool:
+        left, right = args
+        if not isinstance(left, ExpandableTypeUnion):
+            return True
+        if not isinstance(right, ExpandableTypeUnion):
+            return True
+        print("not expanding")
+        return False
+
+    @magic(z3.SortRef, z3.SortRef)
+    def equality(self, left: Expression, right: Expression) -> z3.BoolRef:
+        left_sort = left.sort()
+        right_sort = right.sort()
+        if left_sort == right_sort:
+            return self.compare(left, right)
+        else:
+            # If the argument sorts are different, the values are different.
+            return z3.BoolVal(False)
+
+    def compare(self, left: Expression, right: Expression) -> z3.BoolRef:
+        return left == right
+
+
+class EqMagic(IsMagic):
+    def __init__(self, store: Store, reftype: Optional[z3.DatatypeSortRef]) -> None:
+        super().__init__()
+        self.store = store
+        self.reftype = reftype
+
+    def compare(self, left: Expression, right: Expression) -> z3.BoolRef:
+        if left.sort() == Reference:
+            assert self.reftype is not None
+            assert left.sort() == Reference
+            assert right.sort() == Reference
+            left_val = self.store.get(cast(ReferenceT, left))
+            right_val = self.store.get(cast(ReferenceT, right))
+
+            p_left = getattr(self.reftype, "Pair_left", None)
+            p_right = getattr(self.reftype, "Pair_right", None)
+            assert p_left is not None
+            assert p_right is not None
+
+            return bool_and(
+                (
+                    p_left(left_val) == p_left(right_val),
+                    p_right(left_val) == p_right(right_val),
+                )
+            )
+        else:
+            return left == right
+
+
+class IsNotMagic(Magic):
+    def should_expand(self, *args: TypeUnion) -> bool:
+        left, right = args
+        if not isinstance(left, ExpandableTypeUnion):
+            return True
+        if not isinstance(right, ExpandableTypeUnion):
+            return True
+        return False
+
+    @magic(z3.SortRef, z3.SortRef)
+    def inequality(self, left: Expression, right: Expression) -> z3.BoolRef:
+        left_sort = left.sort()
+        right_sort = right.sort()
+        if left_sort == right_sort:
+            return self.compare(left, right)
+        else:
+            return z3.BoolVal(True)
+
+    def compare(self, left: Expression, right: Expression) -> z3.BoolRef:
+        return left != right
+
+
+class NotEqMagic(IsNotMagic):
+    def __init__(self, store: Store, reftype: Optional[z3.DatatypeSortRef]) -> None:
+        super().__init__()
+        self.store = store
+        self.reftype = reftype
+
+    def compare(self, left: Expression, right: Expression) -> z3.BoolRef:
+        if left.sort() == Reference:
+            assert self.reftype is not None
+            assert left.sort() == Reference
+            assert right.sort() == Reference
+            left_val = self.store.get(cast(ReferenceT, left))
+            right_val = self.store.get(cast(ReferenceT, right))
+
+            p_left = getattr(self.reftype, "Pair_left", None)
+            p_right = getattr(self.reftype, "Pair_right", None)
+            assert p_left is not None
+            assert p_right is not None
+
+            return bool_or(
+                (
+                    p_left(left_val) != p_left(right_val),
+                    p_right(left_val) != p_right(right_val),
+                )
+            )
+        else:
+            return left != right
