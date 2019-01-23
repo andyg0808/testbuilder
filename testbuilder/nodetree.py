@@ -6,9 +6,8 @@ functions for the Python AST.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
-
 from dataclasses import dataclass
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar
 
 AddedLine = -1
 
@@ -102,6 +101,8 @@ class Eq(Operator):
 
 class NotEq(Operator):
     pass
+
+class Is
 
 
 @dataclass

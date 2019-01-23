@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
-from logbook import Logger
-
 import z3
-from dataclasses import dataclass
+from logbook import Logger
 from typeassert import assertify
 from z3 import DatatypeRef
 
@@ -14,7 +13,7 @@ from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_or
+from .z3_types import AnyT, Expression, NilSort, Reference, SortSet, bool_and, bool_or
 
 log = Logger("type_registrar")
 
@@ -160,6 +159,13 @@ class TypeRegistrar:
         return cast(AnyT, wrap_func(val))
 
     def wrap(self, val: Expression) -> AnyT:
+        """Take a raw Z3 value and wrap it in an Any.
+
+        Args:
+            val: The value to wrap
+        Return:
+            The same value in an Any
+        """
         if val.sort() == z3.IntSort():
             return self._extract_or_wrap(val, "i", "Int")
         if val.sort() == z3.StringSort():
@@ -168,6 +174,8 @@ class TypeRegistrar:
             return self._extract_or_wrap(val, "b", "Bool")
         if val.sort() == Reference:
             return self._extract_or_wrap(val, "r", "Reference")
+        if val.sort() == NilSort:
+            return self._extract_or_wrap(val, "n", "Nil")
         if val.sort() == self.anytype:
             # This can happen if we already have a wrapped type, or if
             # the type is a non-wrapper type
