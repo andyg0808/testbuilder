@@ -1,4 +1,5 @@
 import ast
+import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -12,8 +13,6 @@ from typing import (
 )
 
 from logbook import Logger
-
-import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
@@ -476,7 +475,13 @@ class AstBuilder(GenericVisitor):
                 f"({type(node)}); no such attribute exists"
             )
         fields = []
-        for field in dataclasses.fields(equivalent):
+        try:
+            dataclass_fields = dataclasses.fields(equivalent)
+        except TypeError as err:
+            raise TypeError(
+                f"Couldn't get fields on {equivalent} of type {type(equivalent)}", err
+            )
+        for field in dataclass_fields:
             if field.name == "line":
                 fields.append(getattr(node, "lineno"))
                 continue
