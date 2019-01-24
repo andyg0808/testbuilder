@@ -31,7 +31,7 @@ build:
 
 .PHONY: watch
 watch:
-	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
+	fd ".py|.exp|.tcl|Makefile" | entr -c test.sh $(MAKE) $(RUN)
 
 .PHONY: fastbuild
 fastbuild: mypy pytest runtests snippets
