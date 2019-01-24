@@ -223,8 +223,7 @@ class TypeRegistrar:
             is_pair = getattr(self.reftype, "is_Pair", None)
             if is_pair is None:
                 raise RuntimeError("No is_Pair available for reftype")
-            return cast(z3.BoolRef, is_pair(expr))
-
+            return z3.BoolVal(True)
         raise UnknownConversionException(
             f"Can't convert {expr.sort().name()} ({expr.decl().name()}) to boolean"
         )
