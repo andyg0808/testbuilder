@@ -57,7 +57,7 @@ runtests:
 
 .PHONY: snippets
 snippets:
-	./run_on_snippets
+	cd private && $(MAKE)
 
 .PHONY: docs
 docs:

@@ -265,3 +265,28 @@ def example(a):
         spotcheck({"ret": 1, "c": 4}),
         slice=False,
     )
+
+
+def test_solve_is_not_none():
+    check_solve(
+        """
+def example(a):
+    if a is None:
+        return 4
+    return 3
+    """,
+        None,
+        spotcheck({"a": lambda a, d: a is not None}),
+    )
+
+
+def test_solve_is_none():
+    check_solve(
+        """
+def example(a):
+    if a is None:
+        return 3
+        """,
+        None,
+        spotcheck({"a": None}),
+    )
