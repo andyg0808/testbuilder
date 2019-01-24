@@ -33,7 +33,7 @@ class TypeBuilder:
         return self
 
     def none(self) -> TypeBuilder:
-        self.datatype.declare("Nil", ("n", NilSort))
+        self.datatype.declare("Nil")
         return self
 
     def references(self) -> TypeBuilder:

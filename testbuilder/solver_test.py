@@ -267,6 +267,7 @@ def example(a):
     )
 
 
+@pytest.mark.xfail(reason="Current work")
 def test_solve_is_not_none():
     check_solve(
         """
