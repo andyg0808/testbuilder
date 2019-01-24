@@ -135,4 +135,4 @@ def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
 
 
 def default_value(name: str) -> Any:
-    return 1234567890
+    return 1_234_567_890
