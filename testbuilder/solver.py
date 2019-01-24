@@ -94,6 +94,10 @@ class Z3PythonConverter:
                     pair.left = self._z3_to_python(store_key + ".left", left)
                     pair.right = self._z3_to_python(store_key + ".right", right)
                     return pair
+            elif value.sort() == self.registrar.anytype:
+                nil = getattr(self.registrar.anytype, "Nil", None)
+                if value.decl() == nil.decl():
+                    return None
 
             raise TypeError(f"Unknown datatype {value.decl()}")
         elif isinstance(value, z3.QuantifierRef):
@@ -106,9 +110,6 @@ class Z3PythonConverter:
                     f"key {store_key}; returning anyway"
                 )
                 return value
-        elif isinstance(value, z3.ExprRef):
-            if value.sort() == NilSort:
-                return None
         log.error(
             f"Couldn't find adapter for {store_key}; {value} has type {type(value)}"
         )
