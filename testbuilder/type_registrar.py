@@ -120,10 +120,11 @@ class TypeRegistrar:
 
         Arguments:
             name: A string to use as the name value for the
-            constraints created during expansion
+                  constraints created during expansion
             orig_constraints: A list of constraints which might
-            already be placed on the value being passed in. These will
-            be added to each of the new values' constraints list.
+                              already be placed on the value being
+                              passed in. These will be added to each
+                              of the new values' constraints list.
         """
         exprs = []
         sorts: SortSet = set()
