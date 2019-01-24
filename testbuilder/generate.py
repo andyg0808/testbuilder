@@ -4,8 +4,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, List, Mapping, Optional, Set, Tuple, Union
 
-from logbook import Logger
 from toolz import concat, pipe
+
+from logbook import Logger
 
 from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
@@ -15,7 +16,7 @@ from .iter_monad import liftIter
 from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
-from .preprocessor import Preprocessor
+from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
 from .renderer import prompt_and_render_test
 from .requester import Requester
 from .solver import Solution, solve
@@ -32,6 +33,7 @@ def generate_tests(
     text: str,
     requester: Requester,
     *,
+    changes: Optional[ChangeList] = None,
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
@@ -89,7 +91,10 @@ def generate_tests(
         return test
 
     def parse_file(text: str) -> AST:
-        preprocess = Preprocessor(text)
+        if changes:
+            preprocess: Preprocessor = AutoPreprocessor(text, changes)
+        else:
+            preprocess = Preprocessor(text)
         return preprocess(parse(text, str(source)))
 
     def function_splitter(

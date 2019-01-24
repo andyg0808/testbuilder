@@ -10,14 +10,16 @@ Options:
     --verbose=<level>  Output all logging information for <level> and above
     --ignore=<file,file>  Ignore all logging from the specified files
     --no-color  Do not use color highlighting when printing Python
+    --autopreprocess=<file.json>  Automatically run the preprocess
+                                  rules in <file.json> on each input file.
 """
 
+import json
 from pathlib import Path
 
+import typeassert
 from docopt import docopt
 from logbook import NullHandler, StderrHandler
-
-import typeassert
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
@@ -47,7 +49,15 @@ def main(filename: str) -> None:
     else:
         requester = Requester()
 
-    test_cases = generate_tests(filepath, text, requester, depth=depth, lines=lines)
+    if opts["--autopreprocess"]:
+        with open(opts["--autopreprocess"]) as f:
+            changes = json.load(f)
+    else:
+        changes = None
+
+    test_cases = generate_tests(
+        filepath, text, requester, depth=depth, lines=lines, changes=changes
+    )
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
         tests.write("from importlib import import_module")
         tests.write("\n\n".join(test_cases))

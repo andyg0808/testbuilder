@@ -2,12 +2,15 @@ import ast
 
 from astor import to_source
 
-from .preprocessor import Preprocessor
+from .preprocessor import AutoPreprocessor, Preprocessor
 
 
-def check_preprocess(program, expected):
+def check_preprocess(program, expected, auto=False):
     parsed = ast.parse(program)
-    preprocess = Preprocessor(program)
+    if auto:
+        preprocess = AutoPreprocessor(program, auto)
+    else:
+        preprocess = Preprocessor(program)
     clean_actual = to_source(preprocess(parsed))
     clean_expected = to_source(ast.parse(expected))
     print("Expected", clean_expected)
@@ -116,4 +119,24 @@ class Jedavu:
     def func(name):
         return name + goats
 """,
+    )
+
+
+def test_auto_preprocess():
+    check_preprocess(
+        """
+a.first = 4
+a.second = 5
+a.rest = 5
+        """,
+        """
+a.left = 4
+a.right = 5
+a.right = 5
+""",
+        auto=[
+            ("ATTRNAME", "RENAME", "first -> left"),
+            ("ATTRNAME", "RENAME", "second -> right"),
+            ("ATTRNAME", "RENAME", "rest -> right"),
+        ],
     )
