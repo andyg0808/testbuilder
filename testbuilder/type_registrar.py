@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
 import z3
+from dataclasses import dataclass
 from logbook import Logger
 from typeassert import assertify
 from z3 import DatatypeRef
@@ -217,6 +217,8 @@ class TypeRegistrar:
                 # are true. This will not be the case for some types,
                 # but it's true for our current set of types
                 return z3.BoolVal(True)
+        elif expr.sort() == NilSort:
+            return z3.BoolVal(False)
         elif expr.sort() == self.reftype:
             is_pair = getattr(self.reftype, "is_Pair", None)
             if is_pair is None:
