@@ -229,10 +229,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.info(f"Found call to {node.func}")
         if isinstance(node.func, n.Name):
             function = node.func.id
+            args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
                 if constructor.name() == function:
-                    args = [self.visit(v) for v in node.args]
                     assert len(node.keywords) == 0
                     union = self.construct_call(constructor, args)
                     log.debug(f"Constructed result is {union}")
