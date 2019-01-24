@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 import dataclasses
+import pytest
 import z3
 
 from .expression_builder import get_expression
@@ -10,7 +11,7 @@ from .solver import solve
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
 
-Registrar = TypeBuilder().wrappers().references().structures().build()
+Registrar = TypeBuilder().construct()
 
 
 def compare_values(expected, actual, actual_dict):

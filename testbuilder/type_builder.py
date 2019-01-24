@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-from logbook import Logger
-
 import z3
+from logbook import Logger
 
 from .type_registrar import TypeRegistrar
 from .z3_types import AnySort, NilSort, Reference
@@ -59,9 +58,12 @@ class TypeBuilder:
             anytype, reftype = z3.CreateDatatypes(self.datatype, self.reftype)
             return TypeRegistrar(anytype, reftype)
 
-    def construct(self) -> TypeRegistrar:
+    def all(self) -> TypeBuilder:
         self.none()
         self.references()
         self.wrappers()
         self.structures()
-        return self.build()
+        return self
+
+    def construct(self) -> TypeRegistrar:
+        return self.all().build()
