@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Generator, List, Optional, Tuple, cast
 
-import z3
-from dataclasses import dataclass
 from logbook import Logger
 from typeassert import assertify
+
+import z3
+from dataclasses import dataclass
 from z3 import DatatypeRef
 
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -48,7 +49,7 @@ class TypeRegistrar:
             union = self.expand(name)
             sorts: SortSet = {
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
-            }
+            }  # scream!!!!
 
             log.debug(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
             expressions: List[CExpr] = []

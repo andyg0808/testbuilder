@@ -10,10 +10,10 @@ import re
 from functools import reduce
 from typing import Any, Callable, Mapping, Optional, Sequence, cast
 
+from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
-from logbook import Logger
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -99,6 +99,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return Magic.m(Reference)(self.store.get)(val)
 
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
+        breakpoint()
         value = self.visit(node.value)
         attr = node.attr
         if attr not in ["left", "right"]:
