@@ -1,9 +1,12 @@
+import cgitb
 import os
 import re
 
 import logbook
 
 import rainbow
+
+cgitb.enable()
 
 Replacer = rainbow.Replacer(colorize=True)
 LoggerName = re.compile(r"")

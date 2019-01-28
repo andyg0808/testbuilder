@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-import z3
 from logbook import Logger
 
+import z3
+
+from . import magic
 from .type_registrar import TypeRegistrar
 from .z3_types import AnySort, NilSort, Reference
 
@@ -33,7 +35,7 @@ class TypeBuilder:
         return self
 
     def none(self) -> TypeBuilder:
-        self.datatype.declare("Nil", ("n", NilSort))
+        self.datatype.declare("Nil")
         return self
 
     def references(self) -> TypeBuilder:
@@ -53,6 +55,7 @@ class TypeBuilder:
     def build(self) -> TypeRegistrar:
         if self.reftype is None:
             anytype = self.datatype.create()
+            magic.anytype = anytype
             return TypeRegistrar(anytype, None)
         else:
             anytype, reftype = z3.CreateDatatypes(self.datatype, self.reftype)

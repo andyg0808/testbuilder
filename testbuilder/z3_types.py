@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Callable, Iterable, List, NewType, Optional, Set, Tuple, Union, cast
+from typing import Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 import z3
 
@@ -78,10 +77,8 @@ class AnySort(z3.DatatypeSortRef):
         ...
 
 
-Sort = Enum("Sort", ["Reference"])
-
-
-SortSet = Set[Union[z3.SortRef, Sort]]
+SortMarker = Union[z3.SortRef, z3.FuncDeclRef]
+SortSet = Set[SortMarker]
 
 
 def bool_not(expr: z3.BoolRef) -> z3.BoolRef:
@@ -209,3 +206,24 @@ def diff_expression(
 def print_diff(diff: List[Tuple[Expression, Expression]]) -> None:
     for left, right in diff:
         print(f"Difference in\n\n{left}\n{right}\n")
+
+
+def get_sort(expr: Expression) -> Union[z3.FuncDeclRef, z3.SortRef, None]:
+    sort = cast(z3.DatatypeSortRef, expr.sort())
+    decl = expr.decl()
+    if decl.arity() == 0:
+        # We either have an instance of a constructor with a zero
+        # arity, or we have a constant. To tell them apart, we
+        # will check if the decl of `expr` is a constructor. If it
+        # is a constructor instance, its decl will be a
+        # constructor for its sort. If it's not, then its decl
+        # will be a `FuncDefRef` with its variable name as its
+        # name.
+        for i in range(sort.num_constructors()):
+            if decl == sort.constructor(i):
+                # We have a zero-arity constructor. Use the decl
+                # because otherwise we can't tell the zero-arg
+                # constructors apart.
+                return decl
+        return None
+    return sort
