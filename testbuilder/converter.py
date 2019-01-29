@@ -91,6 +91,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self.sorting = SortNamer(self.registrar.anytype)
         self.fount = MagicFountain(self.sorting)
         self.visit_oper = OperatorConverter(store, registrar, self.fount)
+        self.builtins = {"len": self.fount(StringSort)(z3.Length)}
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
@@ -261,6 +262,12 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                     union = self.construct_call(constructor, args)
                     log.debug(f"Constructed result is {union}")
                     return union
+            builtin = self.builtins.get(function, None)
+            if builtin is not None:
+                log.debug(f"{function} is a builtin: adding call")
+                union = builtin(*args)
+                log.debug(f"Builtin result is {union}")
+                return union
             return self.registrar.AllTypes("funcdefault_" + node.func.id)
 
         # Treat functions as true which we couldn't substitute
@@ -269,7 +276,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         )
 
     def construct_call(
-        self, constructor: z3.FuncDeclRef, args: Sequence[TypeUnion]
+        self, constructor: Callable[..., Expression], args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
         print("Constructing call", constructor, args)
