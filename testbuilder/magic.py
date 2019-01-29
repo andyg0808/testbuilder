@@ -180,6 +180,7 @@ class Magic:
             functions.append((func, cast(Tuple, arg_tuple)))
         exprs = []
         sorts: SortSet = set()
+        found_none = False
         for func, arg_tuple in functions:
             res = self.__call_on_exprs(func.function, arg_tuple)
             if res is None:
@@ -188,6 +189,17 @@ class Magic:
             sort = self.sorting(res.expr)
             if sort is not None:
                 sorts.add(sort)
+            else:
+                found_none = True
+        if found_none:
+            # The sorts list should be empty if we found a None value
+            # because an empty sort list is treated as an Any, and the
+            # None value means any sort is allowed.  This is only an
+            # issue because we're caching the set of sorts that the
+            # `CExpr`s in our `TypeUnion` have. If we looked at each
+            # one each time, we could check if its type is applicable,
+            # and we could directly check if an AnyType is allowed.
+            assert len(sorts) == 0
         if len(exprs) == 0 and Magic.unexpanded(args):
             log.info(f"No results for {args} Expanding and retrying.")
             newargs = Magic.expand(args)
