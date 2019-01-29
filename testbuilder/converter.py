@@ -84,8 +84,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self.constants: Mapping[Any, TypeUnion] = {
             True: TypeUnion.wrap(z3.BoolVal(True)),
             False: TypeUnion.wrap(z3.BoolVal(False)),
-            None: TypeUnion.wrap(Nil),
+            # None: TypeUnion.wrap(Nil),
         }
+        nil = getattr(self.registrar.anytype, "Nil", None)
+        if nil is not None:
+            self.constants[None] = TypeUnion.wrap(nil)
 
         self.sorting = SortNamer(self.registrar.anytype)
         self.fount = MagicFountain(self.sorting)
@@ -252,10 +255,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.info(f"Found call to {node.func}")
         if isinstance(node.func, n.Name):
             function = node.func.id
+            args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
                 if constructor.name() == function:
-                    args = [self.visit(v) for v in node.args]
                     assert len(node.keywords) == 0
                     union = self.construct_call(constructor, args)
                     log.debug(f"Constructed result is {union}")

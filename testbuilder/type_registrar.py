@@ -182,8 +182,8 @@ class TypeRegistrar:
             return self._extract_or_wrap(val, "b", "Bool")
         if val.sort() == Reference:
             return self._extract_or_wrap(val, "r", "Reference")
-        if val.sort() == NilSort:
-            return self._extract_or_wrap(val, "n", "Nil")
+        # if val.sort() == self.anytype:
+        #     return self._extract_or_wrap(val, "n", "Nil")
         if val.sort() == self.anytype:
             # This can happen if we already have a wrapped type, or if
             # the type is a non-wrapper type
@@ -217,16 +217,14 @@ class TypeRegistrar:
         elif z3.is_string(expr):
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
-            none = getattr(self.anytype, "none", None)
-            if expr.decl() == none:
+            nil = getattr(self.anytype, "Nil", None)
+            if expr.decl() == nil.decl():
                 return z3.BoolVal(False)
             else:
                 # For all anytype values that aren't None, assume they
                 # are true. This will not be the case for some types,
                 # but it's true for our current set of types
                 return z3.BoolVal(True)
-        elif expr.sort() == NilSort:
-            return z3.BoolVal(False)
         elif expr.sort() == self.reftype:
             is_pair = getattr(self.reftype, "is_Pair", None)
             if is_pair is None:
