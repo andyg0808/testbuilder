@@ -4,9 +4,12 @@ import inspect
 import traceback
 from itertools import product
 from typing import (
+    Any,
     Callable,
+    Iterable,
     Iterator,
     List,
+    NewType,
     Optional,
     Sequence,
     Tuple,
@@ -25,7 +28,7 @@ from dataclasses import dataclass
 from .constrained_expression import ConstrainedExpression as CExpr
 from .expandable_type_union import ExpandableTypeUnion
 from .type_union import TypeUnion
-from .z3_types import Expression, SortSet
+from .z3_types import Expression, SortMarker, SortSet
 
 log = Logger("Magic")
 
@@ -54,6 +57,17 @@ class MagicRegistration(MagicTag):
     function: MagicFunc
 
 
+SortingFunc = Callable[[Expression], Optional[SortMarker]]
+
+
+class MagicFountain:
+    def __init__(self, sorting: SortingFunc) -> None:
+        self.sorting = sorting
+
+    def __call__(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
+        return Magic.m(self.sorting, types)
+
+
 class Magic:
     """
     Function overloading and abstract type handling.
@@ -68,7 +82,8 @@ class Magic:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, sorting: SortingFunc) -> None:
+        self.sorting = sorting
         stack = traceback.extract_stack()
         filtered_stack = [s for s in stack if s.filename != __file__]
         self.definition = filtered_stack[-1]
@@ -86,15 +101,20 @@ class Magic:
                 self.funcref.append(registration)
 
     @staticmethod
-    def m(*types: TagType) -> Callable[[MagicFunc], Magic]:
+    def m(
+        sorting: Optional[SortingFunc], types: Sequence[TagType]
+    ) -> Callable[[MagicFunc], Magic]:
         """
         Create an instance of Magic and call `magic` on it with these
         arguments.
         """
-        res = Magic()
-        return res.magic(*types)
+        if not sorting:
+            res = Magic(lambda x: x.sort())
+        else:
+            res = Magic(sorting)
+        return res.magic(types)
 
-    def magic(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
+    def magic(self, types: Sequence[TagType]) -> Callable[[MagicFunc], Magic]:
         """
         To register an existing function for some argument types, call
         this method, passing it the argument types, and pass the
@@ -165,7 +185,9 @@ class Magic:
             if res is None:
                 continue
             exprs.append(res)
-            sorts.add(res.expr.sort())
+            sort = self.sorting(res.expr)
+            if sort is not None:
+                sorts.add(sort)
         if len(exprs) == 0 and Magic.unexpanded(args):
             log.info(f"No results for {args} Expanding and retrying.")
             newargs = Magic.expand(args)

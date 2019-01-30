@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Callable, Iterable, List, NewType, Optional, Set, Tuple, Union, cast
+from typing import Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 import z3
 
@@ -78,10 +77,8 @@ class AnySort(z3.DatatypeSortRef):
         ...
 
 
-Sort = Enum("Sort", ["Reference"])
-
-
-SortSet = Set[Union[z3.SortRef, Sort]]
+SortMarker = Union[z3.SortRef, z3.FuncDeclRef]
+SortSet = Set[SortMarker]
 
 
 def bool_not(expr: z3.BoolRef) -> z3.BoolRef:

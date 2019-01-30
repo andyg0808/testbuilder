@@ -8,7 +8,7 @@ from __future__ import annotations
 import operator
 import re
 from functools import reduce
-from typing import Any, Callable, Mapping, Optional, Sequence, cast
+from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
 from toolz import groupby, mapcat
 
@@ -19,7 +19,7 @@ from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
 from .expandable_type_union import ExpandableTypeUnion
 from .expression_type_union import ExpressionTypeUnion
-from .magic import Magic, magic_tag as magic
+from .magic import Magic, MagicFountain, SortingFunc, magic_tag as magic
 from .store import Store
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
@@ -32,6 +32,7 @@ from .z3_types import (
     Nil,
     Reference,
     ReferenceT,
+    SortMarker,
     SortSet,
     bool_and,
     bool_or,
@@ -49,12 +50,33 @@ StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
 
 
+class SortNamer:
+    def __init__(self, anytype: z3.DatatypeSortRef) -> None:
+        keys = ["Nil"]
+        self.anytype = anytype
+        self.values: List[z3.DatatypeRef] = []
+        for key in keys:
+            value = getattr(anytype, key, None)
+            if value is not None:
+                self.values.append(value)
+
+    def __call__(self, expr: Expression) -> Optional[SortMarker]:
+        print(expr)
+        sort = expr.sort()
+        decl = expr.decl()
+        if decl in self.values:
+            return decl
+        elif sort == self.anytype:
+            return None
+        else:
+            return sort
+
+
 class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def __init__(
         self, registrar: TypeRegistrar, type_manager: TypeManager, store: Store
     ) -> None:
         super().__init__()
-        self.visit_oper = OperatorConverter(store, registrar)
         self.registrar = registrar
         self.type_manager = type_manager
         self.store = store
@@ -62,10 +84,13 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             True: TypeUnion.wrap(z3.BoolVal(True)),
             False: TypeUnion.wrap(z3.BoolVal(False)),
         }
-
         nil = getattr(self.registrar.anytype, "Nil", None)
         if nil is not None:
             self.constants[None] = TypeUnion.wrap(nil)
+
+        self.sorting = SortNamer(self.registrar.anytype)
+        self.fount = MagicFountain(self.sorting)
+        self.visit_oper = OperatorConverter(store, registrar, self.fount)
 
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
@@ -99,7 +124,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         return self.constants[node.value]
 
     def dereference(self, val: TypeUnion) -> TypeUnion:
-        return Magic.m(Reference)(self.store.get)(val)
+        return self.fount(Reference)(self.store.get)(val)
 
     def visit_Attribute(self, node: n.Attribute) -> TypeUnion:
         value = self.visit(node.value)
@@ -115,7 +140,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         accessor = getattr(self.registrar.reftype, "Pair_" + attr)
 
         dereferenced = self.dereference(value)
-        component = Magic.m(self.registrar.reftype)(accessor)(dereferenced)
+        component = self.fount(self.registrar.reftype)(accessor)(dereferenced)
         assert len(component.expressions) == 1
         return ExpressionTypeUnion(
             component.expressions, component.sorts, self.registrar
@@ -213,7 +238,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                     store._set(dest, pair(left_val, right_val))
                     return BOOL_TRUE
 
-            return UpdateMagic()(dest, left_value, right_value)
+            return UpdateMagic(self.sorting)(dest, left_value, right_value)
 
         raise RuntimeError(
             f"Unexpected target type {type(target)} of assign target {target}"
@@ -282,9 +307,12 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
 
 
 class OperatorConverter(SimpleVisitor[OpFunc]):
-    def __init__(self, store: Store, registrar: TypeRegistrar) -> None:
+    def __init__(
+        self, store: Store, registrar: TypeRegistrar, fount: MagicFountain
+    ) -> None:
         self.store = store
         self.registrar = registrar
+        self.fount = fount
 
     def visit_Add(self, node: n.Add) -> OpFunc:
         class AddMagic(Magic):
@@ -296,46 +324,46 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
             def addString(self, left: z3.String, right: z3.String) -> z3.String:
                 return z3.Concat(left, right)
 
-        return AddMagic()
+        return AddMagic(self.fount.sorting)
 
     def visit_Sub(self, node: n.Sub) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.sub)
+        return self.fount(IntSort, IntSort)(operator.sub)
 
     def visit_Mult(self, node: n.Mult) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.mul)
+        return self.fount(IntSort, IntSort)(operator.mul)
 
     def visit_Div(self, node: n.Div) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.truediv)
+        return self.fount(IntSort, IntSort)(operator.truediv)
 
     def visit_LtE(self, node: n.LtE) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.le)
+        return self.fount(IntSort, IntSort)(operator.le)
 
     def visit_GtE(self, node: n.GtE) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.ge)
+        return self.fount(IntSort, IntSort)(operator.ge)
 
     def visit_Or(self, node: n.Or) -> OpFunc:
-        return Magic.m(BoolSort, BoolSort)(lambda *a: bool_or([*a]))
+        return self.fount(BoolSort, BoolSort)(lambda *a: bool_or([*a]))
 
     def visit_And(self, node: n.And) -> OpFunc:
-        return Magic.m(BoolSort, BoolSort)(lambda *a: bool_and([*a]))
+        return self.fount(BoolSort, BoolSort)(lambda *a: bool_and([*a]))
 
     def visit_Eq(self, node: n.Eq) -> OpFunc:
-        return EqMagic(self.store, self.registrar.reftype)
+        return EqMagic(self.fount.sorting, self.store, self.registrar.reftype)
 
     def visit_Is(self, node: n.Is) -> OpFunc:
-        return IsMagic()
+        return IsMagic(self.fount.sorting)
 
     def visit_IsNot(self, node: n.IsNot) -> OpFunc:
-        return IsNotMagic()
+        return IsNotMagic(self.fount.sorting)
 
     def visit_NotEq(self, node: n.NotEq) -> OpFunc:
-        return NotEqMagic(self.store, self.registrar.reftype)
+        return NotEqMagic(self.fount.sorting, self.store, self.registrar.reftype)
 
     def visit_Lt(self, node: n.Lt) -> OpFunc:
-        return Magic.m(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
+        return self.fount(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
 
     def visit_Gt(self, node: n.Gt) -> OpFunc:
-        return Magic.m(IntSort, IntSort)(operator.gt)
+        return self.fount(IntSort, IntSort)(operator.gt)
 
     def visit_Not(self, node: n.Not) -> OpFunc:
         def not_func(value: TypeUnion) -> TypeUnion:
@@ -344,7 +372,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return not_func
 
     def visit_USub(self, node: n.USub) -> OpFunc:
-        return Magic.m(IntSort)(lambda x: -x)
+        return self.fount(IntSort)(lambda x: -x)
 
 
 # T = TypeVar("T")
@@ -433,8 +461,10 @@ class IsMagic(Magic):
 
 
 class EqMagic(IsMagic):
-    def __init__(self, store: Store, reftype: Optional[z3.DatatypeSortRef]) -> None:
-        super().__init__()
+    def __init__(
+        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
+    ) -> None:
+        super().__init__(sorting)
         self.store = store
         self.reftype = reftype
 
@@ -484,8 +514,10 @@ class IsNotMagic(Magic):
 
 
 class NotEqMagic(IsNotMagic):
-    def __init__(self, store: Store, reftype: Optional[z3.DatatypeSortRef]) -> None:
-        super().__init__()
+    def __init__(
+        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
+    ) -> None:
+        super().__init__(sorting)
         self.store = store
         self.reftype = reftype
 

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Generator, List, Optional, Tuple, cast
 
-import z3
-from dataclasses import dataclass
 from logbook import Logger
 from typeassert import assertify
+
+import z3
+from dataclasses import dataclass
 from z3 import DatatypeRef
 
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet

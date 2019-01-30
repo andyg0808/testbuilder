@@ -1,8 +1,9 @@
 import ast
 from pathlib import Path
 
-import dataclasses
 import pytest
+
+import dataclasses
 import z3
 
 from .expression_builder import get_expression
