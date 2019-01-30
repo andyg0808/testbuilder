@@ -61,6 +61,7 @@ class Z3PythonConverter:
             self._standardized[key] = self._z3_to_python(key, value)
 
     def _z3_to_python(self, store_key: str, value: ModelItem) -> Any:
+        log.debug(f"Finding python value for {store_key}: {value}")
         if store_key in self.cache:
             log.info(f"Found value in cache for {store_key}")
             return self.cache[store_key]
@@ -173,6 +174,7 @@ def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
     if res == z3.unsat:
         return None
     model = solver.model()
+    log.debug(f"Model: {model}")
     converter = Z3PythonConverter(model, registrar)
     return converter.solution()
 

@@ -63,6 +63,7 @@ def check_solve(code, conditions, expected, unroll=1, slice=True):
         expression = testdata
     print("expression", expression)
     res = solve(Registrar, expression)
+    log.debug(f"Solution: {res}")
     if isinstance(expected, spotcheck):
         expected.check(res)
     else:
