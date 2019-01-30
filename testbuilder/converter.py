@@ -62,7 +62,6 @@ class SortNamer:
 
     def __call__(self, expr: Expression) -> Optional[SortMarker]:
         print(expr)
-        breakpoint()
         sort = expr.sort()
         decl = expr.decl()
         if decl in self.values:
