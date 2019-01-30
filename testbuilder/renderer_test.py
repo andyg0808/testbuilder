@@ -6,16 +6,15 @@ from .z3_types import BOOL_TRUE
 
 
 def test_expected_failure():
-    test_data = sbb.TestData(
+    test_data = sbb.ExpectedTestData(
         name="Example",
         source_text="<code>",
         free_variables=[sbb.Variable("fish")],
         expression=BOOL_TRUE,
         filepath=Path("/dev/null"),
+        expected_result="fail::RuntimeError",
     )
-    actual = render_test(
-        test=test_data, test_number=0, args={"fish": 44}, expected="fail::RuntimeError"
-    )
+    actual = render_test(test=test_data, test_number=0, args={"fish": 44})
     expected = """
 import pytest
 from testbuilder.pair import Pair

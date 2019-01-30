@@ -261,6 +261,11 @@ class TestData:
     filepath: Path
 
 
+@dataclass
+class ExpectedTestData(TestData):
+    expected_result: str
+
+
 @singledispatch
 def dump_tree(block: BasicBlock, depth: int = 0) -> None:
     print(" " * depth, block)

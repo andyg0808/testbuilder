@@ -3,8 +3,9 @@ from typing import Any, Mapping
 
 from logbook import Logger
 
+from .dataclass_utils import make_extended_instance
 from .requester import Requester
-from .ssa_basic_blocks import TestData
+from .ssa_basic_blocks import ExpectedTestData, TestData
 
 ThrowParser = re.compile(r"fail::(\w+)$")
 
@@ -29,18 +30,21 @@ def prompt_and_render_test(
         )
     else:
         expected = requester.input(prompt)
-    return render_test(test=test, test_number=test_number, args=args, expected=expected)
+    expected_test = make_extended_instance(
+        test, ExpectedTestData, expected_result=expected
+    )
+    return render_test(test=expected_test, test_number=test_number, args=args)
 
 
 def render_test(
-    test: TestData, test_number: int, args: Mapping[str, Any], expected: str
+    test: ExpectedTestData, test_number: int, args: Mapping[str, Any]
 ) -> str:
     keys = [x.id for x in test.free_variables]
     arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
     args_string = "\n    ".join(arg_strings)
     call_args_string = ", ".join(keys)
     call_string = f"{test.name}({call_args_string})"
-    expected = str(expected).strip()
+    expected = str(test.expected_result).strip()
     log.info(f"Building test number {test_number}")
     if test_number > 0:
         number_str = f"_{test_number+1}"
