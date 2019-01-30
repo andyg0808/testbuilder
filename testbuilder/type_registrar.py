@@ -49,6 +49,9 @@ class TypeRegistrar:
             sorts: SortSet = {
                 e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
             }
+            assert (
+                len(sorts) > 0
+            ), f"Expected at least one of these sorts to be present {restricted}"
 
             log.debug(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
             expressions: List[CExpr] = []
