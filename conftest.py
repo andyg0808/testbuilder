@@ -1,6 +1,15 @@
+import cgitb
 import os
+import re
 
 import logbook
+
+import rainbow
+
+cgitb.enable()
+
+Replacer = rainbow.Replacer(colorize=True)
+LoggerName = re.compile(r"")
 
 
 def pytest_configure(config):
@@ -8,7 +17,7 @@ def pytest_configure(config):
     verbosity = config.getoption("--verbose")
 
 
-FILES = {"linefilterer": logbook.DEBUG, "conditional_elimination": logbook.INFO}
+FILES = {"conditional_elimination": logbook.INFO}
 
 
 def should_write(r, h):
@@ -18,8 +27,12 @@ def should_write(r, h):
     return level <= r.level
 
 
+def rainbowize(record):
+    record.message = Replacer.color(record.message)
+
+
 def pytest_runtest_logstart():
-    from logbook import StderrHandler, NullHandler
+    from logbook import StderrHandler, NullHandler, Processor
 
     null_handler = NullHandler()
     null_handler.push_application()
@@ -27,11 +40,12 @@ def pytest_runtest_logstart():
     if os.environ.get("VERBOSE", False) or verbosity:
         flag = os.environ.get("VERBOSE", False)
         ignores = os.environ.get("IGNORE", "").split(",")
-        if flag and not flag.isalpha():
+        if flag and flag.isnumeric():
             StderrHandler(
-                filter=lambda r, h: r.channel not in ignores
+                level=int(flag), filter=lambda r, h: r.channel not in ignores
             ).push_application()
-        elif flag and flag.isalpha():
+        elif flag and LoggerName.match(flag):
+            print(f"Only logging from {flag}")
             StderrHandler(filter=lambda r, h: r.channel == flag).push_application()
         else:
             StderrHandler().push_application()
@@ -52,4 +66,6 @@ def pytest_runtest_logstart():
             )
         else:
             stderr_handler = StderrHandler(level=level)
-        stderr_handler.push_application()
+
+            stderr_handler.push_application()
+    Processor(rainbowize).push_application()

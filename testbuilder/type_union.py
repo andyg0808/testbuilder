@@ -6,7 +6,7 @@ import z3
 from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
-from .z3_types import Expression, SortSet, bool_or
+from .z3_types import BOOL_TRUE, Expression, SortSet, bool_or
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,14 @@ class TypeUnion:
 
     @staticmethod
     def wrap(expr: Expression) -> TypeUnion:
+        """
+        Wrap `expr` in an unconstrained `CExpr` and a `TypeUnion`,
+        using the result of `expr.sort()` as the sort present in the
+        `TypeUnion`.
+
+        Args:
+            expr: An expression to put into a type union
+        """
         cexpr = CExpr(expr=expr)
         return TypeUnion([cexpr], {expr.sort()})
 
@@ -25,7 +33,7 @@ class TypeUnion:
     def is_bool(self) -> bool:
         return self.sorts == {z3.BoolSort()}
 
-    def to_expr(self, invert: bool = False) -> z3.Bool:
+    def to_expr(self, invert: bool = False) -> z3.BoolRef:
         """
         Creates a boolean expression allowing execution to procede down
         any of the possible expressions in this TypeUnion
@@ -33,14 +41,16 @@ class TypeUnion:
         assert (
             self.is_bool()
         ), "Cannot convert non-boolean TypeUnion to boolean expression"
-        boolexprs: List[z3.Bool] = [
-            cast(z3.Bool, x.to_expr(invert)) for x in self.expressions
+        boolexprs: List[z3.BoolRef] = [
+            cast(z3.BoolRef, x.to_expr(invert)) for x in self.expressions
         ]
         return bool_or(boolexprs)
 
-    def implications(self) -> z3.Bool:
+    def implications(self) -> z3.BoolRef:
         assert not self.empty()
         constraints = [x.constraint() for x in self.expressions if x.constrained()]
+        if not constraints:
+            return BOOL_TRUE
         return bool_or(constraints)
 
     def unwrap(

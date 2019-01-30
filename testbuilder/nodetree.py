@@ -104,6 +104,14 @@ class NotEq(Operator):
     pass
 
 
+class Is(Operator):
+    pass
+
+
+class IsNot(Operator):
+    pass
+
+
 @dataclass
 class UnaryOperator(Node):
     pass
@@ -128,6 +136,12 @@ class BinOp(expr):
 class UnaryOp(expr):
     op: UnaryOperator
     operand: expr
+
+
+@dataclass
+class Assert(stmt):
+    test: expr
+    msg: str
 
 
 @dataclass

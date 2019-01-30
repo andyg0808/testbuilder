@@ -2,6 +2,8 @@ from typing import List, Mapping, MutableMapping as MMapping, Set, Tuple, TypeVa
 
 from logbook import Logger
 
+import dataclasses
+
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .visitor import GatherVisitor, UpdateVisitor
 
@@ -14,7 +16,7 @@ class SSARepair(UpdateVisitor):
         self.used_vars = used_vars
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
-        return sbb.Request(module=request.module, code=self.visit(request.code))
+        return dataclasses.replace(request, code=self.visit(request.code))
 
     def visit_Name(self, name: n.Name) -> n.Name:
         uselist = self.used_vars[name.id]

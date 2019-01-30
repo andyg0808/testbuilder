@@ -1,18 +1,24 @@
 from typing import Any, Generator, List, Optional
 
+import dataclasses
+
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .variable_manager import VAR_START_VALUE
 from .visitor import CoroutineVisitor, UpdateVisitor
 
 
 class FunctionSubstitute(UpdateVisitor):
+    """Finds function calls and replaces them with the function
+    definition.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.call_id = 0
 
     def visit_Request(self, request: sbb.Request) -> sbb.Request:
         code = self.generic_visit(request.code, module=request.module)
-        return sbb.Request(module=request.module, code=code)
+        return dataclasses.replace(request, code=code)
 
     def visit_Code(
         self, node: sbb.Code, start_line: int = 0, **kwargs: Any
@@ -20,8 +26,10 @@ class FunctionSubstitute(UpdateVisitor):
         lines = list(enumerate(node.code[start_line:]))
         for num, line in reversed(lines):
             calls = find_calls(line)
-            if calls:
-                assert len(calls) == 1
+            if len(calls) == 1:
+                # If there's more than one call, we don't currently
+                # want to try to substitute; not sure why, but not
+                # figuring it out until we need it.
                 return self.split_code(node, num + start_line, calls[0], **kwargs)
         # If there are no function calls here, move on to the parent node.
         return self.generic_visit(node, **kwargs)

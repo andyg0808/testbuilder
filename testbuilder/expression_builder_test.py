@@ -1,16 +1,6 @@
-import ast
-from functools import partial
-
 import pytest
-from toolz import pipe
-
-import z3
 
 from .check_expression import ExpressionChecker
-from .expression_builder import get_expression
-from .type_builder import TypeBuilder
-from .variable_expander import expand_variables
-from .z3_types import diff_expression, print_diff
 
 check_expression = ExpressionChecker(lambda b: b.wrappers())
 
@@ -56,6 +46,30 @@ def test_neq():
           Any.is_String(pyname_i)
         )
         """,
+    )
+
+
+def test_eq():
+    check_expression("1 == 'abc'", "false")
+    check_expression("1 == True", "false")
+    check_expression("'abc' == True", "false")
+
+
+def test_is():
+    check_expression("1 is 'abc'", "false")
+    check_expression("1 is True", "false")
+    check_expression("'abc' is True", "false")
+
+
+@pytest.mark.skip(reason="This is untypable code, and currently crashes")
+def test_variable_types():
+    check_expression(
+        """
+def f(a):
+    a += 1
+    a += "abc"
+    """,
+        "false",
     )
 
 
@@ -116,23 +130,10 @@ def twothings(a, b):
     """,
         """
 ret == Any.Int(Any.i(pyname_a) + Any.i(pyname_b)) and \
- (Any.is_Int(pyname_a) and Any.is_Int(pyname_b)) or \
+ Any.is_Int(pyname_a) and Any.is_Int(pyname_b) or \
 ret == Any.String(z3.Concat(Any.s(pyname_a), Any.s(pyname_b))) and \
- (Any.is_String(pyname_a) and Any.is_String(pyname_b))
+ Any.is_String(pyname_a) and Any.is_String(pyname_b)
 """,
-    )
-
-
-def test_multiple_functions():
-    check_expression(
-        """
-def first_func(a):
-    return a * 5
-
-def second_func(b):
-    return b + 8
-        """,
-        "ret == Any.Int(Any.i(pyname_b) + 8) and Any.is_Int(pyname_b)",
     )
 
 
@@ -164,10 +165,12 @@ def multiple_deps(a, b):
         """
 pyname_c == pyname_a and \
 pyname_d == pyname_b and \
-Or(ret == Any.Int(Any.i(pyname_c) + Any.i(pyname_d)) and \
-        And(Any.is_Int(pyname_c), Any.is_Int(pyname_d)), \
-   ret == Any.String(Concat(Any.s(pyname_c), Any.s(pyname_d))) and \
-        And(Any.is_String(pyname_c), Any.is_String(pyname_d)))
+Or(ret == Any.Int(Any.i(pyname_c) + Any.i(pyname_d)) and
+    Any.is_Int(pyname_c) and
+    Any.is_Int(pyname_d),
+   ret == Any.String(Concat(Any.s(pyname_c), Any.s(pyname_d))) and
+    Any.is_String(pyname_c)
+    and Any.is_String(pyname_d))
 """,
     )
 
@@ -244,8 +247,9 @@ def tester(a):
     return a
     """,
         """
-And(pyname_a_1 == Any.Int(Any.i(pyname_a) + 2), Any.is_Int(pyname_a)) \
-and ret == pyname_a_1
+pyname_a_1 == Any.Int(Any.i(pyname_a) + 2) and \
+Any.is_Int(pyname_a) and \
+ret == pyname_a_1
 """,
     )
 
@@ -286,12 +290,12 @@ return c
     """,
         """
     pyname_c == Any.Int(3) and \
-        (And(Any.i(pyname_a) < Any.i(pyname_b),
-        Any.is_Int(pyname_a) and Any.is_Int(pyname_b)) \
+        (Any.i(pyname_a) < Any.i(pyname_b) and
+        Any.is_Int(pyname_a) and Any.is_Int(pyname_b) \
         and pyname_c_1 == Any.Int(4) \
     or \
-        And(Not(Any.i(pyname_a) < Any.i(pyname_b)), \
-            Any.is_Int(pyname_a) and Any.is_Int(pyname_b)) \
+        Not(Any.i(pyname_a) < Any.i(pyname_b)) and \
+            Any.is_Int(pyname_a) and Any.is_Int(pyname_b) \
     and pyname_c_1 == pyname_c) \
     and ret == pyname_c_1""",
     )
@@ -309,14 +313,14 @@ def things(a, b):
     """,
         """
         ((4 < 3 and \
-          And(pyname_c == Any.Int(Any.i(pyname_a) + 2),
-              Any.is_Int(pyname_a))) \
+          pyname_c == Any.Int(Any.i(pyname_a) + 2) and \
+              Any.is_Int(pyname_a)) \
 or \
         (not (4 < 3) and \
-         And(pyname_c == Any.Int(Any.i(pyname_a) + 3),
-             Any.is_Int(pyname_a)))) and \
-And(ret == Any.Int(Any.i(pyname_c) + Any.i(pyname_b)),
-    Any.is_Int(pyname_b))
+         pyname_c == Any.Int(Any.i(pyname_a) + 3) and \
+             Any.is_Int(pyname_a))) and \
+    ret == Any.Int(Any.i(pyname_c) + Any.i(pyname_b)) and \
+    Any.is_Int(pyname_b)
     """,
     )
 
@@ -337,10 +341,10 @@ def things(a, b, c):
             return b
             """,
         """
-        And(And(Not(Any.i(pyname_a) < Any.i(pyname_b)),
-                And(Any.is_Int(pyname_a), Any.is_Int(pyname_b))),
-            And(Not(Any.i(pyname_c) < Any.i(pyname_b)),
-                Any.is_Int(pyname_c)),
+        And(Not(Any.i(pyname_a) < Any.i(pyname_b)),
+                Any.is_Int(pyname_a), Any.is_Int(pyname_b),
+            Not(Any.i(pyname_c) < Any.i(pyname_b)),
+                Any.is_Int(pyname_c),
             ret == pyname_b)
         """,
     )
@@ -355,11 +359,11 @@ def things(a, b):
     return a
     """,
         """
-(pyname_a_1 == pyname_a or \
-        And(And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a)),
-        pyname_a_1 == Any.Int(Any.i(pyname_a) - 1))) \
-        and And(Not(Any.i(pyname_a_1) > 1), Any.is_Int(pyname_a_1)) and \
-ret == pyname_a_1
+And(pyname_a_1 == pyname_a or \
+        And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a),
+        pyname_a_1 == Any.Int(Any.i(pyname_a) - 1)), \
+        Not(Any.i(pyname_a_1) > 1), Any.is_Int(pyname_a_1),
+ret == pyname_a_1)
     """,
     )
 
@@ -374,14 +378,14 @@ def things(a, b):
     """,
         """
 ((pyname_a_2 == pyname_a) or \
-        (And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a))\
+        (Any.i(pyname_a) > 1 and Any.is_Int(pyname_a) \
          and pyname_a_1 == Any.Int(Any.i(pyname_a) - 1) \
          and pyname_a_2 == pyname_a_1) or \
-        (And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a)) \
+        (Any.i(pyname_a) > 1 and Any.is_Int(pyname_a) \
          and pyname_a_1 == Any.Int(Any.i(pyname_a) - 1)\
         and Any.i(pyname_a_1) > 1\
         and pyname_a_2 == Any.Int(Any.i(pyname_a_1) - 1)))\
-        and And(Not(Any.i(pyname_a_2) > 1), Any.is_Int(pyname_a_2)) \
+        and Not(Any.i(pyname_a_2) > 1) and Any.is_Int(pyname_a_2) \
   and ret == pyname_a_2
     """,
         depth=2,
@@ -401,12 +405,12 @@ def things(a, b):
     """,
         """
 Or(pyname_a_1 == pyname_a, \
-   And(And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a)),
-       Or(And(Any.i(pyname_b) > 1, Any.is_Int(pyname_b))
+   And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a),
+        Or(Any.i(pyname_b) > 1 and Any.is_Int(pyname_b)
            and pyname_a_1 == Any.Int(Any.i(pyname_a) - Any.i(pyname_b)),
-          And(Not(Any.i(pyname_b) > 1), Any.is_Int(pyname_b))
+          Not(Any.i(pyname_b) > 1) and Any.is_Int(pyname_b)
            and pyname_a_1 == Any.Int(Any.i(pyname_a) + Any.i(pyname_b)))))\
-and And(Not(Any.i(pyname_a_1) > 1), Any.is_Int(pyname_a_1))\
+and Not(Any.i(pyname_a_1) > 1) and Any.is_Int(pyname_a_1)\
 and ret == pyname_a_1
     """,
     )
@@ -424,12 +428,13 @@ def tester(a, b):
     """,
         """
     (pyname_a_1 == pyname_a or \
-        (And(Any.i(pyname_a) > 1, Any.is_Int(pyname_a)) and \
+        (Any.i(pyname_a) > 1 and Any.is_Int(pyname_a) and \
       (pyname_b_1 == pyname_b or \
-        And(Any.i(pyname_b) > 1, Any.is_Int(pyname_b)) and \
+        Any.i(pyname_b) > 1 and Any.is_Int(pyname_b) and \
          pyname_b_1 == Any.Int(Any.i(pyname_b) - 1)) and \
-        And(Not(Any.i(pyname_b_1) > 1), Any.is_Int(pyname_b_1)) and \
-        pyname_a_1 == pyname_b_1)) and And(Not(Any.i(pyname_a_1) > 1), Any.is_Int(pyname_a_1)) and \
+        Not(Any.i(pyname_b_1) > 1) and Any.is_Int(pyname_b_1) and \
+        pyname_a_1 == pyname_b_1)) and \
+        Not(Any.i(pyname_a_1) > 1) and Any.is_Int(pyname_a_1) and \
     ret == pyname_a_1
     """,
     )
@@ -494,7 +499,7 @@ def test(i):
         return 2
     return 1
     """,
-        "And(Any.i(pyname_i) > 0, Any.is_Int(pyname_i)) and ret == Any.Int(2)",
+        "Any.i(pyname_i) > 0 and Any.is_Int(pyname_i) and ret == Any.Int(2)",
         line=3,
         # depth=22,
         depth=2,
@@ -509,7 +514,7 @@ def test(i):
         return 1
     return i
     """,
-        "And(Not(Any.i(pyname_i) > 0), Any.is_Int(pyname_i)) and ret == pyname_i",
+        "Not(Any.i(pyname_i) > 0) and Any.is_Int(pyname_i) and ret == pyname_i",
         depth=22,
     )
 
@@ -563,7 +568,7 @@ def test(i):
         j = 1
     return 2
     """,
-        "And(Not(Any.i(pyname_i) < 5), Any.is_Int(pyname_i)) and ret == Any.Int(2)",
+        "Not(Any.i(pyname_i) < 5) and Any.is_Int(pyname_i) and ret == Any.Int(2)",
     )
 
 
@@ -575,8 +580,8 @@ def test(i):
         j = 1
     return i
     """,
-        """And(Not(Any.i(pyname_i) < 5), Any.is_Int(pyname_i))\
-           and ret == pyname_i""",
+        """And(Not(Any.i(pyname_i) < 5), Any.is_Int(pyname_i),
+           ret == pyname_i)""",
     )
 
 
@@ -613,8 +618,8 @@ def test(i):
             return 1
     return 2
     """,
-        """Or(And(Any.i(pyname_i) < 8, Any.is_Int(pyname_i))\
-               and Not(Any.i(pyname_i) < 2),
+        """Or(And(Any.i(pyname_i) < 8, Any.is_Int(pyname_i),
+               Not(Any.i(pyname_i) < 2)),
               And(Not(Any.i(pyname_i) < 8), Any.is_Int(pyname_i)))\
            and ret == Any.Int(2)""",
     )
@@ -628,7 +633,7 @@ def test(i):
         return i
     return i
     """,
-        "And(Not(Any.i(pyname_i) > 8), Any.is_Int(pyname_i)) and ret == pyname_i",
+        "And(Not(Any.i(pyname_i) > 8), Any.is_Int(pyname_i), ret == pyname_i)",
     )
 
 
@@ -644,7 +649,7 @@ def test(i):
         return 1
     return 4
         """,
-        "And(Any.i(pyname_i) < 10, Any.is_Int(pyname_i)) and ret == Any.Int(4)",
+        "And(Any.i(pyname_i) < 10, Any.is_Int(pyname_i), ret == Any.Int(4))",
     )
 
 
@@ -656,7 +661,7 @@ def test(i):
         return i
     return i
     """,
-        "And(Any.i(pyname_i) > 8, Any.is_Int(pyname_i)) and ret == pyname_i",
+        "And(Any.i(pyname_i) > 8, Any.is_Int(pyname_i), ret == pyname_i)",
         line=3,
     )
 
@@ -704,7 +709,7 @@ def test(i):
         return 1
     return 2
     """,
-        "And(Not(Any.i(pyname_i) > 0), Any.is_Int(pyname_i)) and ret == Any.Int(2)",
+        "And(Not(Any.i(pyname_i) > 0), Any.is_Int(pyname_i), ret == Any.Int(2))",
     )
 
 
@@ -720,9 +725,9 @@ def test(i):
     return i
     """,
         """
-        And(Any.i(pyname_i) > 0, Any.is_Int(pyname_i)) \
-        and Any.i(pyname_i) == 2 \
-        and ret == Any.Int(2)""",
+        And(Any.i(pyname_i) > 0, Any.is_Int(pyname_i),
+        Any.i(pyname_i) == 2,
+        ret == Any.Int(2))""",
         line=4,
     )
 
@@ -789,8 +794,8 @@ def test_return_halfway():
     check_expression(
         code,
         """
-    And(pyname_i_1 == Any.Int(Any.i(pyname_i) + 1), Any.is_Int(pyname_i))\
-    and ret == pyname_i_1
+    And(pyname_i_1 == Any.Int(Any.i(pyname_i) + 1), Any.is_Int(pyname_i),
+        ret == pyname_i_1)
     """,
         line=3,
     )
@@ -809,8 +814,8 @@ def test(i):
     check_expression(
         code,
         """
-    And(pyname_i_1 == Any.Int(Any.i(pyname_i) + 1), Any.is_Int(pyname_i))\
-    and ret == pyname_i_1
+    And(pyname_i_1 == Any.Int(Any.i(pyname_i) + 1), Any.is_Int(pyname_i),
+        ret == pyname_i_1)
     """,
     )
     check_expression(code, None, line=5)
@@ -844,8 +849,8 @@ def test(S_text: str):
     return res
     """,
         """
-Or(And(Any.s(spyname_S_text) == "win", Any.is_String(spyname_S_text))\
-    and pyname_res == Any.Int(1),
+Or(And(Any.s(spyname_S_text) == "win", Any.is_String(spyname_S_text),
+    pyname_res == Any.Int(1)),
    Or(Any.is_Int(spyname_S_text),
       Any.is_Bool(spyname_S_text),
       And(Not(Any.s(spyname_S_text) == "win"),
@@ -856,7 +861,6 @@ and ret == pyname_res
     )
 
 
-@pytest.mark.xfail
 def test_string_length():
     check_expression(
         """
@@ -868,9 +872,15 @@ def test(s: str):
     return res
     """,
         """
-    (Length("s") > 2 and pyname_res == 1 or \
-    Not(Length("s") > 2) and pyname_res == 0) and \
-    ret == pyname_res
+Or(
+    And(
+        Length(Any.s(pyname_s)) > 2,
+        Any.is_String(pyname_s),
+        pyname_res == Any.Int(1),
+    ),
+        And(Not(Length(Any.s(pyname_s)) > 2),
+            Any.is_String(pyname_s),
+            pyname_res == Any.Int(0))) and ret == pyname_res
     """,
     )
 
@@ -890,99 +900,6 @@ def tester(count):
         Not(pyname_count_1 > 0))
 """,
         overall=True,
-    )
-
-
-def test_simplest_function_call():
-    check_expression(
-        """
-def inner(i):
-    return i
-def outer(i):
-    return inner(i)
-        """,
-        """
-        And(function_inner_1_pyname_i == pyname_i,
-        function_inner_1_return == function_inner_1_pyname_i,
-        ret == function_inner_1_return)
-        """,
-    )
-
-
-def test_function_call():
-    check_expression(
-        """
-def double(i):
-    return i * 2
-
-def call_func(i):
-    return double(i)
-        """,
-        # "ret == 2 * pyname_i",
-        """
-        And(function_double_1_pyname_i == pyname_i,
-        And(function_double_1_return == Any.Int(Any.i(function_double_1_pyname_i) * 2),
-            Any.is_Int(function_double_1_pyname_i)),
-        ret == function_double_1_return)
-        """,
-    )
-
-
-@pytest.mark.xfail
-def test_deep_call():
-    check_expression(
-        """
-def bottom(i):
-    return i * 2
-
-def middle(i):
-    p = bottom(i) + 2
-    return p
-
-def top(i):
-    q = middle(i)
-    q += 23
-    return q * 23
-        """,
-        """
-        And(function_middle_1_pyname_i == pyname_i,
-        function_bottom_1_pyname_i == function_middle_1_pyname_i,
-        function_bottom_1_return == function_bottom_1_pyname_i * 2,
-        function_middle_1_pyname_p == function_bottom_1_return + 2,
-        function_middle_1_return == function_middle_1_pyname_p,
-        pyname_q == function_middle_1_return,
-        pyname_q_1 == pyname_q + 23
-        ret == pyname_q_1 * 23)
-""",
-    )
-
-
-def test_conditional_functions():
-    # TODO: Extract the initial line of each of the innermost `And`s
-    # into the outer `And`.
-    check_expression(
-        """
-def conditioned(i):
-    if i > 4:
-        return 6
-    else:
-        return 14
-
-def run_func(i):
-    return i * conditioned(i)
-        """,
-        """
-        And(
-        Or(And(function_conditioned_1_pyname_i == pyname_i,
-               And(Any.i(function_conditioned_1_pyname_i) > 4,
-                   Any.is_Int(function_conditioned_1_pyname_i)),
-               function_conditioned_1_return == Any.Int(6)),
-           And(function_conditioned_1_pyname_i == pyname_i,
-               And(Not(Any.i(function_conditioned_1_pyname_i) > 4),
-                   Any.is_Int(function_conditioned_1_pyname_i)),
-               function_conditioned_1_return == Any.Int(14))),
-        And(ret == Any.Int(Any.i(pyname_i) * Any.i(function_conditioned_1_return)), Any.is_Int(pyname_i)))
-        """,
     )
 
 
@@ -1033,8 +950,8 @@ def test(doit):
         """,
         """
 And(
-    And(Any.b(pyname_doit) == true, Any.is_Bool(pyname_doit))\
-     and pyname_ret == Any.Int(4)\
+    And(Any.b(pyname_doit) == true, Any.is_Bool(pyname_doit),
+        pyname_ret == Any.Int(4))\
 or\
         Or(Any.is_Int(pyname_doit),
            And(Not(Any.b(pyname_doit) == true), Any.is_Bool(pyname_doit)),
@@ -1042,20 +959,6 @@ or\
      and pyname_ret == Any.Int(5),
 ret == pyname_ret)
 """,
-    )
-
-
-@pytest.mark.skip
-def test_function_recursion():
-    check_expression(
-        """
-def zero(i):
-    if i == 0:
-        return 0
-    else:
-        return zero(i-1)
-        """,
-        "ret == 0",
     )
 
 
@@ -1077,6 +980,33 @@ def tester(b):
     # After an example in canon2005
     # This function will crash if passed False (because it tries to add a number to
     # a string). This needs to be discovered!
+
+
+def test_flow_dependent_anytype():
+    check_expression(
+        """
+def tester(a, b):
+    if b == 2:
+        ret = a*1
+    else:
+        ret = a
+    return ret
+        """,
+        """
+And(Or(
+    And(
+        Any.i(pyname_b) == 2,
+        Any.is_Int(pyname_b),
+        pyname_ret == Any.Int(Any.i(pyname_a) * 1),
+        Any.is_Int(pyname_a)),
+    And(Or(
+            Not(Any.i(pyname_b) == 2) and Any.is_Int(pyname_b),
+            Any.is_Bool(pyname_b),
+            Any.is_String(pyname_b)),
+        pyname_ret == pyname_a)),
+ret == pyname_ret)
+""",
+    )
 
 
 @pytest.mark.skip

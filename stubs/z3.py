@@ -25,7 +25,7 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def num_constructors(self) -> int:
         ...
 
-    def recognizer(self, i: int) -> Callable[[ExprRef], Bool]:
+    def recognizer(self, i: int) -> Callable[[ExprRef], BoolRef]:
         ...
 
     def constructor(self, i: int) -> FuncDeclRef:
@@ -64,10 +64,10 @@ class BoolSort(SortRef):
 
 
 class ExprRef(AstRef):
-    def __eq__(self, other: Any) -> Bool:  # type: ignore
+    def __eq__(self, other: Any) -> BoolRef:  # type: ignore
         ...
 
-    def __ne__(self, other: Any) -> Bool:  # type: ignore
+    def __ne__(self, other: Any) -> BoolRef:  # type: ignore
         ...
 
     def sort(self) -> SortRef:
@@ -92,6 +92,10 @@ class DatatypeRef(ExprRef):
 
 
 def Const(name: str, sort: SortRef) -> ExprRef:
+    ...
+
+
+def Var(idx: int, sort: SortRef) -> ExprRef:
     ...
 
 
@@ -137,7 +141,21 @@ class ModelRef:
         ...
 
     # This definition is known incomplete; this just gives us the ones we need
-    def __getitem__(self, idx: FuncDeclRef) -> FuncInterp:
+    def __getitem__(self, idx: FuncDeclRef) -> Union[FuncInterp, QuantifierRef]:
+        ...
+
+
+class QuantifierRef:
+    def is_lambda(self) -> bool:
+        ...
+
+    def var_name(self, idx: int) -> str:
+        ...
+
+    def var_sort(self, idx: int) -> SortRef:
+        ...
+
+    def body(self) -> DatatypeRef:
         ...
 
 
@@ -152,14 +170,16 @@ class Solver:
         ...
 
 
-class Bool(ExprRef):
-    def __init__(self, name: str) -> None:
-        ...
+class BoolRef(ExprRef):
+    ...
 
 
-class BoolVal(Bool):
-    def __init__(self, value: bool) -> None:
-        ...
+def Bool(name: str) -> BoolRef:
+    ...
+
+
+def BoolVal(value: bool) -> BoolRef:
+    ...
 
 
 class Int(ExprRef):
@@ -201,15 +221,15 @@ class StringVal(String):
         ...
 
 
-def And(*values: ExprRef) -> Bool:
+def And(*values: ExprRef) -> BoolRef:
     ...
 
 
-def Or(*values: ExprRef) -> Bool:
+def Or(*values: ExprRef) -> BoolRef:
     ...
 
 
-def Not(value: ExprRef) -> Bool:
+def Not(value: ExprRef) -> BoolRef:
     ...
 
 
@@ -254,6 +274,14 @@ def Store(array: ArrayRef[K, V], key: K, value: V) -> ArrayRef[K, V]:
 
 
 def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
+    ...
+
+
+def set_param(key: str, value: str) -> None:
+    ...
+
+
+def substitute(expr: ExprRef, *pairs: Tuple[ExprRef, ExprRef]) -> ExprRef:
     ...
 
 

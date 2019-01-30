@@ -1,12 +1,16 @@
 import ast
 import inspect
+import re
 import sys
 from pprint import pprint
-from typing import Any, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar, cast
 
+import rainbow  # type: ignore
 from termcolor import cprint
 
 from .test_utils import write_dot
+
+ObjString = re.compile(r"<\S+ object at \S+>")
 
 
 def print_locations(node: ast.AST) -> None:
@@ -45,6 +49,26 @@ def pipe_print(value: Any, message: str = "") -> Any:
     pprint(value)
     print("End pipe print")
     return value
+
+
+def code_format(value: Any, message: str = "") -> str:
+    import black  # type: ignore
+    from .requester import format
+    import shutil
+
+    width = shutil.get_terminal_size().columns
+    return black.format_str(str(value), width)  # type: ignore
+
+
+Replacer = rainbow.Replacer(colorize=True)
+
+
+def colorize(code: str) -> str:
+    return cast(str, Replacer.color(code))
+
+
+def dataclass_dump(code: Any) -> str:
+    return colorize(code_format(ObjString.sub(r'"\0"', str(code))))
 
 
 A = TypeVar("A")

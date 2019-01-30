@@ -1,5 +1,4 @@
 # from __future__ import annotations
-import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -14,6 +13,8 @@ from typing import (
 )
 
 from logbook import Logger
+
+import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
@@ -171,7 +172,7 @@ class Filter(GenericVisitor[Coroutine]):
         # We have to work up from the bottom
         for line in reversed(code.code):
             target = target_finder(line)
-            if line.line == self.target_line or target in targets:
+            if self.keep_line(line, target in targets):
                 deps = self.dep_finder(line)
                 lines.insert(0, line)
                 if target != StoreMutation:
@@ -190,6 +191,9 @@ class Filter(GenericVisitor[Coroutine]):
             parent=parent,
             code=lines,
         )
+
+    def keep_line(self, line: n.stmt, in_targets: bool) -> bool:
+        return line.line == self.target_line or in_targets or isinstance(line, n.Assert)
 
     def visit_StartBlock(
         self, start: sbb.StartBlock, stop: StopBlock, targets: TargetManager
@@ -285,7 +289,29 @@ class Filter(GenericVisitor[Coroutine]):
         return v.__class__(**results)
 
 
-def filter_lines(target_line: int, module: sbb.Module) -> Optional[sbb.Request]:
+class FunctionChooser(ComputedLineFilterer):
+    def visit_Module(self, module: sbb.Module) -> Optional[sbb.Request]:
+        self.update_target(module)
+        for func in module.functions.values():
+            updated = self.visit_FunctionDef(func)
+            if updated is not None:
+                assert isinstance(updated, sbb.FunctionDef)
+                return sbb.Request(module=module, code=func)
+            else:
+                log.notice(f"Throwing out `{func.name}` because no lines were kept")
+        blocktree = self.visit_BlockTree(module.code)
+        if blocktree is None:
+            return None
+        assert isinstance(blocktree, sbb.BlockTree)
+        return sbb.Request(module=module, code=module.code)
+
+
+def filter_lines(
+    target_line: int, module: sbb.Module, slice: bool = True
+) -> Optional[sbb.Request]:
     log.info(f"Filtering starting at line {target_line}")
-    filtered = ComputedLineFilterer(target_line).visit_Module(module)
+    if slice:
+        filtered = ComputedLineFilterer(target_line).visit_Module(module)
+    else:
+        filtered = FunctionChooser(target_line).visit_Module(module)
     return filtered

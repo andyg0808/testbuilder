@@ -8,16 +8,20 @@ Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
     --lines=<line,line,line>  Lines to generate tests for
     --verbose=<level>  Output all logging information for <level> and above
+    --ignore=<file,file>  Ignore all logging from the specified files
+    --no-color  Do not use color highlighting when printing Python
+    --autopreprocess=<file.json>  Automatically run the preprocess
+                                  rules in <file.json> on each input file.
 """
 
-import sys
+import json
 from pathlib import Path
 
-from docopt import docopt
-
 import typeassert
+from docopt import docopt
 from logbook import NullHandler, StderrHandler
 from testbuilder.generate import generate_tests
+from testbuilder.requester import PlainRequester, Requester
 
 typeassert.log.setLevel("ERROR")
 
@@ -39,7 +43,21 @@ def main(filename: str) -> None:
     else:
         lines = None
 
-    test_cases = generate_tests(filepath, text, sys.stdin, depth=depth, lines=lines)
+    requester = None
+    if opts["--no-color"]:
+        requester = PlainRequester()
+    else:
+        requester = Requester()
+
+    if opts["--autopreprocess"]:
+        with open(opts["--autopreprocess"]) as f:
+            changes = json.load(f)
+    else:
+        changes = None
+
+    test_cases = generate_tests(
+        filepath, text, requester, depth=depth, lines=lines, changes=changes
+    )
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
         tests.write("from importlib import import_module")
         tests.write("\n\n".join(test_cases))
@@ -48,11 +66,21 @@ def main(filename: str) -> None:
 if __name__ == "__main__":
     opts = docopt(__doc__)
 
-    verbosity = opts["--verbose"]
     NullHandler().push_application()
-    if verbosity:
-        StderrHandler(level=verbosity).push_application()
+
+    ignores_s = opts["--ignore"]
+    if ignores_s:
+        ignores = set(ignores_s.split(","))
     else:
-        StderrHandler(level="NOTICE").push_application()
+        ignores = set()
+
+    def ignore_filter(r, h):
+        return r.channel not in ignores
+
+    verbosity = opts["--verbose"]
+    if verbosity:
+        StderrHandler(level=verbosity, filter=ignore_filter).push_application()
+    else:
+        StderrHandler(level="NOTICE", filter=ignore_filter).push_application()
 
     main(opts["<source.py>"])

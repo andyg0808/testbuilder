@@ -6,7 +6,7 @@ import z3
 from logbook import Logger
 
 from .type_registrar import TypeRegistrar
-from .z3_types import AnySort, Reference
+from .z3_types import AnySort, NilSort, Reference
 
 log = Logger("type_builder")
 
@@ -33,7 +33,7 @@ class TypeBuilder:
         return self
 
     def none(self) -> TypeBuilder:
-        self.datatype.declare("none")
+        self.datatype.declare("Nil")
         return self
 
     def references(self) -> TypeBuilder:
@@ -58,9 +58,12 @@ class TypeBuilder:
             anytype, reftype = z3.CreateDatatypes(self.datatype, self.reftype)
             return TypeRegistrar(anytype, reftype)
 
-    def construct(self) -> TypeRegistrar:
+    def all(self) -> TypeBuilder:
         self.none()
         self.references()
         self.wrappers()
         self.structures()
-        return self.build()
+        return self
+
+    def construct(self) -> TypeRegistrar:
+        return self.all().build()

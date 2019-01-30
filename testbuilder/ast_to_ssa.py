@@ -11,9 +11,8 @@ from typing import (
     cast,
 )
 
-from logbook import Logger
-
 import dataclasses
+from logbook import Logger
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
@@ -123,6 +122,8 @@ class AstToSSABasicBlocks(SimpleVisitor):
     ) -> sbb.BlockTreeIndex:
         assert isinstance(tree, sbb.BlockTreeIndex)
         expr = self.stmt_visitor(node)
+        if expr is None:
+            return tree
         return self.append_code(tree, expr)
 
     def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> MaybeIndex:
@@ -372,6 +373,12 @@ class StatementVisitor(GenericVisitor):
         self.variables = variables
         self.expr_visitor = AstBuilder(variables)
 
+    def visit_Import(self, node: ast.Import) -> None:
+        return None
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        return None
+
     def visit_Assign(self, node: ast.Assign) -> n.Set:
         expr = self.expr_visitor(node.value)
         target = self.get_target_variable(node.targets[0])
@@ -383,7 +390,7 @@ class StatementVisitor(GenericVisitor):
             var.set_count = self.variables.get_target(node.id)
             return var
         elif isinstance(node, ast.Attribute):
-            val = self.visit(node.value)
+            val = self.expr_visitor(node.value)
             return n.Attribute(e=val, value=val, attr=node.attr)
         else:
             raise RuntimeError("Unknown target type")
@@ -450,6 +457,9 @@ class AstBuilder(GenericVisitor):
         value = self.visit(node.value)
         return n.Attribute(e=value, value=value, attr=node.attr)
 
+    def visit_Tuple(self, node: ast.Tuple) -> n.Call:
+        raise RuntimeError("Cannot work with tuple in input")
+
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v
         # print(f"visiting generically to {node}")
@@ -465,7 +475,13 @@ class AstBuilder(GenericVisitor):
                 f"({type(node)}); no such attribute exists"
             )
         fields = []
-        for field in dataclasses.fields(equivalent):
+        try:
+            dataclass_fields = dataclasses.fields(equivalent)
+        except TypeError as err:
+            raise TypeError(
+                f"Couldn't get fields on {equivalent} of type {type(equivalent)}"
+            ) from err
+        for field in dataclass_fields:
             if field.name == "line":
                 fields.append(getattr(node, "lineno"))
                 continue

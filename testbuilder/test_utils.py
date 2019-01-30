@@ -66,19 +66,24 @@ def dotify(obj: Any, reverse: bool = False) -> List[str]:
     node_strings = []
     link_strings = []
     nodes = [obj]
-    seen: Set[Any] = set()
+    seen: Set[int] = set()
     while len(nodes) > 0:
         node = nodes.pop(0)
         if id(node) in seen:
-            next
-        seen.add(id(obj))
+            continue
+        seen.add(id(node))
         node_strings.append(_label_format(node, _dot_label(node)))
         next_nodes = nexts(node)
         for n in next_nodes:
+            options = []
+            if isinstance(n, tuple):
+                options.append(n[1])
+                n = n[0]
+            opt_string = ",".join(options)
             if reverse:
-                link = f"{id(n)} -> {id(node)};"
+                link = f"{id(n)} -> {id(node)} [{opt_string}];"
             else:
-                link = f"{id(node)} -> {id(n)};"
+                link = f"{id(node)} -> {id(n)} [{opt_string}];"
             link_strings.append(link)
             nodes.append(n)
     return node_strings + link_strings
@@ -187,7 +192,7 @@ def nexts_return_block(obj: sbb.ReturnBlock) -> List[Any]:
 
 @nexts.register(sbb.Conditional)
 def nexts_conditional_block(obj: sbb.Conditional) -> List[Any]:
-    return [obj.true_branch, obj.false_branch]
+    return [obj.true_branch, obj.false_branch, (obj.parent, 'style="dotted"')]
 
 
 @nexts.register(sbb.FunctionDef)

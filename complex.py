@@ -9,4 +9,4 @@ def print_all(count):
 
 
 def run_them():
-    print_all(mult(5, 4))
+    print_all(mult(2, 3))

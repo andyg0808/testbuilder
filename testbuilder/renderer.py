@@ -1,50 +1,71 @@
-from pathlib import Path
+import re
 from typing import Any, Mapping
 
+from logbook import Logger
+
+from .requester import Requester
 from .ssa_basic_blocks import TestData
+
+ThrowParser = re.compile(r"fail::(\w+)$")
+
+log = Logger("renderer")
 
 
 def prompt_and_render_test(
-    source: Path,
-    name: str,
-    io: Any,
+    requester: Requester,
     prompt: str,
-    text: str,
     test: TestData,
     test_number: int,
     args: Mapping[str, Any],
 ) -> str:
-    print("=================================================")
-    # print(text)
-    print(test.source_text)
+    requester.output("=================================================")
+    requester.formatted_output(test.source_text)
+    expected = ""
     if prompt == "":
-        print(f"What is the expected output of {name} from these arguments? {args}")
+        requester.output("Suppose we pass the following arguments:")
+        requester.formatted_output(str(args))
+        expected = requester.input(
+            f"What is the expected output of {test.name} from these arguments? "
+        )
     else:
-        print(prompt)
-    expected = io.readline()
-    return render_test(source, name, test_number, args, expected)
+        expected = requester.input(prompt)
+    return render_test(test=test, test_number=test_number, args=args, expected=expected)
 
 
 def render_test(
-    source: Path, name: str, test_number: int, args: Mapping[str, Any], expected: Any
+    test: TestData, test_number: int, args: Mapping[str, Any], expected: str
 ) -> str:
-    keys = [x for x in sorted(args.keys()) if x != "ret"]
-    arg_strings = [f"{key} = {args[key]}" for key in keys]
+    keys = [x.id for x in test.free_variables]
+    arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
     args_string = "\n    ".join(arg_strings)
     call_args_string = ", ".join(keys)
-    call_string = f"{name}({call_args_string})"
+    call_string = f"{test.name}({call_args_string})"
     expected = str(expected).strip()
-    print("Test number", test_number)
+    log.info(f"Building test number {test_number}")
     if test_number > 0:
         number_str = f"_{test_number+1}"
     else:
         number_str = ""
-    # See https://stackoverflow.com/a/38813946/2243495
-    # This allows correct importing of modules with unacceptable
-    # Python names
-    return f"""
-{name} = import_module("{source.stem}").{name}
-def test_{name}{number_str}():
+    throw_match = ThrowParser.match(expected)
+    if throw_match:
+        exception_name = throw_match[1]
+        return f"""
+import pytest
+from testbuilder.pair import Pair
+{test.name} = import_module("{test.filepath.stem}").{test.name}
+def test_{test.name}{number_str}():
+    {args_string}
+    with pytest.raises({exception_name}):
+        {call_string}
+    """
+    else:
+        # See https://stackoverflow.com/a/38813946/2243495
+        # This allows correct importing of modules with unacceptable
+        # Python names
+        return f"""
+from testbuilder.pair import Pair
+{test.name} = import_module("{test.filepath.stem}").{test.name}
+def test_{test.name}{number_str}():
     {args_string}
     actual = {call_string}
     expected = {expected}

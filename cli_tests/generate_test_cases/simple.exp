@@ -9,13 +9,13 @@ proc max {a b} {
 }
 
 proc wait_and_respond args {
-    expect -re {expected.*\{.*: ([-\d]+), .*: ([-\d]+)\}.*}
+    expect -re {\{.*: ([-\d]+), .*: ([-\d]+)\}.*expected}
     send "[max $expect_out(1,string) $expect_out(2,string)]\n"
 }
 
 file delete simple_test.py
 
-spawn python3 ./run.py simple.py
+spawn python3 ./run.py --no-color simple.py
 wait_and_respond
 wait_and_respond
 system pytest simple_test.py

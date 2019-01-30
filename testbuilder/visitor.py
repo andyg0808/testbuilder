@@ -1,4 +1,3 @@
-import dataclasses
 import inspect
 import re
 import traceback
@@ -23,6 +22,8 @@ from typing import (
 
 from logbook import Logger
 from toolz import mapcat
+
+import dataclasses
 
 log = Logger("visitor")
 
@@ -79,6 +80,7 @@ class SimpleVisitor(Generic[B]):
             if func is not None:
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
+                log.trace(f"Found function {func}")
                 return func
             elif suggestion is None:
                 suggestions = getattr(self, "__suggestions", {})

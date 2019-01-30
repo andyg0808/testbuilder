@@ -1,14 +1,31 @@
 import ast
+from pathlib import Path
 
+import pytest
+
+import dataclasses
 import z3
 
-from . import ssa_basic_blocks as sbb
 from .expression_builder import get_expression
+from .pair import Pair
 from .solver import solve
 from .type_builder import TypeBuilder
 from .variable_expander import expand_variables
 
-Registrar = TypeBuilder().wrappers().build()
+Registrar = TypeBuilder().construct()
+
+
+def compare_values(expected, actual, actual_dict):
+    if callable(expected):
+        print("actual", actual)
+        print("dict", actual_dict)
+        print("expected", expected)
+        assert expected(actual, actual_dict)
+    else:
+        print("expected", expected)
+        print("actual", actual)
+        assert type(expected) == type(actual)
+        assert expected == actual
 
 
 def compare_dicts(actual, expected):
@@ -19,31 +36,47 @@ def compare_dicts(actual, expected):
         assert actual is not None
     keys = actual.keys() | expected.keys()
     for k in keys:
-        left = actual[k]
-        right = expected[k]
-        assert type(left) == type(right)
-        assert left == right
+        compare_values(expected[k], actual[k], actual)
 
 
-def check_solve(code, conditions, expected, unroll=1):
+def check_solve(code, conditions, expected, unroll=1, slice=True):
+    """
+    Args:
+        code (str): A string of source code to check
+        conditions (str): Additional code establishing constraints
+                          which should be added to the solver. This
+                          allows some control over the solution which
+                          is found.
+        expected (dict): A dict of the expected values for each solver
+                         variable.
+    """
     parse = ast.parse(code)
-    testdata = get_expression(Registrar, -1, parse, depth=unroll)
+    testdata = get_expression(
+        Registrar, Path("<source>"), -1, parse, depth=unroll, slice=slice
+    )
     if conditions:
         condition_expression = expand_variables(conditions, Registrar)
-        expression = sbb.TestData(
-            name=testdata.name,
-            source_text=testdata.source_text,
-            free_variables=testdata.free_variables,
-            expression=z3.And(testdata.expression, condition_expression),
+        expression = dataclasses.replace(
+            testdata, expression=z3.And(testdata.expression, condition_expression)
         )
     else:
         expression = testdata
     print("expression", expression)
     res = solve(Registrar, expression)
+    print(f"Solution: {res}")
     if isinstance(expected, spotcheck):
         expected.check(res)
     else:
         compare_dicts(res, expected)
+
+
+class spotcheck:
+    def __init__(self, spots):
+        self.spots = spots
+
+    def check(self, actual):
+        for k, v in self.spots.items():
+            compare_values(v, actual[k], actual)
 
 
 def test_basic_solution():
@@ -81,6 +114,18 @@ def test(r):
     )
 
 
+def test_bool_force():
+    check_solve(
+        """
+def test(r):
+    if r == False:
+        return 42
+        """,
+        None,
+        {"ret": 42, "r": False},
+    )
+
+
 def test_loop_unrolling_case():
     check_solve(
         """
@@ -90,9 +135,9 @@ def print_all(count):
         print(count)
     return count
     """,
-        "pyname_count == Any.Int(20)",
+        "pyname_count == Any.Int(10)",
         spotcheck({"ret": 0}),
-        unroll=20,
+        unroll=10,
     )
 
 
@@ -140,17 +185,110 @@ def print_all(s_thing):
     )
 
 
-def merge(*dicts):
-    merged = {}
-    for d in dicts:
-        merged.update(d)
-    return merged
+def test_dereference():
+    check_solve(
+        """
+def test(a):
+    if a.left == 3 and a.right == 4:
+        return 22
+        """,
+        "ret == Any.Int(22)",
+        spotcheck({"a": Pair(3, 4)}),
+    )
 
 
-class spotcheck:
-    def __init__(self, spots):
-        self.spots = spots
+def test_store_mutation():
+    check_solve(
+        """
+def test(a):
+    a.left += 3
+    assert a.right == False
+    return a.left
+        """,
+        "ret == Any.Int(2)",
+        spotcheck({"a": Pair(-1, False)}),
+    )
 
-    def check(self, actual):
-        for k, v in self.spots.items():
-            assert actual[k] == v
+
+def test_solve_invalid_reference():
+    check_solve(
+        """
+def test(a):
+    return a
+        """,
+        "Any.is_Reference(pyname_a)",
+        {"ret": None, "a": None},
+    )
+
+
+def test_solve_invalid_reference_with_store():
+    check_solve(
+        """
+def example(a):
+    b.left = 42
+    return a
+        """,
+        "Any.is_Reference(pyname_a)",
+        spotcheck(
+            {"ret": lambda ret, d: d["a"] == ret, "a": lambda a, d: d["ret"] == a}
+        ),
+        slice=False,
+    )
+
+
+def test_solve_multilayer():
+    check_solve(
+        """
+def example(a):
+    a.left.right.left.left.right.right = 22
+    if a.left.right.right.left.left:
+        return a.left.right.right.left.left
+    else:
+        assert a.left.right.right.left.right == 454
+        return a.left.right.right.left.right
+        """,
+        False,
+        spotcheck({"ret": 454}),
+        slice=False,
+    )
+
+
+def test_solve():
+    check_solve(
+        """
+def example(a):
+    a = Pair(1, 2)
+    b = a
+    a = Pair(3, 4)
+    c = a.right
+    return b.left
+        """,
+        None,
+        spotcheck({"ret": 1, "c": 4}),
+        slice=False,
+    )
+
+
+def test_solve_is_not_none():
+    check_solve(
+        """
+def example(a):
+    if a is None:
+        return 4
+    return 3
+    """,
+        None,
+        spotcheck({"a": lambda a, d: a is not None}),
+    )
+
+
+def test_solve_is_none():
+    check_solve(
+        """
+def example(a):
+    if a is None:
+        return 3
+        """,
+        None,
+        spotcheck({"a": None}),
+    )

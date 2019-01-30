@@ -1,5 +1,6 @@
 import ast
 from functools import reduce, singledispatch
+from pathlib import Path
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
@@ -87,6 +88,10 @@ class TrueBranch(Controlled, Parented):
 
 @dataclass
 class ForcedTrueBranch(TrueBranch):
+    """Represents a `TrueBranch` which causes an exit when taken (e.g., a
+    branch of an `if` with a `return` at the bottom.
+    """
+
     pass
 
 
@@ -97,6 +102,11 @@ class FalseBranch(Controlled, Parented):
 
 @dataclass
 class ForcedFalseBranch(FalseBranch):
+    """Represents a `FalseBranch` which causes an exit when taken (e.g., a
+    branch of an `if` with a `return` at the bottom.
+
+    """
+
     pass
 
 
@@ -240,7 +250,6 @@ class Variable:
 
 @dataclass
 class TestData:
-    # filepath: Path
     # line: int
     name: str
     # statements: Dependency
@@ -249,6 +258,7 @@ class TestData:
     # function: Optional[FunctionDef] = None
     free_variables: List[Variable]
     expression: Expression
+    filepath: Path
 
 
 @singledispatch

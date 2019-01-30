@@ -1,13 +1,14 @@
+import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, List, Mapping, Optional, Set, Tuple, Union
 
 from toolz import concat, pipe
 
 from logbook import Logger
 
-from . import ssa_basic_blocks as sbb
+from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
@@ -15,13 +16,14 @@ from .iter_monad import liftIter
 from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
+from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
 from .renderer import prompt_and_render_test
+from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
 from .ssa_to_expression import ssa_to_expression
 from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
-from .utils import WriteDot
 
 log = Logger("generator")
 
@@ -29,8 +31,9 @@ log = Logger("generator")
 def generate_tests(
     source: Path,
     text: str,
-    io: Any,
+    requester: Requester,
     *,
+    changes: Optional[ChangeList] = None,
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
@@ -54,40 +57,45 @@ def generate_tests(
             )
             return ""
         function = request.code
-        _ssa_to_expression = partial(ssa_to_expression, registrar)
+        _ssa_to_expression = partial(ssa_to_expression, source, registrar)
 
-        expr: sbb.TestData = pipe(
-            request,
-            repair,
-            PhiFilterer(),
-            FunctionSubstitute(),
-            ExprStripper(),
-            _ssa_to_expression,
+        cleaned_expr: sbb.TestData = pipe(
+            request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
         )
-        solution: Optional[Solution] = solve(registrar, expr)
+        log.debug(
+            "\n=====Cleaned expression=====\n"
+            + utils.dataclass_dump(cleaned_expr)
+            + "\n=====END cleaned expression====="
+        )
+        testdata = _ssa_to_expression(cleaned_expr)
+        solution: Optional[Solution] = solve(registrar, testdata)
         if not solution:
             log.error(
                 f"Couldn't generate a test for line {target_line};"
                 " maybe try increasing the loop unrolling depth?"
             )
-            log.debug(f"Couldn't solve {expr}")
+            log.debug(f"Couldn't solve {testdata.expression}")
             return ""
         _filter_inputs = partial(filter_inputs, function)
-        _render_test = partial(
-            prompt_and_render_test,
-            source,
-            function.name,
-            io,
-            prompt,
-            text,
-            expr,
-            test_number,
-        )
+
+        def _render_test(args: Mapping[str, Any]) -> str:
+            return prompt_and_render_test(
+                requester=requester,
+                prompt=prompt,
+                test=testdata,
+                test_number=test_number,
+                args=args,
+            )
+
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
 
     def parse_file(text: str) -> AST:
-        return parse(text, str(source))
+        if changes:
+            preprocess: Preprocessor = AutoPreprocessor(text, changes)
+        else:
+            preprocess = Preprocessor(text)
+        return preprocess(parse(text, str(source)))
 
     def function_splitter(
         module: sbb.Module
@@ -101,6 +109,7 @@ def generate_tests(
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
+    log.debug("\n=====SSA module=====\n{}\n=====END SSA module=====", module)
     builder = TypeBuilder()
     registrar = builder.construct()
     _generate_test = partial(generate_test, registrar, module)
@@ -126,4 +135,4 @@ def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:
 
 
 def default_value(name: str) -> Any:
-    return 1234567890
+    return 1_234_567_890

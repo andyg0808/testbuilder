@@ -137,13 +137,10 @@ def test_bounding_2():
     #     (((z3.IntVal(1) < z3.IntVal(2)), (z3.IntVal(2) < z3.IntVal(3)) > z3.IntVal(2)) > z3.IntVal(1)
     # ) > -z3.IntVal(4)
     expected = z3.And(
-        z3.And(
-            z3.And(
-                z3.And(z3.IntVal(1) < z3.IntVal(2), z3.IntVal(2) < z3.IntVal(3)),
-                z3.IntVal(3) > z3.IntVal(2),
-            ),
-            z3.IntVal(2) > z3.IntVal(1),
-        ),
+        z3.IntVal(1) < z3.IntVal(2),
+        z3.IntVal(2) < z3.IntVal(3),
+        z3.IntVal(3) > z3.IntVal(2),
+        z3.IntVal(2) > z3.IntVal(1),
         z3.IntVal(1) > -z3.IntVal(4),
     )
     conversion_assert(expected, "1 < 2 < 3 > 2 > 1 > -4")

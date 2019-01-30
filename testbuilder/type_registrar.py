@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Generator, List, Optional, Tuple, cast
 
-import z3
 from logbook import Logger
 from typeassert import assertify
+
+import z3
+from dataclasses import dataclass
 from z3 import DatatypeRef
 
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -13,7 +14,7 @@ from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_not, bool_or
+from .z3_types import AnyT, Expression, NilSort, Reference, SortSet, bool_and, bool_or
 
 log = Logger("type_registrar")
 
@@ -45,10 +46,12 @@ class TypeRegistrar:
                 unrestricted, as with expand.
         """
         if len(restricted) > 0:
-            union = self.expand(name)
-            sorts: SortSet = {
-                e.expr.sort() for e in union.expressions if e.expr.sort() in restricted
-            }
+            sorts = restricted
+            # union = self.expand(name)
+            # sorts = union.sorts & restricted
+            # assert (
+            #     len(sorts) > 0
+            # ), f"Expected at least one of these sorts to be present {restricted}"
 
             log.debug(f"Restricting new VariableAnyType for {name} to sorts: {sorts}")
             expressions: List[CExpr] = []
@@ -77,7 +80,9 @@ class TypeRegistrar:
         self, union: TypeUnion, types: SortSet = set(), name: Optional[str] = None
     ) -> TypeUnion:
         """
-        This function is the equivalent of `expand` but for full TypeUnions. It expands the values in each
+        This function is the equivalent of `expand` but for full
+        TypeUnions. It expands the values in each
+
         Arguments:
             union: A type union to expand values in
             types: A set of sorts to restrict the results to. If the
@@ -118,10 +123,11 @@ class TypeRegistrar:
 
         Arguments:
             name: A string to use as the name value for the
-            constraints created during expansion
+                  constraints created during expansion
             orig_constraints: A list of constraints which might
-            already be placed on the value being passed in. These will
-            be added to each of the new values' constraints list.
+                              already be placed on the value being
+                              passed in. These will be added to each
+                              of the new values' constraints list.
         """
         exprs = []
         sorts: SortSet = set()
@@ -157,6 +163,13 @@ class TypeRegistrar:
         return cast(AnyT, wrap_func(val))
 
     def wrap(self, val: Expression) -> AnyT:
+        """Take a raw Z3 value and wrap it in an Any.
+
+        Args:
+            val: The value to wrap
+        Return:
+            The same value in an Any
+        """
         if val.sort() == z3.IntSort():
             return self._extract_or_wrap(val, "i", "Int")
         if val.sort() == z3.StringSort():
@@ -186,28 +199,7 @@ class TypeRegistrar:
 
         return TypeUnion.wrap(bool_or(exprs))
 
-    def to_boolean(self, value: TypeUnion, invert: bool = False) -> TypeUnion:
-        """
-        Convert all the expressions in this TypeUnion to booleans,
-        applying truthy standards as needed in order to convert
-        non-boolean types.
-        """
-        if isinstance(value, ExpandableTypeUnion):
-            # Always want to work on expanded version, because a
-            # VariableTypeUnion is either unconstrained or empty. If
-            # unconstrained, we need to expand to get constrained
-            # values. If empty, expanding gets the appropriate
-            # constrained values.
-            return self.to_boolean(value.expand(), invert)
-        bools: List[CExpr] = []
-        for cexpr in value.expressions:
-            expr = self.expr_to_boolean(cexpr.expr)
-            if invert:
-                expr = bool_not(expr)
-            bools.append(CExpr(expr=expr, constraints=cexpr.constraints))
-        return TypeUnion(expressions=bools, sorts={z3.BoolSort()})
-
-    def expr_to_boolean(self, expr: Expression) -> z3.Bool:
+    def expr_to_boolean(self, expr: Expression) -> z3.BoolRef:
         """
         Apply Python's truthy standards to make a boolean of an
         expression.
@@ -215,22 +207,26 @@ class TypeRegistrar:
         if z3.is_int(expr):
             return expr != z3.IntVal(0)
         elif z3.is_bool(expr):
-            return cast(z3.Bool, expr)
+            return cast(z3.BoolRef, expr)
         elif z3.is_string(expr):
             return z3.Length(cast(z3.String, expr)) != z3.IntVal(0)
         elif expr.sort() == self.anytype:
-            none = getattr(self.anytype, "none", None)
-            if none is not None and expr.decl() == none:
+            nil = getattr(self.anytype, "Nil", None)
+            if expr.decl() == nil.decl():
                 return z3.BoolVal(False)
             else:
                 # For all anytype values that aren't None, assume they
                 # are true. This will not be the case for some types,
                 # but it's true for our current set of types
                 return z3.BoolVal(True)
-        else:
-            raise UnknownConversionException(
-                f"Can't convert {expr.sort().name()} to boolean"
-            )
+        elif expr.sort() == self.reftype:
+            is_pair = getattr(self.reftype, "is_Pair", None)
+            if is_pair is None:
+                raise RuntimeError("No is_Pair available for reftype")
+            return z3.BoolVal(True)
+        raise UnknownConversionException(
+            f"Can't convert {expr.sort().name()} ({expr.decl().name()}) to boolean"
+        )
 
     def unwrap(self, val: Expression) -> Expression:
         """

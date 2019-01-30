@@ -1,5 +1,6 @@
 import ast
 from functools import partial
+from pathlib import Path
 
 from toolz import pipe
 
@@ -64,7 +65,9 @@ class ExpressionChecker:
                 expected = expand_variables(
                     expected, self.registrar, local_vals=local_vals
                 )
-        _get_expression = partial(get_expression, self.registrar, line, depth=depth)
+        _get_expression = partial(
+            get_expression, self.registrar, Path("<path>"), line, depth=depth
+        )
         test_data = pipe(code_string.strip(), ast.parse, _get_expression)
         if test_data is None:
             expr = None

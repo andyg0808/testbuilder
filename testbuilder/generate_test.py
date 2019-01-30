@@ -1,13 +1,17 @@
-from io import StringIO
 from pathlib import Path
+from unittest.mock import Mock, call, create_autospec
 
 from hypothesis import assume, given
 from hypothesis.strategies import integers
 
+from testbuilder.pair import Pair
+
+from . import requester, ssa_basic_blocks as sbb
 from .generate import generate_tests
 from .hypothesis_entities import functions
 from .renderer import render_test
 
+Requester = create_autospec(requester.Requester)
 # def test_generation():
 #     code = """
 # def maximize(a, b):
@@ -77,13 +81,19 @@ def test_generate_basic(op, a, b):
     function_args = {"a": a, "b": b}
     function_expectation = op(a, b)
     function = render_test(
-        source=Path("mycode.py"),
-        name=function_name,
         test_number=0,
+        test=sbb.TestData(
+            filepath=Path("mycode.py"),
+            name=function_name,
+            source_text="",
+            free_variables=[sbb.Variable("a"), sbb.Variable("b")],
+            expression=None,
+        ),
         args=function_args,
         expected=function_expectation,
     )
     expected = f"""
+from testbuilder.pair import Pair
 {op.__name__} = import_module("mycode").{op.__name__}
 def test_{op.__name__}():
     a = {a}
@@ -100,13 +110,19 @@ def test_generate_list_handler():
     function_args = {"a": [1, 2, 3]}
     function_expectation = 1
     function = render_test(
-        source=Path("mycode.py"),
-        name=function_name,
         test_number=0,
+        test=sbb.TestData(
+            filepath=Path("mycode.py"),
+            name=function_name,
+            source_text="",
+            free_variables=[sbb.Variable("a")],
+            expression=None,
+        ),
         args=function_args,
         expected=function_expectation,
     )
     expected = """
+from testbuilder.pair import Pair
 min = import_module("mycode").min
 def test_min():
     a = [1, 2, 3]
@@ -137,8 +153,10 @@ def boring(fishy):
         #     boring(fishy)
         #     """
     ]
-    io = StringIO("")
-    tests = generate_tests(Path("boring.py"), code, io)
+    requester = Requester()
+    requester.input.return_value = ""
+    tests = generate_tests(Path("boring.py"), code, requester)
+    assert requester.input.call_count == 0
     assert tests == expected
 
 
@@ -153,6 +171,7 @@ def caller(fishy):
     """
     expected = {
         """
+from testbuilder.pair import Pair
 boring = import_module("boring").boring
 def test_boring():
     fishy = 1234567890
@@ -161,6 +180,7 @@ def test_boring():
     assert actual == expected
     """,
         """
+from testbuilder.pair import Pair
 caller = import_module("boring").caller
 def test_caller():
     fishy = None
@@ -169,8 +189,10 @@ def test_caller():
     assert actual == expected
     """,
     }
-    io = StringIO("36\n36\n")
-    tests = generate_tests(Path("boring.py"), code, io)
+    requester = Requester()
+    requester.input.side_effect = ["36", "36"]
+    tests = generate_tests(Path("boring.py"), code, requester)
+    assert requester.input.call_count == 2
     assert set(tests) == expected
 
 

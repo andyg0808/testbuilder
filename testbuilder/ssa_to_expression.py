@@ -1,11 +1,12 @@
 from functools import singledispatch
+from pathlib import Path
 from typing import List, Optional, cast
 
 from astor import to_source  # type: ignore
+from logbook import Logger
 from toolz import mapcat, pipe
 
 import z3
-from logbook import Logger
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -17,8 +18,9 @@ from .store import Store
 from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
+from .utils import dataclass_dump
 from .visitor import GatherVisitor, SimpleVisitor
-from .z3_types import bool_all, bool_any, bool_true
+from .z3_types import BOOL_TRUE, bool_all, bool_any
 
 log = Logger("ssa_to_expression")
 
@@ -53,10 +55,13 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         if len(node.parents) == 1:
             return self.visit(node.parents[0], stop)
         exprs = []
+        types = []
         for parent in node.parents:
-            parent_exprs = cast(List[z3.Bool], self.visit(parent, stop))
+            self.type_manager.push()
+            parent_exprs = cast(List[z3.BoolRef], self.visit(parent, stop))
             exprs.append(bool_all(parent_exprs))
-
+            types.append(self.type_manager.pop())
+        self.type_manager.merge_and_update(types)
         return [bool_any(exprs)]
 
     def visit_Stmt(self, node: n.stmt) -> ExprList:
@@ -75,7 +80,9 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         return exprs
 
     def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
-        return self.visit(node.end, None)
+        exprs = self.visit(node.end, None)
+        assert not self.store.pending(), "Store pending at highest level"
+        return exprs
 
     def visit_Conditional(self, node: sbb.Conditional, stop: StopBlock) -> ExprList:
         if stop and node.number == stop.number:
@@ -119,9 +126,9 @@ class SSAVisitor(SimpleVisitor[ExprList]):
                     # empty. By using True as a result, we avoid
                     # making `bool_all` angry when deciding what to do
                     # with this branch.
-                    branches.append([bool_true()])
+                    branches.append([BOOL_TRUE])
                 else:
-                    branches.append(res)
+                    branches.append(cast(List[z3.BoolRef], res))
         if branches:
             branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
             self.type_manager.merge_and_update(types)
@@ -145,15 +152,15 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return code + [self.to_boolean(self.expression(node.conditional), invert=True)]
 
-    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.Bool:
+    def to_boolean(self, value: TypeUnion, invert: bool = False) -> z3.BoolRef:
         if value.is_bool():
             return value.to_expr(invert)
         else:
-            return self.registrar.to_boolean(value, invert).to_expr()
+            return self.store.to_boolean(value, invert).to_expr()
 
 
 @singledispatch
-def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
+def process(filepath: Path, node: object, visitor: SSAVisitor) -> sbb.TestData:
     """
     Convert a node to a TestData description
 
@@ -163,16 +170,19 @@ def process(node: object, visitor: SSAVisitor) -> sbb.TestData:
 
 
 @process.register(sbb.FunctionDef)
-def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
+def process_fut(
+    node: sbb.FunctionDef, filepath: Path, visitor: SSAVisitor
+) -> sbb.TestData:
     if node.blocks.empty():
-        expression = bool_true()
+        expression = BOOL_TRUE
     else:
         expressions = visitor.visit(node.blocks)
         for expr in expressions:
             assert z3.is_bool(expr), f"{expr} is not boolean"
-        expression = bool_all(cast(List[z3.Bool], expressions))
+        expression = bool_all(cast(List[z3.BoolRef], expressions))
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
+        filepath=filepath,
         name=node.name,
         free_variables=free_variables,
         expression=expression,
@@ -181,13 +191,16 @@ def process_fut(node: sbb.FunctionDef, visitor: SSAVisitor) -> sbb.TestData:
 
 
 @process.register(sbb.BlockTree)
-def process_sut(code: sbb.BlockTree, visitor: SSAVisitor) -> sbb.TestData:
+def process_sut(
+    code: sbb.BlockTree, filepath: Path, visitor: SSAVisitor
+) -> sbb.TestData:
     if code.empty():
-        expression = bool_true()
+        expression = BOOL_TRUE
     else:
-        expression = bool_all(cast(List[z3.Bool], visitor.visit(code)))
+        expression = bool_all(cast(List[z3.BoolRef], visitor.visit(code)))
     free_variables = find_variables(code)
     return sbb.TestData(
+        filepath=filepath,
         name="code",
         free_variables=free_variables,
         expression=expression,
@@ -210,24 +223,31 @@ def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
     return VariableFinder().visit(code)
 
 
-def ssa_to_expression(registrar: TypeRegistrar, request: sbb.Request) -> sbb.TestData:
+def ssa_to_expression(
+    filepath: Path, registrar: TypeRegistrar, request: sbb.Request
+) -> sbb.TestData:
     assert isinstance(request, sbb.Request)
     # TODO: I think this is right?
     v = SSAVisitor(registrar, request.module)
     assert isinstance(request.code, sbb.BlockTree) or isinstance(
         request.code, sbb.FunctionDef
     )
-    return process(request.code, v)
+    return process(request.code, filepath, v)
 
 
 def ssa_lines_to_expression(
-    registrar: TypeRegistrar, target_line: int, module: sbb.Module
+    filepath: Path,
+    registrar: TypeRegistrar,
+    target_line: int,
+    slice: bool,
+    module: sbb.Module,
 ) -> Optional[sbb.TestData]:
-    request = filter_lines(target_line, module)
-    log.debug("Filtered request {}", request)
+    request = filter_lines(target_line, module, slice)
+
+    log.debug("Filtered request {}", dataclass_dump(request))
     if request is None:
         return None
     repaired_request: sbb.Request = pipe(
         request, repair, PhiFilterer(), FunctionSubstitute()
     )
-    return ssa_to_expression(registrar, repaired_request)
+    return ssa_to_expression(filepath, registrar, repaired_request)

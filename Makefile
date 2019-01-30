@@ -1,5 +1,3 @@
-.PHONY: build docs pytest mypy
-
 # From https://stackoverflow.com/a/31605520/2243495
 SHELL=/bin/bash -o pipefail
 
@@ -20,57 +18,56 @@ TESTFILE = testbuilder
 #   --maxfail=n Stop after `n` failed tests. This is useful to get a
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
-PYTEST_FLAGS = -x -ra --ff -Wignore
+#   --duration=n Show the `n` slowest tests.
+PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5
 ifdef parallel
-	PYTEST = pytest $(PYTEST_FLAGS) -n=$(shell nproc) $(TESTFILE)
-else
-	PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
+	PYTEST_FLAGS += -n=$(shell nproc)
 endif
+PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
 
+.PHONY: build
 build:
-	pipenv run $(MYPY)
-	pipenv run $(PYTEST)
-	./runtests
+	pipenv run $(MAKE) $(RUN)
 
-pytest: PYTEST_FLAGS += --looponfail
-pytest:
-	pipenv run $(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
-
-mypy:
-	pipenv run $(MYPY)
-
-fastbuild:
-	$(MYPY)
-	$(PYTEST) 2>&1 | sed "/seconds ======/,$$ d" | rainbow.py --colorize
-	./runtests
-
-livetest:
-	$(MYPY)
-	./runtests
-
-run:
-	expect run.exp
-
+.PHONY: watch
 watch:
-	fd ".py|.exp|.tcl" | entr -c test.sh $(MAKE) $(RUN)
-test:
+	fd ".py|.exp|.tcl|Makefile" | entr -c test.sh $(MAKE) $(RUN)
+
+.PHONY: fastbuild
+fastbuild: mypy pytest runtests snippets
+
+.PHONY: livetest
+livetest: mypy runtests snippets
+
+.PHONY: mypy
+mypy:
+	$(MYPY)
+
+.PHONY: pytest
+pytest:
+	$(PYTEST)
+
+.PHONY: plaintest
+plaintest:
+	$(PYTEST)
+
+.PHONY: runtests
+runtests:
 	./runtests
 
-# The rest of this makefile is taken from the default Makefile Sphinx makes
-# Minimal makefile for Sphinx documentation
-#
+.PHONY: snippets
+snippets:
+	cd private && $(MAKE)
 
-# You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = pipenv run sphinx-build
-SPHINXPROJ    = TestBuilder
-SOURCEDIR     = docs
-BUILDDIR      = build
-
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+.PHONY: docs
 docs:
-	@$(SPHINXBUILD) -M Makefile "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	pipenv run sphinx-apidoc --separate --force --o docs/api testbuilder
+	pipenv run sphinx-build -b html docs build
+
+.PHONY: doc-server
+doc-server:
+	python -m http.server --directory build
+
+.PHONY: clean
+clean:
+	rm -r build

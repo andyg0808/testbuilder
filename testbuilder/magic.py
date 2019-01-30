@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import inspect
-from dataclasses import dataclass
+import traceback
 from itertools import product
 from typing import (
+    Any,
     Callable,
+    Iterable,
     Iterator,
     List,
+    NewType,
     Optional,
     Sequence,
     Tuple,
@@ -16,15 +19,16 @@ from typing import (
     cast,
 )
 
+from logbook import Logger
 from toolz import concat
 
 import z3
-from logbook import Logger
+from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
 from .expandable_type_union import ExpandableTypeUnion
 from .type_union import TypeUnion
-from .z3_types import Expression, SortSet
+from .z3_types import Expression, SortMarker, SortSet
 
 log = Logger("Magic")
 
@@ -53,12 +57,23 @@ class MagicRegistration(MagicTag):
     function: MagicFunc
 
 
+SortingFunc = Callable[[Expression], Optional[SortMarker]]
+
+
+class MagicFountain:
+    def __init__(self, sorting: SortingFunc) -> None:
+        self.sorting = sorting
+
+    def __call__(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
+        return Magic.m(self.sorting, types)
+
+
 class Magic:
     """
     Function overloading and abstract type handling.
 
     A `Magic` is a callable object which accepts any number of
-    `TypeUnion`s as arguments. It searches for registered handler
+    `TypeUnion` s as arguments. It searches for registered handler
     functions for each element of the Cartesian product of all the
     expressions in each `TypeUnion`. It discards those n-tuples of
     types which do not have defined handlers. For those which do have
@@ -67,7 +82,17 @@ class Magic:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, sorting: SortingFunc) -> None:
+        self.sorting = sorting
+        stack = traceback.extract_stack()
+        filtered_stack = [s for s in stack if s.filename != __file__]
+        self.definition = filtered_stack[-1]
+        if not hasattr(self, "name"):
+            self.name = (
+                f"{self.__class__} (created at "
+                f"{self.definition.filename}:{self.definition.lineno} "
+                f"in {self.definition.name})"
+            )
         self.funcref: List[MagicRegistration] = []
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
@@ -76,15 +101,20 @@ class Magic:
                 self.funcref.append(registration)
 
     @staticmethod
-    def m(*types: TagType) -> Callable[[MagicFunc], Magic]:
+    def m(
+        sorting: Optional[SortingFunc], types: Sequence[TagType]
+    ) -> Callable[[MagicFunc], Magic]:
         """
         Create an instance of Magic and call `magic` on it with these
         arguments.
         """
-        res = Magic()
-        return res.magic(*types)
+        if not sorting:
+            res = Magic(lambda x: x.sort())
+        else:
+            res = Magic(sorting)
+        return res.magic(types)
 
-    def magic(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
+    def magic(self, types: Sequence[TagType]) -> Callable[[MagicFunc], Magic]:
         """
         To register an existing function for some argument types, call
         this method, passing it the argument types, and pass the
@@ -136,12 +166,12 @@ class Magic:
         to the resulting `TypeUnion`. n-tuples of the Cartesian
         product for which handlers do not exist will be skipped.
         """
-        log.info(f"Called {self.__class__} on {args}")
+        log.info(f"Called {self.name}\non {args}")
         functions = []
         if self.should_expand(*args) and Magic.unexpanded(args):
-            print("Expanding", args)
+            log.debug("Expanding {}", args)
             newargs = Magic.expand(args)
-            print("Expanded", newargs)
+            log.debug("Expanded {}", newargs)
             return self(*newargs)
         for arg_tuple in Magic.cartesian_product(args):
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
@@ -150,16 +180,34 @@ class Magic:
             functions.append((func, cast(Tuple, arg_tuple)))
         exprs = []
         sorts: SortSet = set()
+        found_none = False
         for func, arg_tuple in functions:
             res = self.__call_on_exprs(func.function, arg_tuple)
             if res is None:
                 continue
             exprs.append(res)
-            sorts.add(res.expr.sort())
+            sort = self.sorting(res.expr)
+            if sort is not None:
+                sorts.add(sort)
+            else:
+                found_none = True
+        if found_none:
+            # The sorts list should be empty if we found a None value
+            # because an empty sort list is treated as an Any, and the
+            # None value means any sort is allowed.  This is only an
+            # issue because we're caching the set of sorts that the
+            # `CExpr`s in our `TypeUnion` have. If we looked at each
+            # one each time, we could check if its type is applicable,
+            # and we could directly check if an AnyType is allowed.
+            assert len(sorts) == 0
         if len(exprs) == 0 and Magic.unexpanded(args):
             log.info(f"No results for {args} Expanding and retrying.")
             newargs = Magic.expand(args)
             return self(*newargs)
+        elif len(exprs) == 0:
+            log.info(
+                f"No results for {args}. Could not expand. Returning empty TypeUnion"
+            )
         else:
             arg_lines = ",\n".join(str(x) for x in args)
             arg_lines = f"({arg_lines})"

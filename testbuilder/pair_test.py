@@ -76,8 +76,8 @@ def test_read_inferred_pair():
         "x.left > 0",
         """
 And(Any.i(Ref.Pair_left(store[Any.r(pyname_x)])) > 0,
-    And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)])),
-        Any.is_Reference(pyname_x)))
+    Any.is_Int(Ref.Pair_left(store[Any.r(pyname_x)])),
+        Any.is_Reference(pyname_x))
         """,
     )
 
@@ -156,8 +156,8 @@ and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2))) \
 and pyname_b == pyname_a \
 and store_2 == Store(store_1, Any.r(pyname_a),
           Ref.Pair(Any.Int(2), Ref.Pair_right(store_1[Any.r(pyname_a)]))) \
-and And(Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2),
-        Any.is_Int(Ref.Pair_left(store_2[Any.r(pyname_b)])))
+and Not(Any.i(Ref.Pair_left(store_2[Any.r(pyname_b)])) != 2)\
+and Any.is_Int(Ref.Pair_left(store_2[Any.r(pyname_b)]))
         """,
     )
 
@@ -171,9 +171,9 @@ a.right < 23
         """
 Any.is_Reference(pyname_a) \
 and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Ref.Pair_left(store[Any.r(pyname_a)]), Any.Int(3))) \
-and And(Any.i(Ref.Pair_right(store_1[Any.r(pyname_a)])) < 23,
-        And(Any.is_Int(Ref.Pair_right(store_1[Any.r(pyname_a)])),
-        Any.is_Reference(pyname_a)))
+and Any.i(Ref.Pair_right(store_1[Any.r(pyname_a)])) < 23 \
+and Any.is_Int(Ref.Pair_right(store_1[Any.r(pyname_a)])) \
+and Any.is_Reference(pyname_a)
         """,
     )
 
@@ -186,10 +186,10 @@ a.left < 23
         """,
         """
 Any.is_Reference(pyname_a) \
-        and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(3), Ref.Pair_right(store[Any.r(pyname_a)]))) \
-and And(Any.i(Ref.Pair_left(store_1[Any.r(pyname_a)])) < 23,
-        And(Any.is_Int(Ref.Pair_left(store_1[Any.r(pyname_a)])),
-        Any.is_Reference(pyname_a)))
+and store_1 == Store(store, Any.r(pyname_a), Ref.Pair(Any.Int(3), Ref.Pair_right(store[Any.r(pyname_a)]))) \
+and Any.i(Ref.Pair_left(store_1[Any.r(pyname_a)])) < 23\
+and Any.is_Int(Ref.Pair_left(store_1[Any.r(pyname_a)]))\
+and Any.is_Reference(pyname_a)
         """,
     )
 
@@ -219,4 +219,101 @@ pyname_x == Any.Reference(Reference(0))\
 and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(2)))\
 and store_2 == Store(store_1, Any.r(pyname_x), Ref.Pair(Any.Int(3), Ref.Pair_right(store_1[Any.r(pyname_x)])))
     """,
+    )
+
+
+def test_infer_modify_pair():
+    check_expression(
+        """
+def test(a):
+    a.left = a.left + 32
+    return a
+    """,
+        """
+And(Any.is_Int(Ref.Pair_left(store[Any.r(pyname_a)])),
+    Any.is_Reference(pyname_a),
+    store_1 == Store(store, Any.r(pyname_a),
+                     Ref.Pair(Any.Int(Any.i(Ref.Pair_left(store[Any.r(pyname_a)])) + 32),\
+                              Ref.Pair_right(store[Any.r(pyname_a)]))),
+    ret == pyname_a
+)
+""",
+    )
+
+
+def test_pair_with_odd_names():
+    with pytest.raises(RuntimeError):
+        check_expression(
+            """
+def test(a):
+    a.first = 42
+    return a
+        """,
+            None,
+        )
+
+
+def test_pair_equality():
+    check_expression(
+        """
+a = Pair(1,1)
+b = Pair(1,1)
+a == b
+""",
+        """
+pyname_a == Any.Reference(Reference(0)) and \
+store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(1))) and \
+pyname_b == Any.Reference(Reference(1)) and \
+store_2 == Store(store_1, Reference(1), Ref.Pair(Any.Int(1), Any.Int(1))) and \
+Ref.Pair_left(store_2[Any.r(pyname_a)]) == Ref.Pair_left(store_2[Any.r(pyname_b)]) \
+and Ref.Pair_right(store_2[Any.r(pyname_a)]) == Ref.Pair_right(store_2[Any.r(pyname_b)])
+""",
+    )
+
+
+def test_pair_inequality():
+    check_expression(
+        """
+a = Pair(1,1)
+b = Pair(1,1)
+a != b
+""",
+        """
+pyname_a == Any.Reference(Reference(0)) and \
+store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(1))) and \
+pyname_b == Any.Reference(Reference(1)) and \
+store_2 == Store(store_1, Reference(1), Ref.Pair(Any.Int(1), Any.Int(1))) and \
+Or(Ref.Pair_left(store_2[Any.r(pyname_a)]) != Ref.Pair_left(store_2[Any.r(pyname_b)]),
+   Ref.Pair_right(store_2[Any.r(pyname_a)]) != Ref.Pair_right(store_2[Any.r(pyname_b)]))
+""",
+    )
+
+
+def test_pair_identity():
+    check_expression(
+        "Pair(1,1) is not Pair(1,1)",
+        """
+Reference(0) != Reference(1) \
+and store_2 == Store(Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(1))),
+                         Reference(1), Ref.Pair(Any.Int(1), Any.Int(1)))
+""",
+    )
+    check_expression(
+        """
+a = Pair(1,1)
+a is a
+""",
+        """
+pyname_a == Any.Reference(Reference(0)) \
+and store_1 == Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(1))) \
+and Any.r(pyname_a) == Any.r(pyname_a)
+""",
+    )
+    check_expression(
+        "Pair(1,1) is Pair(1,1)",
+        """
+Reference(0) == Reference(1) \
+and store_2 == Store(Store(store, Reference(0), Ref.Pair(Any.Int(1), Any.Int(1))),
+                     Reference(1), Ref.Pair(Any.Int(1), Any.Int(1)))
+""",
     )
