@@ -861,7 +861,6 @@ and ret == pyname_res
     )
 
 
-@pytest.mark.xfail
 def test_string_length():
     check_expression(
         """
@@ -873,9 +872,15 @@ def test(s: str):
     return res
     """,
         """
-    (Length("s") > 2 and pyname_res == 1 or \
-    Not(Length("s") > 2) and pyname_res == 0) and \
-    ret == pyname_res
+Or(
+    And(
+        Length(Any.s(pyname_s)) > 2,
+        Any.is_String(pyname_s),
+        pyname_res == Any.Int(1),
+    ),
+        And(Not(Length(Any.s(pyname_s)) > 2),
+            Any.is_String(pyname_s),
+            pyname_res == Any.Int(0))) and ret == pyname_res
     """,
     )
 
