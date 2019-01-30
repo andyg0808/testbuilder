@@ -977,6 +977,33 @@ def tester(b):
     # a string). This needs to be discovered!
 
 
+def test_flow_dependent_anytype():
+    check_expression(
+        """
+def tester(a, b):
+    if b == 2:
+        ret = a*1
+    else:
+        ret = a
+    return ret
+        """,
+        """
+And(Or(
+    And(
+        Any.i(pyname_b) == 2,
+        Any.is_Int(pyname_b),
+        pyname_ret == Any.Int(Any.i(pyname_a) * 1),
+        Any.is_Int(pyname_a)),
+    And(Or(
+            Not(Any.i(pyname_b) == 2) and Any.is_Int(pyname_b),
+            Any.is_Bool(pyname_b),
+            Any.is_String(pyname_b)),
+        pyname_ret == pyname_a)),
+ret == pyname_ret)
+""",
+    )
+
+
 @pytest.mark.skip
 def test_node_swap():
     # After an example in khurshid2003
