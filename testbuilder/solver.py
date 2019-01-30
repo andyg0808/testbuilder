@@ -70,8 +70,7 @@ class Z3PythonConverter:
         if z3.is_int(value):
             return value.as_long()  # type: ignore
         elif z3.is_string(value):
-            strvalue = value.as_string()  # type: ignore
-            return strvalue[1:-1]
+            return value.as_string()  # type: ignore
         elif z3.is_bool(value) and not isinstance(value, z3.QuantifierRef):
             return bool(value)
         elif isinstance(value, z3.DatatypeRef):
