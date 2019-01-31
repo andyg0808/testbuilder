@@ -59,9 +59,10 @@ def generate_tests(
         function = request.code
         _ssa_to_expression = partial(ssa_to_expression, source, registrar)
 
-        cleaned_expr: sbb.TestData = pipe(
+        cleaned_expr: sbb.Request = pipe(
             request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
         )
+        assert isinstance(cleaned_expr, sbb.Request)
         log.debug(
             "\n=====Cleaned expression=====\n"
             + utils.dataclass_dump(cleaned_expr)
