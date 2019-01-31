@@ -89,8 +89,8 @@ def test_generate_basic(op, a, b):
             free_variables=[sbb.Variable("a"), sbb.Variable("b")],
             expression=None,
             expected_result=function_expectation,
+            args=function_args,
         ),
-        args=function_args,
     )
     expected = f"""
 from testbuilder.pair import Pair
@@ -118,8 +118,8 @@ def test_generate_list_handler():
             free_variables=[sbb.Variable("a")],
             expression=None,
             expected_result=function_expectation,
+            args=function_args,
         ),
-        args=function_args,
     )
     expected = """
 from testbuilder.pair import Pair

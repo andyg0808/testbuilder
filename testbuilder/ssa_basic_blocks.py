@@ -262,7 +262,12 @@ class TestData:
 
 
 @dataclass
-class ExpectedTestData(TestData):
+class SolvedTestData(TestData):
+    args: Mapping[str, Any]
+
+
+@dataclass
+class ExpectedTestData(SolvedTestData):
     expected_result: str
 
 

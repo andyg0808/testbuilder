@@ -5,7 +5,7 @@ from logbook import Logger
 
 from .dataclass_utils import make_extended_instance
 from .requester import Requester
-from .ssa_basic_blocks import ExpectedTestData, TestData
+from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
 
 ThrowParser = re.compile(r"fail::(\w+)$")
 
@@ -13,18 +13,14 @@ log = Logger("renderer")
 
 
 def prompt_and_render_test(
-    requester: Requester,
-    prompt: str,
-    test: TestData,
-    test_number: int,
-    args: Mapping[str, Any],
+    requester: Requester, prompt: str, test: SolvedTestData, test_number: int
 ) -> str:
     requester.output("=================================================")
     requester.formatted_output(test.source_text)
     expected = ""
     if prompt == "":
         requester.output("Suppose we pass the following arguments:")
-        requester.formatted_output(str(args))
+        requester.formatted_output(str(test.args))
         expected = requester.input(
             f"What is the expected output of {test.name} from these arguments? "
         )
@@ -33,14 +29,12 @@ def prompt_and_render_test(
     expected_test = make_extended_instance(
         test, ExpectedTestData, expected_result=expected
     )
-    return render_test(test=expected_test, test_number=test_number, args=args)
+    return render_test(test=expected_test, test_number=test_number)
 
 
-def render_test(
-    test: ExpectedTestData, test_number: int, args: Mapping[str, Any]
-) -> str:
+def render_test(test: ExpectedTestData, test_number: int) -> str:
     keys = [x.id for x in test.free_variables]
-    arg_strings = [f"{key} = {repr(args[key])}" for key in keys]
+    arg_strings = [f"{key} = {repr(test.args[key])}" for key in keys]
     args_string = "\n    ".join(arg_strings)
     call_args_string = ", ".join(keys)
     call_string = f"{test.name}({call_args_string})"

@@ -4,12 +4,12 @@ from functools import partial
 from pathlib import Path
 from typing import Any, List, Mapping, Optional, Set, Tuple, Union
 
-from toolz import concat, pipe
-
 from logbook import Logger
+from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
+from .dataclass_utils import make_extended_instance
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
@@ -79,12 +79,14 @@ def generate_tests(
         _filter_inputs = partial(filter_inputs, function)
 
         def _render_test(args: Mapping[str, Any]) -> str:
+            updated_testdata = make_extended_instance(
+                testdata, sbb.SolvedTestData, args=args
+            )
             return prompt_and_render_test(
                 requester=requester,
                 prompt=prompt,
-                test=testdata,
+                test=updated_testdata,
                 test_number=test_number,
-                args=args,
             )
 
         test: str = pipe(solution, _filter_inputs, _render_test)
