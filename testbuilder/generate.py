@@ -78,16 +78,15 @@ def generate_tests(
             return ""
         _filter_inputs = partial(filter_inputs, function)
 
-        def _render_test(args: Mapping[str, Any]) -> str:
+        def _prompt_for_test(args: sbb.Solution) -> sbb.ExpectedTestData:
             updated_testdata = make_extended_instance(
                 testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
-            expected = prompt_for_test(
+            return prompt_for_test(
                 requester=requester, prompt=prompt, test=updated_testdata
             )
-            return render_test(expected)
 
-        test: str = pipe(solution, _filter_inputs, _render_test)
+        test: str = pipe(solution, _filter_inputs, _prompt_for_test, render_test)
         return test
 
     def parse_file(text: str) -> AST:
