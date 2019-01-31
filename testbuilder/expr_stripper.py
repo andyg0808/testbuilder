@@ -2,7 +2,7 @@
 Drops lines which only contain bare expressions which are not function
 calls.
 """
-from typing import Optional
+from typing import Optional, TypeVar
 
 from logbook import Logger
 
@@ -10,6 +10,8 @@ from . import nodetree as n, ssa_basic_blocks as sbb
 from .visitor import UpdateVisitor
 
 log = Logger("expr_stripper")
+
+E = TypeVar("E", bound=n.expr)
 
 
 class ExprStripper(UpdateVisitor):
@@ -28,7 +30,7 @@ class ExprStripper(UpdateVisitor):
             code=code,
         )
 
-    def visit_Expr(self, expr: n.Expr) -> Optional[n.Expr]:
+    def visit_Expr(self, expr: n.Expr[E]) -> Optional[n.Expr[E]]:
         if not isinstance(expr.value, n.Call):
             log.debug(f"Discarding {expr}")
             # Discard code which is not a call site

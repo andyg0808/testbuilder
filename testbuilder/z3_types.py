@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Iterable, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 import z3
 
@@ -11,13 +11,13 @@ class ReferenceT(z3.DatatypeRef):
     ...
 
 
-class ReferenceSort(z3.DatatypeSortRef):
+class ReferenceSort(z3.DatatypeSortRef[ReferenceT]):
     def Reference(self, r: z3.Int) -> ReferenceT:
         ...
 
 
 def make_ref_type() -> ReferenceSort:
-    reference = z3.Datatype("Reference")
+    reference: z3.Datatype[ReferenceT] = z3.Datatype("Reference")
     reference.declare("Reference", ("r", z3.IntSort()))
     return cast(ReferenceSort, reference.create())
 
@@ -51,7 +51,7 @@ class PairT(z3.DatatypeRef):
     ...
 
 
-class AnySort(z3.DatatypeSortRef):
+class AnySort(z3.DatatypeSortRef[Any]):
     def Int(self, i: z3.Int) -> AnyT:
         ...
 

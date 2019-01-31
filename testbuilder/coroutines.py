@@ -33,5 +33,6 @@ def retrieve(xs: Generator[None, T, U], val: T) -> U:
         # Finish generator
         xs.send(val)
     except StopIteration as stop:
-        return cast(U, stop.value)
+        # `StopIteration`s created by a generator have this value attribute
+        return stop.value  # type: ignore
     raise RuntimeError(f"Too many yields in {xs}!")

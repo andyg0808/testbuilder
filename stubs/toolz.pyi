@@ -1,9 +1,4 @@
-from typing import Callable, Iterable, List, Mapping, Sequence, TypeVar, overload
-
-
-def compose(*funcs: Callable) -> Callable:
-    ...
-
+from typing import Any, Callable, Iterable, List, Mapping, Sequence, TypeVar, overload
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -18,6 +13,11 @@ _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 
 
+def compose(*funcs: Callable[..., Any]) -> Callable[..., Any]:
+    ...
+
+
+@overload
 def pipe(data: T, funcs: Callable[[T], _T1]) -> _T1:
     ...
 
@@ -49,7 +49,19 @@ def pipe(
 
 
 @overload
-def pipe(data: T, funcs: Callable) -> U:
+def pipe(
+    data: T,
+    func1: Callable[[T], _T1],
+    func2: Callable[[_T1], _T2],
+    func3: Callable[[_T2], _T3],
+    func4: Callable[[_T3], _T4],
+    func5: Callable[[_T4], _T5],
+) -> _T5:
+    ...
+
+
+@overload
+def pipe(data: T, funcs: Callable[..., Any]) -> U:
     ...
 
 

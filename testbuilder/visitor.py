@@ -69,7 +69,7 @@ class SimpleVisitor(Generic[B]):
         func = self.__find_function(v.__class__)
         return func(v, *args, **kwargs)
 
-    def __find_function(self, start_class: Type) -> Callable[..., B]:
+    def __find_function(self, start_class: Type[T]) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
         suggestion = None
         if start_class in cache:
@@ -90,7 +90,7 @@ class SimpleVisitor(Generic[B]):
         else:
             raise VisitError(start_class)
 
-    def __scan_functions(self, target_class: Type) -> Callable[..., B]:
+    def __scan_functions(self, target_class: Type[T]) -> Callable[..., B]:
         typecache = getattr(self, "__type_cache", None)
         if typecache is None:
             typecache = {}
@@ -212,7 +212,7 @@ class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
         return
 
 
-class UpdateVisitor(GenericVisitor):
+class UpdateVisitor(GenericVisitor[Any]):
     def __init__(self) -> None:
         self.visited_nodes: MMapping[int, Any] = {}
 
@@ -221,9 +221,9 @@ class UpdateVisitor(GenericVisitor):
         # This makes handling trees with joins well-behaved.
         if self.id(v) in self.visited_nodes:
             return self.get_updated(v)
-        visited = super().visit(v, *args, **kwargs)
+        visited: A = super().visit(v, *args, **kwargs)
         self.visited_nodes[self.id(v)] = visited
-        return cast(A, visited)
+        return visited
 
     def get_updated(self, original: A) -> A:
         return cast(A, self.visited_nodes[self.id(original)])

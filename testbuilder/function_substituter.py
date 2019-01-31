@@ -1,10 +1,12 @@
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, TypeVar
 
 import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .variable_manager import VAR_START_VALUE
 from .visitor import CoroutineVisitor, UpdateVisitor
+
+E = TypeVar("E", bound=n.expr)
 
 
 class FunctionSubstitute(UpdateVisitor):
@@ -93,8 +95,8 @@ class FunctionSubstitute(UpdateVisitor):
         return self.call_id
 
     def visit_Expr(
-        self, expr: n.Expr, call_info: Optional[n.Prefix] = None, **kwargs: Any
-    ) -> Optional[n.Expr]:
+        self, expr: n.Expr[E], call_info: Optional[n.Prefix] = None, **kwargs: Any
+    ) -> Optional[n.Expr[E]]:
         if not call_info:
             return self.generic_visit(expr, **kwargs)
         if isinstance(expr.value, n.Call):

@@ -35,14 +35,16 @@ class DatatypeSortRef(SortRef, Generic[T]):
         ...
 
 
-class Datatype:
+class Datatype(Generic[T]):
     def __init__(self, name: str) -> None:
         ...
 
-    def declare(self, name: str, *args: Tuple[str, Union[SortRef, Datatype]]) -> None:
+    def declare(
+        self, name: str, *args: Tuple[str, Union[SortRef, Datatype[Any]]]
+    ) -> None:
         ...
 
-    def create(self) -> DatatypeSortRef:
+    def create(self) -> DatatypeSortRef[T]:
         ...
 
 
@@ -261,7 +263,7 @@ def Concat(left: String, right: String) -> String:
     ...
 
 
-def CreateDatatypes(*types: Datatype) -> Tuple[DatatypeSortRef, ...]:
+def CreateDatatypes(*types: Datatype[Any]) -> Tuple[DatatypeSortRef[Any], ...]:
     ...
 
 
@@ -273,7 +275,7 @@ def Store(array: ArrayRef[K, V], key: K, value: V) -> ArrayRef[K, V]:
     ...
 
 
-def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
+def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef[K, V]:
     ...
 
 
