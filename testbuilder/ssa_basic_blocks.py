@@ -251,11 +251,11 @@ class Variable:
 @dataclass
 class TestData:
     # line: int
-    name: str
     # statements: Dependency
     # lines: Set[int]
-    source_text: str
     # function: Optional[FunctionDef] = None
+    name: str
+    source_text: str
     free_variables: List[Variable]
     expression: Expression
     filepath: Path
@@ -263,6 +263,7 @@ class TestData:
 
 @dataclass
 class SolvedTestData(TestData):
+    test_number: int
     args: Mapping[str, Any]
 
 

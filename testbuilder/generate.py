@@ -80,13 +80,10 @@ def generate_tests(
 
         def _render_test(args: Mapping[str, Any]) -> str:
             updated_testdata = make_extended_instance(
-                testdata, sbb.SolvedTestData, args=args
+                testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
             return prompt_and_render_test(
-                requester=requester,
-                prompt=prompt,
-                test=updated_testdata,
-                test_number=test_number,
+                requester=requester, prompt=prompt, test=updated_testdata
             )
 
         test: str = pipe(solution, _filter_inputs, _render_test)

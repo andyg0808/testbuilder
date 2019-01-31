@@ -14,8 +14,9 @@ def test_expected_failure():
         filepath=Path("/dev/null"),
         expected_result="fail::RuntimeError",
         args={"fish": 44},
+        test_number=0,
     )
-    actual = render_test(test=test_data, test_number=0)
+    actual = render_test(test_data)
     expected = """
 import pytest
 from testbuilder.pair import Pair

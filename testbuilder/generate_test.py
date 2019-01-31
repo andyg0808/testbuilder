@@ -81,8 +81,7 @@ def test_generate_basic(op, a, b):
     function_args = {"a": a, "b": b}
     function_expectation = op(a, b)
     function = render_test(
-        test_number=0,
-        test=sbb.ExpectedTestData(
+        sbb.ExpectedTestData(
             filepath=Path("mycode.py"),
             name=function_name,
             source_text="",
@@ -90,7 +89,8 @@ def test_generate_basic(op, a, b):
             expression=None,
             expected_result=function_expectation,
             args=function_args,
-        ),
+            test_number=0,
+        )
     )
     expected = f"""
 from testbuilder.pair import Pair
@@ -110,8 +110,7 @@ def test_generate_list_handler():
     function_args = {"a": [1, 2, 3]}
     function_expectation = 1
     function = render_test(
-        test_number=0,
-        test=sbb.ExpectedTestData(
+        sbb.ExpectedTestData(
             filepath=Path("mycode.py"),
             name=function_name,
             source_text="",
@@ -119,7 +118,8 @@ def test_generate_list_handler():
             expression=None,
             expected_result=function_expectation,
             args=function_args,
-        ),
+            test_number=0,
+        )
     )
     expected = """
 from testbuilder.pair import Pair
