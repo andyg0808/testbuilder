@@ -261,10 +261,13 @@ class TestData:
     filepath: Path
 
 
+Solution = Mapping[str, Any]
+
+
 @dataclass
 class SolvedTestData(TestData):
     test_number: int
-    args: Mapping[str, Any]
+    args: Solution
 
 
 @dataclass

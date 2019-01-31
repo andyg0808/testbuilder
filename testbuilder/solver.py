@@ -10,12 +10,13 @@ from typing import (
 )
 
 from logbook import Logger
+from typeassert import assertify
 
 import z3
-from typeassert import assertify
 
 from . import ssa_basic_blocks as sbb
 from .pair import Pair
+from .ssa_basic_blocks import Solution
 from .type_registrar import TypeRegistrar
 from .z3_types import NilSort, Reference
 
@@ -24,7 +25,6 @@ ModelItem = Union[z3.FuncInterp, z3.QuantifierRef]
 
 VAR_NAME = re.compile(r"pyname_(.*)")
 
-Solution = Mapping[str, Any]
 
 StoreParser = re.compile(r"^store$|^store_(\d+)$")
 
