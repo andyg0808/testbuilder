@@ -12,9 +12,9 @@ ThrowParser = re.compile(r"fail::(\w+)$")
 log = Logger("renderer")
 
 
-def prompt_and_render_test(
+def prompt_for_test(
     requester: Requester, prompt: str, test: SolvedTestData
-) -> str:
+) -> ExpectedTestData:
     requester.output("=================================================")
     requester.formatted_output(test.source_text)
     expected = ""
@@ -29,7 +29,7 @@ def prompt_and_render_test(
     expected_test = make_extended_instance(
         test, ExpectedTestData, expected_result=expected
     )
-    return render_test(expected_test)
+    return expected_test
 
 
 def render_test(test: ExpectedTestData) -> str:

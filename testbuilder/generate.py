@@ -17,7 +17,7 @@ from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
-from .renderer import prompt_and_render_test
+from .renderer import prompt_for_test, render_test
 from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -82,9 +82,10 @@ def generate_tests(
             updated_testdata = make_extended_instance(
                 testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
-            return prompt_and_render_test(
+            expected = prompt_for_test(
                 requester=requester, prompt=prompt, test=updated_testdata
             )
+            return render_test(expected)
 
         test: str = pipe(solution, _filter_inputs, _render_test)
         return test
