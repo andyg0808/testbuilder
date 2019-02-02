@@ -21,8 +21,8 @@ log = Logger("type_registrar")
 
 @dataclass
 class TypeRegistrar:
-    anytype: z3.DatatypeSortRef[AnyT]
-    reftype: Optional[z3.DatatypeSortRef[Any]]
+    anytype: z3.DatatypeSortRef
+    reftype: Optional[z3.DatatypeSortRef]
 
     def store(self, name: str) -> StoreArray:
         assert self.reftype is not None

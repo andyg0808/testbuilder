@@ -24,8 +24,8 @@ class TypeBuilder:
         else:
             name = f"Any_{self.index}"
         self.name = name
-        self.datatype: z3.Datatype[AnyT] = z3.Datatype(name)
-        self.reftype: Optional[z3.Datatype[ReferentT]] = None
+        self.datatype: z3.Datatype = z3.Datatype(name)
+        self.reftype: Optional[z3.Datatype] = None
 
     def wrappers(self) -> TypeBuilder:
         self.datatype.declare("Int", ("i", z3.IntSort()))

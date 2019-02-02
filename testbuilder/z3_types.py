@@ -11,13 +11,13 @@ class ReferenceT(z3.DatatypeRef):
     ...
 
 
-class ReferenceSort(z3.DatatypeSortRef[ReferenceT]):
+class ReferenceSort(z3.DatatypeSortRef):
     def Reference(self, r: z3.Int) -> ReferenceT:
         ...
 
 
 def make_ref_type() -> ReferenceSort:
-    reference: z3.Datatype[ReferenceT] = z3.Datatype("Reference")
+    reference: z3.Datatype = z3.Datatype("Reference")
     reference.declare("Reference", ("r", z3.IntSort()))
     return cast(ReferenceSort, reference.create())
 
@@ -33,7 +33,7 @@ class ReferentT(z3.DatatypeRef):
     ...
 
 
-class AnySort(z3.DatatypeSortRef[Any]):
+class AnySort(z3.DatatypeSortRef):
     def Int(self, i: z3.Int) -> AnyT:
         ...
 

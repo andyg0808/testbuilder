@@ -21,7 +21,7 @@ class SortRef(AstRef):
 T = TypeVar("T", bound=DatatypeRef)
 
 
-class DatatypeSortRef(SortRef, Generic[T]):
+class DatatypeSortRef(SortRef):
     def num_constructors(self) -> int:
         ...
 
@@ -31,20 +31,18 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def constructor(self, i: int) -> FuncDeclRef:
         ...
 
-    def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
+    def accessor(self, i: int, arg: int) -> Callable[[DatatypeRef], ExprRef]:
         ...
 
 
-class Datatype(Generic[T]):
+class Datatype:
     def __init__(self, name: str) -> None:
         ...
 
-    def declare(
-        self, name: str, *args: Tuple[str, Union[SortRef, Datatype[Any]]]
-    ) -> None:
+    def declare(self, name: str, *args: Tuple[str, Union[SortRef, Datatype]]) -> None:
         ...
 
-    def create(self) -> DatatypeSortRef[T]:
+    def create(self) -> DatatypeSortRef:
         ...
 
 
@@ -263,7 +261,7 @@ def Concat(left: String, right: String) -> String:
     ...
 
 
-def CreateDatatypes(*types: Datatype[Any]) -> Tuple[DatatypeSortRef[Any], ...]:
+def CreateDatatypes(*types: Datatype) -> Tuple[DatatypeSortRef, ...]:
     ...
 
 

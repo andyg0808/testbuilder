@@ -52,7 +52,7 @@ BoolSort = z3.BoolSort()
 
 
 class SortNamer:
-    def __init__(self, anytype: z3.DatatypeSortRef[AnyT]) -> None:
+    def __init__(self, anytype: z3.DatatypeSortRef) -> None:
         keys = ["Nil"]
         self.anytype = anytype
         self.values: List[z3.DatatypeRef] = []
@@ -470,10 +470,7 @@ class IsMagic(Magic):
 
 class EqMagic(IsMagic):
     def __init__(
-        self,
-        sorting: SortingFunc,
-        store: Store,
-        reftype: Optional[z3.DatatypeSortRef[ReferentT]],
+        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
     ) -> None:
         super().__init__(sorting)
         self.store = store
@@ -526,10 +523,7 @@ class IsNotMagic(Magic):
 
 class NotEqMagic(IsNotMagic):
     def __init__(
-        self,
-        sorting: SortingFunc,
-        store: Store,
-        reftype: Optional[z3.DatatypeSortRef[ReferentT]],
+        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
     ) -> None:
         super().__init__(sorting)
         self.store = store
