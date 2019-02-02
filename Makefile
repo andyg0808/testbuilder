@@ -19,7 +19,7 @@ TESTFILE = testbuilder
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
 #   --duration=n Show the `n` slowest tests.
-PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5
+PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5 --indulgent-ordering
 ifdef parallel
 	PYTEST_FLAGS += -n=$(shell nproc)
 endif
