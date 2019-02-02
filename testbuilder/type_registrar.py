@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator, List, Optional, Tuple, cast
+from typing import Any, Generator, List, Optional, Tuple, cast
 
 from logbook import Logger
 from typeassert import assertify
@@ -14,15 +14,15 @@ from .expandable_type_union import ExpandableTypeUnion
 from .store_array import StoreArray
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .z3_types import AnyT, Expression, NilSort, Reference, SortSet, bool_and, bool_or
+from .z3_types import AnyT, Expression, Reference, SortSet, bool_and, bool_or
 
 log = Logger("type_registrar")
 
 
 @dataclass
 class TypeRegistrar:
-    anytype: z3.DatatypeSortRef
-    reftype: Optional[z3.DatatypeSortRef]
+    anytype: z3.DatatypeSortRef[AnyT]
+    reftype: Optional[z3.DatatypeSortRef[Any]]
 
     def store(self, name: str) -> StoreArray:
         assert self.reftype is not None

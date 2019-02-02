@@ -2,7 +2,7 @@ import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Iterable, Iterator, List, Mapping, Optional, Set, Tuple, Union
 
 from logbook import Logger
 from toolz import concat, pipe
@@ -117,14 +117,18 @@ def generate_tests(
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
         if lines is not None:
             _filter = partial(filter, lambda x: x in lines)
-            return pipe(
+            return pipe(  # type: ignore
                 unit, LineSplitter(), _filter, enumerate, liftIter(_generate_test), list
             )
         else:
-            return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
+            return pipe(  # type: ignore
+                unit, LineSplitter(), enumerate, liftIter(_generate_test), list
+            )
 
     log.debug("Splitting on lines", LineSplitter()(module))
-    return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)
+    return pipe(  # type: ignore
+        module, function_splitter, liftIter(generate_unit_tests), concat, list
+    )
 
 
 def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:

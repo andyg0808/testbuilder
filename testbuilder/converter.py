@@ -10,10 +10,10 @@ import re
 from functools import reduce
 from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
+from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
-from logbook import Logger
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -28,10 +28,11 @@ from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
+    AnyT,
     Expression,
-    Nil,
     Reference,
     ReferenceT,
+    ReferentT,
     SortMarker,
     SortSet,
     bool_and,
@@ -51,7 +52,7 @@ BoolSort = z3.BoolSort()
 
 
 class SortNamer:
-    def __init__(self, anytype: z3.DatatypeSortRef) -> None:
+    def __init__(self, anytype: z3.DatatypeSortRef[AnyT]) -> None:
         keys = ["Nil"]
         self.anytype = anytype
         self.values: List[z3.DatatypeRef] = []
@@ -245,7 +246,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             f"Unexpected target type {type(target)} of assign target {target}"
         )
 
-    def visit_Expr(self, node: n.Expr) -> TypeUnion:
+    def visit_Expr(self, node: n.Expr[Any]) -> TypeUnion:
         v = self.visit(node.value)
         assert v is not None
         return v
@@ -379,7 +380,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return not_func
 
     def visit_USub(self, node: n.USub) -> OpFunc:
-        return self.fount(IntSort)(lambda x: -x)
+        return self.fount(IntSort)(lambda x: -x)  # type: ignore
 
 
 # T = TypeVar("T")
@@ -469,7 +470,10 @@ class IsMagic(Magic):
 
 class EqMagic(IsMagic):
     def __init__(
-        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
+        self,
+        sorting: SortingFunc,
+        store: Store,
+        reftype: Optional[z3.DatatypeSortRef[ReferentT]],
     ) -> None:
         super().__init__(sorting)
         self.store = store
@@ -522,7 +526,10 @@ class IsNotMagic(Magic):
 
 class NotEqMagic(IsNotMagic):
     def __init__(
-        self, sorting: SortingFunc, store: Store, reftype: Optional[z3.DatatypeSortRef]
+        self,
+        sorting: SortingFunc,
+        store: Store,
+        reftype: Optional[z3.DatatypeSortRef[ReferentT]],
     ) -> None:
         super().__init__(sorting)
         self.store = store

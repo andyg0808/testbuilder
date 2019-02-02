@@ -18,7 +18,7 @@ from . import ssa_basic_blocks as sbb
 from .pair import Pair
 from .ssa_basic_blocks import Solution
 from .type_registrar import TypeRegistrar
-from .z3_types import NilSort, Reference
+from .z3_types import Reference
 
 # z3.set_param("model_compress", "false")
 ModelItem = Union[z3.FuncInterp, z3.QuantifierRef]

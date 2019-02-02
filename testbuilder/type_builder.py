@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-import z3
 from logbook import Logger
 
+import z3
+
 from .type_registrar import TypeRegistrar
-from .z3_types import AnySort, NilSort, Reference
+from .z3_types import AnySort, AnyT, Reference, ReferentT
 
 log = Logger("type_builder")
 
@@ -23,8 +24,8 @@ class TypeBuilder:
         else:
             name = f"Any_{self.index}"
         self.name = name
-        self.datatype = z3.Datatype(name)
-        self.reftype: Optional[z3.Datatype] = None
+        self.datatype: z3.Datatype[AnyT] = z3.Datatype(name)
+        self.reftype: Optional[z3.Datatype[ReferentT]] = None
 
     def wrappers(self) -> TypeBuilder:
         self.datatype.declare("Int", ("i", z3.IntSort()))

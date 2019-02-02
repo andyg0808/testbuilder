@@ -177,7 +177,7 @@ class Magic:
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
             if func is None:
                 continue
-            functions.append((func, cast(Tuple, arg_tuple)))
+            functions.append((func, cast(Tuple[Any], arg_tuple)))
         exprs = []
         sorts: SortSet = set()
         found_none = False
@@ -216,7 +216,7 @@ class Magic:
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
-        self, func: Callable[..., Expression], args: Tuple
+        self, func: Callable[..., Expression], args: Tuple[Any]
     ) -> Optional[CExpr]:
         log.info(f"Trying to run implementation for type-pair {args}")
 

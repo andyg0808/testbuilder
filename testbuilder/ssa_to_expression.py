@@ -26,10 +26,10 @@ log = Logger("ssa_to_expression")
 
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
-ExprList = List[Expression]
+BoolList = List[z3.BoolRef]
 
 
-class SSAVisitor(SimpleVisitor[ExprList]):
+class SSAVisitor(SimpleVisitor[BoolList]):
     def __init__(self, registrar: TypeRegistrar, module: sbb.Module) -> None:
         self.module = module
         self.type_manager = TypeManager()
@@ -39,7 +39,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             self.registrar, self.type_manager, self.store
         )
 
-    def visit_Code(self, node: sbb.Code, stop: StopBlock) -> ExprList:
+    def visit_Code(self, node: sbb.Code, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:
             return []
 
@@ -48,26 +48,26 @@ class SSAVisitor(SimpleVisitor[ExprList]):
         res = exprs + visited
         return res
 
-    def visit_StartBlock(self, node: sbb.StartBlock, stop: StopBlock) -> ExprList:
+    def visit_StartBlock(self, node: sbb.StartBlock, stop: StopBlock) -> BoolList:
         return []
 
-    def visit_ReturnBlock(self, node: sbb.ReturnBlock, stop: StopBlock) -> ExprList:
+    def visit_ReturnBlock(self, node: sbb.ReturnBlock, stop: StopBlock) -> BoolList:
         if len(node.parents) == 1:
             return self.visit(node.parents[0], stop)
         exprs = []
         types = []
         for parent in node.parents:
             self.type_manager.push()
-            parent_exprs = cast(List[z3.BoolRef], self.visit(parent, stop))
+            parent_exprs = self.visit(parent, stop)
             exprs.append(bool_all(parent_exprs))
             types.append(self.type_manager.pop())
         self.type_manager.merge_and_update(types)
         return [bool_any(exprs)]
 
-    def visit_Stmt(self, node: n.stmt) -> ExprList:
+    def visit_Stmt(self, node: n.stmt) -> BoolList:
         union = self.expression(node)
         if union.is_bool():
-            exprs: List[Expression] = [union.to_expr()]
+            exprs: BoolList = [union.to_expr()]
         else:
             # The expression is not a boolean. This can happen when
             # assigning to an attribute, since the actual assignment
@@ -79,19 +79,19 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             exprs.append(self.store.write())
         return exprs
 
-    def visit_BlockTree(self, node: sbb.BlockTree) -> ExprList:
+    def visit_BlockTree(self, node: sbb.BlockTree) -> BoolList:
         exprs = self.visit(node.end, None)
         assert not self.store.pending(), "Store pending at highest level"
         return exprs
 
-    def visit_Conditional(self, node: sbb.Conditional, stop: StopBlock) -> ExprList:
+    def visit_Conditional(self, node: sbb.Conditional, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:
             return []
 
         code = self.visit(node.parent, stop)
 
         print("node.parent", node.parent, id(node.parent))
-        branches = []
+        branches: List[List[z3.BoolRef]] = []
         types = []
         if node.true_branch:
             self.type_manager.push()
@@ -107,7 +107,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return code + [pipe(branches, liftIter(bool_all), bool_any)]
 
-    def visit_Loop(self, node: sbb.Loop, stop: StopBlock) -> ExprList:
+    def visit_Loop(self, node: sbb.Loop, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:
             return []
 
@@ -128,15 +128,15 @@ class SSAVisitor(SimpleVisitor[ExprList]):
                     # with this branch.
                     branches.append([BOOL_TRUE])
                 else:
-                    branches.append(cast(List[z3.BoolRef], res))
+                    branches.append(res)
         if branches:
-            branch_expr: ExprList = [pipe(branches, liftIter(bool_all), bool_any)]
+            branch_expr: BoolList = [pipe(branches, liftIter(bool_all), bool_any)]
             self.type_manager.merge_and_update(types)
         else:
             branch_expr = []
         return code + branch_expr
 
-    def visit_TrueBranch(self, node: sbb.TrueBranch, stop: StopBlock) -> ExprList:
+    def visit_TrueBranch(self, node: sbb.TrueBranch, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:
             return []
 
@@ -144,7 +144,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         return code + [self.to_boolean(self.expression(node.conditional))]
 
-    def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> ExprList:
+    def visit_FalseBranch(self, node: sbb.FalseBranch, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:
             return []
 
@@ -179,7 +179,7 @@ def process_fut(
         expressions = visitor.visit(node.blocks)
         for expr in expressions:
             assert z3.is_bool(expr), f"{expr} is not boolean"
-        expression = bool_all(cast(List[z3.BoolRef], expressions))
+        expression = bool_all(expressions)
     free_variables = [sbb.Variable(arg) for arg in node.args]
     return sbb.TestData(
         filepath=filepath,
@@ -197,7 +197,7 @@ def process_sut(
     if code.empty():
         expression = BOOL_TRUE
     else:
-        expression = bool_all(cast(List[z3.BoolRef], visitor.visit(code)))
+        expression = bool_all(visitor.visit(code))
     free_variables = find_variables(code)
     return sbb.TestData(
         filepath=filepath,
