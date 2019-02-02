@@ -58,6 +58,29 @@ def pipe(
     func5: Callable[[_T4], _T5],
 ) -> _T5:
     ...
+@overload
+def pipe(
+    data: T,
+    func1: Callable[[T], _T1],
+    func2: Callable[[_T1], _T2],
+    func3: Callable[[_T2], _T3],
+    func4: Callable[[_T3], _T4],
+    func5: Callable[[_T4], _T5],
+    func6: Callable[[_T5], _T6],
+) -> _T6:
+    ...
+@overload
+def pipe(
+    data: T,
+    func1: Callable[[T], _T1],
+    func2: Callable[[_T1], _T2],
+    func3: Callable[[_T2], _T3],
+    func4: Callable[[_T3], _T4],
+    func5: Callable[[_T4], _T5],
+    func6: Callable[[_T5], _T6],
+    func7: Callable[[_T6], _T7],
+) -> _T7:
+    ...
 
 
 @overload
