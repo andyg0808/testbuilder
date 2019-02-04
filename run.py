@@ -19,7 +19,9 @@ from pathlib import Path
 
 import typeassert
 from docopt import docopt
-from logbook import NullHandler, StderrHandler
+from logbook import NullHandler
+
+import logconfig
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
@@ -78,9 +80,6 @@ if __name__ == "__main__":
         return r.channel not in ignores
 
     verbosity = opts["--verbose"]
-    if verbosity:
-        StderrHandler(level=verbosity, filter=ignore_filter).push_application()
-    else:
-        StderrHandler(level="NOTICE", filter=ignore_filter).push_application()
+    logconfig.configure_fancylog(verbosity)
 
     main(opts["<source.py>"])
