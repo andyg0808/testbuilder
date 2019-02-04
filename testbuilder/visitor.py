@@ -1,6 +1,7 @@
 import inspect
 import re
 import traceback
+import typing
 from abc import abstractmethod
 from typing import (
     Any,
@@ -107,6 +108,11 @@ class SimpleVisitor(Generic[B]):
                 param = parameters[0]
                 if NameRegex.match(name):
                     annotation = annotations[param.name]
+                    # This next line is bad, but we want to try to
+                    # detect and handle generics by looking at their
+                    # base class.
+                    if isinstance(annotation, typing._GenericAlias):  # type: ignore
+                        annotation = annotation.__origin__
                     log.debug("Found visitor {} for {}", name, annotation)
                     typecache[annotation] = method
                 elif SuggestionRegex.match(name):
