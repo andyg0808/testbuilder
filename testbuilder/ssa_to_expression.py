@@ -90,7 +90,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
 
         code = self.visit(node.parent, stop)
 
-        print("node.parent", node.parent, id(node.parent))
+        # print("node.parent", node.parent, id(node.parent))
         branches = []
         types = []
         if node.true_branch:
@@ -103,7 +103,7 @@ class SSAVisitor(SimpleVisitor[ExprList]):
             types.append(self.type_manager.pop())
         self.type_manager.merge_and_update(types)
 
-        print("branches", branches)
+        # print("branches", branches)
 
         return code + [pipe(branches, liftIter(bool_all), bool_any)]
 

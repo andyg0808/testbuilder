@@ -10,10 +10,10 @@ import re
 from functools import reduce
 from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
+from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
-from logbook import Logger
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -61,7 +61,7 @@ class SortNamer:
                 self.values.append(value)
 
     def __call__(self, expr: Expression) -> Optional[SortMarker]:
-        print(expr)
+        # print(expr)
         sort = expr.sort()
         decl = expr.decl()
         if decl in self.values:
