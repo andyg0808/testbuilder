@@ -2,7 +2,7 @@ import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, Iterable, Iterator, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 
 from logbook import Logger
 from toolz import concat, pipe
@@ -17,7 +17,7 @@ from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
-from .renderer import prompt_for_test, render_test
+from .renderer import prompt_for_test, render_test, run_for_test
 from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -37,6 +37,7 @@ def generate_tests(
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
+    autosolve: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -79,15 +80,20 @@ def generate_tests(
             return ""
         _filter_inputs = partial(filter_inputs, function)
 
-        def _prompt_for_test(args: sbb.Solution) -> sbb.ExpectedTestData:
+        def get_expected_test_result(args: sbb.Solution) -> sbb.ExpectedTestData:
             updated_testdata = make_extended_instance(
                 testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
-            return prompt_for_test(
-                requester=requester, prompt=prompt, test=updated_testdata
-            )
+            if autosolve:
+                return run_for_test(updated_testdata)
+            else:
+                return prompt_for_test(
+                    requester=requester, prompt=prompt, test=updated_testdata
+                )
 
-        test: str = pipe(solution, _filter_inputs, _prompt_for_test, render_test)
+        test: str = pipe(
+            solution, _filter_inputs, get_expected_test_result, render_test
+        )
         return test
 
     def parse_file(text: str) -> AST:

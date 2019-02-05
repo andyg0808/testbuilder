@@ -1,10 +1,8 @@
 from pathlib import Path
-from unittest.mock import Mock, call, create_autospec
+from unittest.mock import create_autospec
 
 from hypothesis import assume, given
 from hypothesis.strategies import integers
-
-from testbuilder.pair import Pair
 
 from . import requester, ssa_basic_blocks as sbb
 from .generate import generate_tests
@@ -12,66 +10,6 @@ from .hypothesis_entities import functions
 from .renderer import render_test
 
 Requester = create_autospec(requester.Requester)
-# def test_generation():
-#     code = """
-# def maximize(a, b):
-#     if a < b:
-#         return b
-#     else:
-#         return a
-
-# def minimize(a, b):
-#     if a < b:
-#         return a
-#     else:
-#         return b
-#     """
-#     expected = [
-#         """
-# from minmax import maximize
-# def test_maximize():
-#     a = 0
-#     b = 1
-#     actual = maximize(a, b)
-#     expected = 1
-#     assert actual == expected
-#     """,
-#         """
-# from minmax import maximize
-# def test_maximize_2():
-#     a = 0
-#     b = -38
-#     actual = maximize(a, b)
-#     expected = 0
-#     assert actual == expected
-#     """,
-#         """
-# from minmax import minimize
-# def test_minimize_3():
-#     a =
-#         """,
-#         """
-# from minmax import minimize
-# def test_minimize():
-#     a = 0
-#     b = 1
-#     actual = minimize(a, b)
-#     expected = 0
-#     assert actual == expected
-#     """,
-#         """
-# from minmax import minimize
-# def test_minimize_2():
-#     a = 0
-#     b = 0
-#     actual = minimize(a, b)
-#     expected = 0
-#     assert actual == expected
-#     """,
-#     ]
-#     io = StringIO("1\n0\n0\n0\n")
-#     tests = generate_tests(Path("minmax.py"), code, io)
-#     assert tests == expected
 
 
 @given(functions, integers(), integers())
@@ -196,19 +134,25 @@ def test_caller():
     assert set(tests) == expected
 
 
-# @given(function_names, integers(), integers())
-# def test_run_test(testname, n, k):
-#    assume(n != k)
-#    failed_code = f"""
-# def {testname}():
-#    assert {n} == {k}
-# """
-#
-#    code = f"""
-# def {testname}():
-#    assert {n} == {n}
-# """
-#
-#    with pytest.raises(AssertionError):
-#        run_test(testname, failed_code)
-#    run_test(testname, code)
+def test_autosolve():
+    code = """
+def id(x):
+    return x
+    """
+    expected = {
+        """
+from testbuilder.pair import Pair
+id = import_module("id").id
+def test_id():
+    x = 0
+    actual = id(x)
+    expected = 0
+    assert actual == expected
+    """
+    }
+    requester = Requester()
+    tests = generate_tests(
+        source=Path("id.py"), text=code, requester=requester, autosolve=True
+    )
+    requester.input.assert_not_called()
+    assert set(tests) == expected

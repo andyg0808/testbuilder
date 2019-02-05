@@ -26,10 +26,17 @@ def prompt_for_test(
         )
     else:
         expected = requester.input(prompt)
-    expected_test = make_extended_instance(
-        test, ExpectedTestData, expected_result=expected
-    )
-    return expected_test
+    return make_extended_instance(test, ExpectedTestData, expected_result=expected)
+
+
+def run_for_test(test: SolvedTestData) -> ExpectedTestData:
+    glo = globals()
+    loc: Mapping[str, Any] = {}
+    exec(test.source_text, glo, loc)
+    funcs = list(loc.values())
+    func = funcs[0]
+    result = func(**test.args)
+    return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
 
 
 def render_test(test: ExpectedTestData) -> str:
