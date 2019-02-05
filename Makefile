@@ -19,11 +19,14 @@ TESTFILE = testbuilder
 #        notion of whether we have broken everything or not.
 #   -v   Show full diffs.
 #   --duration=n Show the `n` slowest tests.
-PYTEST_FLAGS = -x -ra --ff -Wignore --duration=5 --indulgent-ordering
-ifdef parallel
-	PYTEST_FLAGS += -n=$(shell nproc)
-endif
-PYTEST = pytest $(PYTEST_FLAGS) $(TESTFILE)
+PYTEST_FLAGS = -x -ra -Wignore
+PYTEST_FAST_FLAGS = $(PYTEST_FLAGS) --last-failed --last-failed-no-failures none -p no:ordering
+PYTEST_COMPLETE_FLAGS = $(PYTEST_FLAGS) --duration=5 -n=$(shell nproc)
+# ifdef parallel
+# 	PYTEST_COMPLETE_FlAGS += -n=$(shell nproc)
+# endif
+PYTEST_COMPLETE = pytest $(PYTEST_COMPLETE_FLAGS) $(TESTFILE)
+PYTEST_FAST = ./pytest_empty $(PYTEST_FAST_FLAGS) $(TESTFILE)
 
 .PHONY: build
 build:
@@ -45,7 +48,8 @@ mypy:
 
 .PHONY: pytest
 pytest:
-	$(PYTEST)
+	$(PYTEST_FAST)
+	$(PYTEST_COMPLETE)
 
 .PHONY: plaintest
 plaintest:
