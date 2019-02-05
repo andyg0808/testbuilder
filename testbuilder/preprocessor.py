@@ -1,7 +1,7 @@
 import ast
 import re
 from abc import ABC
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from logbook import Logger
 
@@ -69,7 +69,9 @@ class AttrName(ast.NodeTransformer):
 
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         new_attr = self.transformer.visit_String(attr.attr)  # type: ignore
-        return ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
+        return cast(
+            ast.Attribute, ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
+        )
 
 
 @dataclass
@@ -85,7 +87,9 @@ class Rename(ast.NodeTransformer):
         self.search, self.replace = re.split(r"\s*->\s*", action)
 
     def visit_Name(self, name: ast.Name) -> ast.Name:
-        return ast.copy_location(ast.Name(self.visit_String(name.id)), name)
+        return cast(
+            ast.Name, ast.copy_location(ast.Name(self.visit_String(name.id)), name)
+        )
 
     def visit_String(self, string: str) -> str:
         return re.sub(self.search, self.replace, string)
