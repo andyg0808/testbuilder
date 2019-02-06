@@ -1,0 +1,6 @@
+#!/bin/zsh
+for i in {0..9}
+do 
+  python -m execnet.script.socketserver :888$i&
+done
+wait

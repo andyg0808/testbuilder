@@ -30,6 +30,7 @@ hypothesis = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
 pytest-ordering = "*"
+execnet = "==1.5.0"
 
 [requires]
 python_version = "3.7"
