@@ -1,0 +1,9 @@
+source "./testing.tcl"
+file delete pair_test.py
+spawn python3 ./run.py --autogen --no-color --lines=4,6,11 pair.py
+expect "Generating test 0 for basic_pair_use"
+expect "Generating test 1 for basic_pair_use"
+expect "Generating test 0 for simple_inferred_pair"
+expect eof
+system pytest pair_test.py
+file delete pair_test.py
