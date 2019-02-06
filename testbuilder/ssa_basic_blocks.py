@@ -251,14 +251,28 @@ class Variable:
 @dataclass
 class TestData:
     # line: int
-    name: str
     # statements: Dependency
     # lines: Set[int]
-    source_text: str
     # function: Optional[FunctionDef] = None
+    name: str
+    source_text: str
     free_variables: List[Variable]
     expression: Expression
     filepath: Path
+
+
+Solution = Mapping[str, Any]
+
+
+@dataclass
+class SolvedTestData(TestData):
+    test_number: int
+    args: Solution
+
+
+@dataclass
+class ExpectedTestData(SolvedTestData):
+    expected_result: str
 
 
 @singledispatch

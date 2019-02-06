@@ -1,10 +1,11 @@
 import ast
 import re
 from abc import ABC
-from typing import List, Tuple
+from typing import List, Tuple, cast
+
+from logbook import Logger
 
 from dataclasses import dataclass
-from logbook import Logger
 
 ActionMarker = re.compile(r"# ([A-Z]+)/([A-Z]+): (.*)")
 CommentLine = re.compile(r"\s*#|^\s*$")
@@ -18,7 +19,7 @@ class Preprocessor:
         self.commands: List[ast.NodeTransformer] = []
         for line in text.splitlines():
             match = ActionMarker.fullmatch(line)
-            print("match", line, match)
+            log.debug("match {} {}", line, match)
             if match is not None:
                 self.add_rewrite_rule(match[1], match[2], match[3])
             elif not CommentLine.match(line):
@@ -68,8 +69,8 @@ class AttrName(ast.NodeTransformer):
 
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         new_attr = self.transformer.visit_String(attr.attr)  # type: ignore
-        return ast.copy_location(  # type: ignore
-            ast.Attribute(attr.value, new_attr), attr
+        return cast(
+            ast.Attribute, ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
         )
 
 
@@ -86,8 +87,8 @@ class Rename(ast.NodeTransformer):
         self.search, self.replace = re.split(r"\s*->\s*", action)
 
     def visit_Name(self, name: ast.Name) -> ast.Name:
-        return ast.copy_location(  # type: ignore
-            ast.Name(self.visit_String(name.id)), name
+        return cast(
+            ast.Name, ast.copy_location(ast.Name(self.visit_String(name.id)), name)
         )
 
     def visit_String(self, string: str) -> str:

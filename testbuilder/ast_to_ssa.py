@@ -11,8 +11,9 @@ from typing import (
     cast,
 )
 
-import dataclasses
 from logbook import Logger
+
+import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
@@ -22,7 +23,7 @@ from .visitor import GenericVisitor, SimpleVisitor
 log = Logger("ast_to_ssa")
 
 StmtList = List[ast.stmt]
-MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex]
+MaybeIndex = Union[sbb.BlockTree, sbb.BlockTreeIndex[Any]]
 
 
 def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
@@ -36,7 +37,7 @@ def ast_to_ssa(depth: int, variables: VarMapping, node: ast.AST) -> sbb.Module:
     return res
 
 
-class AstToSSABasicBlocks(SimpleVisitor):
+class AstToSSABasicBlocks(SimpleVisitor[Any]):
     def __init__(self, depth: int, variables: VariableManager) -> None:
         self.block_id = 0
         self.depth = depth
@@ -108,7 +109,9 @@ class AstToSSABasicBlocks(SimpleVisitor):
         else:
             return final
 
-    def line_visit(self, stmts: StmtList, start_tree: sbb.BlockTreeIndex) -> MaybeIndex:
+    def line_visit(
+        self, stmts: StmtList, start_tree: sbb.BlockTreeIndex[Any]
+    ) -> MaybeIndex:
         tree: MaybeIndex = start_tree
         for line in stmts:
             tree = self.visit(line, tree)
@@ -118,19 +121,19 @@ class AstToSSABasicBlocks(SimpleVisitor):
         return tree
 
     def visit_Stmt(
-        self, node: ast.stmt, tree: sbb.BlockTreeIndex
-    ) -> sbb.BlockTreeIndex:
+        self, node: ast.stmt, tree: sbb.BlockTreeIndex[Any]
+    ) -> sbb.BlockTreeIndex[Any]:
         assert isinstance(tree, sbb.BlockTreeIndex)
         expr = self.stmt_visitor(node)
         if expr is None:
             return tree
         return self.append_code(tree, expr)
 
-    def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex) -> MaybeIndex:
+    def visit_If(self, node: ast.If, tree: sbb.BlockTreeIndex[Any]) -> MaybeIndex:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
         condition = self.expr_visitor(node.test)
-        paths: List[Tuple[sbb.BlockTreeIndex, VarMapping]] = []
+        paths: List[Tuple[sbb.BlockTreeIndex[Any], VarMapping]] = []
         returns: List[sbb.BlockTree] = []
 
         def add_block(block: MaybeIndex) -> None:
@@ -190,12 +193,14 @@ class AstToSSABasicBlocks(SimpleVisitor):
             *blocks,
         )
 
-    def visit_While(self, node: ast.While, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
+    def visit_While(
+        self, node: ast.While, tree: sbb.BlockTreeIndex[Any]
+    ) -> sbb.BlockTree:
         assert isinstance(tree, sbb.BlockTreeIndex)
         assert tree.target
         paths = []
 
-        def add_block(block: sbb.BlockTreeIndex) -> None:
+        def add_block(block: sbb.BlockTreeIndex[Any]) -> None:
             paths.append((block, self.variables.mapping()))
 
         bypass = tree.map_target(
@@ -267,11 +272,13 @@ class AstToSSABasicBlocks(SimpleVisitor):
         return child
 
     def visit_Pass(
-        self, node: ast.Pass, tree: sbb.BlockTreeIndex
-    ) -> sbb.BlockTreeIndex:
+        self, node: ast.Pass, tree: sbb.BlockTreeIndex[Any]
+    ) -> sbb.BlockTreeIndex[Any]:
         return tree
 
-    def visit_Return(self, node: ast.Return, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
+    def visit_Return(
+        self, node: ast.Return, tree: sbb.BlockTreeIndex[Any]
+    ) -> sbb.BlockTree:
         if node.value is None:
             value = None
         else:
@@ -280,17 +287,21 @@ class AstToSSABasicBlocks(SimpleVisitor):
         tree = self.append_code(tree, ret)
         return tree.return_target()
 
-    def visit_Raise(self, node: ast.Raise, tree: sbb.BlockTreeIndex) -> sbb.BlockTree:
+    def visit_Raise(
+        self, node: ast.Raise, tree: sbb.BlockTreeIndex[Any]
+    ) -> sbb.BlockTree:
         return tree.return_target()
 
     def append_lines(
-        self, tree: sbb.BlockTreeIndex, lines: Sequence[n.stmt]
-    ) -> sbb.BlockTreeIndex:
+        self, tree: sbb.BlockTreeIndex[Any], lines: Sequence[n.stmt]
+    ) -> sbb.BlockTreeIndex[Any]:
         for line in lines:
             tree = self.append_code(tree, line)
         return tree
 
-    def append_code(self, tree: sbb.BlockTreeIndex, line: n.stmt) -> sbb.BlockTreeIndex:
+    def append_code(
+        self, tree: sbb.BlockTreeIndex[Any], line: n.stmt
+    ) -> sbb.BlockTreeIndex[Any]:
         def append_to_block(cur_block: sbb.BasicBlock) -> sbb.Code:
             if not isinstance(cur_block, sbb.Code):
                 return sbb.Code(
@@ -312,7 +323,7 @@ class AstToSSABasicBlocks(SimpleVisitor):
         return tree.map_target(append_to_block)
 
     def _update_paths(
-        self, paths: Sequence[Tuple[sbb.BlockTreeIndex, VarMapping]]
+        self, paths: Sequence[Tuple[sbb.BlockTreeIndex[Any], VarMapping]]
     ) -> Tuple[List[sbb.BlockTreeIndex[sbb.Code]], VarMapping]:
         variables, edit_lists = unify_all_variables([p[1] for p in paths])
         updated_conditions: List[sbb.BlockTreeIndex[sbb.Code]] = []
@@ -368,7 +379,7 @@ def unify_all_variables(
     return (variables, renamings)
 
 
-class StatementVisitor(GenericVisitor):
+class StatementVisitor(GenericVisitor[Any]):
     def __init__(self, variables: VariableManager) -> None:
         self.variables = variables
         self.expr_visitor = AstBuilder(variables)
@@ -402,7 +413,7 @@ class StatementVisitor(GenericVisitor):
         target = self.get_target_variable(node.target)
         return n.Set(line=node.lineno, target=target, e=n.BinOp(var, op, value))
 
-    def visit_Expr(self, node: ast.expr) -> n.Expr:
+    def visit_Expr(self, node: ast.expr) -> n.Expr[Any]:
         expr = self.expr_visitor(node)
         return n.Expr(line=node.lineno, value=expr)
 
@@ -410,7 +421,7 @@ class StatementVisitor(GenericVisitor):
         return self.expr_visitor(v)
 
 
-class AstBuilder(GenericVisitor):
+class AstBuilder(GenericVisitor[Any]):
     def __init__(self, variables: VariableManager) -> None:
         super().__init__()
         self.variables = variables

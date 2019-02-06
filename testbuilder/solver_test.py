@@ -126,6 +126,7 @@ def test(r):
     )
 
 
+@pytest.mark.second
 def test_loop_unrolling_case():
     check_solve(
         """
@@ -236,6 +237,7 @@ def example(a):
     )
 
 
+@pytest.mark.first
 def test_solve_multilayer():
     check_solve(
         """

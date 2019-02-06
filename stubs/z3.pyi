@@ -21,7 +21,7 @@ class SortRef(AstRef):
 T = TypeVar("T", bound=DatatypeRef)
 
 
-class DatatypeSortRef(SortRef, Generic[T]):
+class DatatypeSortRef(SortRef):
     def num_constructors(self) -> int:
         ...
 
@@ -31,7 +31,7 @@ class DatatypeSortRef(SortRef, Generic[T]):
     def constructor(self, i: int) -> FuncDeclRef:
         ...
 
-    def accessor(self, i: int, arg: int) -> Callable[[T], ExprRef]:
+    def accessor(self, i: int, arg: int) -> Callable[[DatatypeRef], ExprRef]:
         ...
 
 
@@ -273,7 +273,7 @@ def Store(array: ArrayRef[K, V], key: K, value: V) -> ArrayRef[K, V]:
     ...
 
 
-def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef:
+def Array(name: str, key: SortRef, value: SortRef) -> ArrayRef[K, V]:
     ...
 
 

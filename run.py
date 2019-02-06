@@ -12,6 +12,8 @@ Options:
     --no-color  Do not use color highlighting when printing Python
     --autopreprocess=<file.json>  Automatically run the preprocess
                                   rules in <file.json> on each input file.
+    --autogen  Run the function under test with the suggested inputs to
+               determine the expected output
 """
 
 import json
@@ -57,8 +59,16 @@ def main(filename: str) -> None:
     else:
         changes = None
 
+    autogen = opts["--autogen"]
+
     test_cases = generate_tests(
-        filepath, text, requester, depth=depth, lines=lines, changes=changes
+        filepath,
+        text,
+        requester,
+        depth=depth,
+        lines=lines,
+        changes=changes,
+        autogen=autogen,
     )
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
         tests.write("from importlib import import_module")

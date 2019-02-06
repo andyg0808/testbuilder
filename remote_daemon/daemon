@@ -1,0 +1,17 @@
+#!/bin/zsh
+
+children=()
+
+TRAPINT () {
+  echo Killing $children
+  kill $children
+}
+trap TRAPINT TERM
+
+for i in {0..9}
+do 
+  python -m execnet.script.socketserver :888$i&
+  children+=($!)
+done
+echo $children
+wait

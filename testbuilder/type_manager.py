@@ -21,7 +21,7 @@ class TypeManager:
     def get(self, name: str) -> Optional[SortSet]:
         return self.type_list.get(name, None)
 
-    def put(self, name: str, value: Optional[set] = None) -> None:
+    def put(self, name: str, value: Optional[SortSet] = None) -> None:
         if value is None:
             value = set()
         self.type_list[name] = value

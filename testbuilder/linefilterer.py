@@ -52,8 +52,6 @@ class ComputedLineFilterer(UpdateVisitor):
             if updated is not None:
                 assert isinstance(updated, sbb.FunctionDef)
                 return sbb.Request(module=module, code=updated)
-            else:
-                log.notice(f"Throwing out `{func.name}` because no lines were kept")
         blocktree = self.visit_BlockTree(module.code)
         if blocktree is None:
             return None
@@ -64,7 +62,10 @@ class ComputedLineFilterer(UpdateVisitor):
         self.update_target(function)
         blocktree = self.visit_BlockTree(function.blocks)
         if blocktree is None or blocktree.empty():
-            log.notice("Discarding function because it is empty")
+            log.info(
+                f"Discarding {function.name} because it is empty. "
+                "This probably means it is unused in this test."
+            )
             return None
         else:
             return sbb.FunctionDef(

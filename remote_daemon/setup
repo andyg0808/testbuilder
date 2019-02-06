@@ -1,0 +1,2 @@
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH":/home/andrew/Projects/Clones/z3/build
+export MYPYPATH=../stubs

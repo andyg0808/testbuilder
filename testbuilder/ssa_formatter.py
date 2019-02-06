@@ -1,3 +1,5 @@
+from typing import Any
+
 from . import nodetree as n
 from .visitor import SimpleVisitor
 
@@ -9,7 +11,7 @@ class SSAVisitor(SimpleVisitor[str]):
         else:
             return "return"
 
-    def visit_Expr(self, node: n.Expr) -> str:
+    def visit_Expr(self, node: n.Expr[Any]) -> str:
         return self.visit(node.value) + "\n"
 
     def visit_BinOp(self, node: n.BinOp) -> str:

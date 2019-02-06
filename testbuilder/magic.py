@@ -36,7 +36,7 @@ log = Logger("Magic")
 T = TypeVar("T")
 
 MagicFunc = Callable[..., T]
-TagType = Union[z3.SortRef, Type]
+TagType = Union[z3.SortRef, Type[Any]]
 
 
 @dataclass(frozen=True)
@@ -44,8 +44,8 @@ class MagicTag:
     types: Sequence[TagType]
 
 
-def magic_tag(*types: TagType) -> Callable[[MagicFunc], MagicFunc]:
-    def _magic(func: MagicFunc) -> MagicFunc:
+def magic_tag(*types: TagType) -> Callable[[MagicFunc[T]], MagicFunc[T]]:
+    def _magic(func: MagicFunc[T]) -> MagicFunc[T]:
         setattr(func, "__magic", MagicTag(types=types))
         return func
 
@@ -54,7 +54,7 @@ def magic_tag(*types: TagType) -> Callable[[MagicFunc], MagicFunc]:
 
 @dataclass(frozen=True)
 class MagicRegistration(MagicTag):
-    function: MagicFunc
+    function: MagicFunc[Any]
 
 
 SortingFunc = Callable[[Expression], Optional[SortMarker]]
@@ -64,7 +64,7 @@ class MagicFountain:
     def __init__(self, sorting: SortingFunc) -> None:
         self.sorting = sorting
 
-    def __call__(self, *types: TagType) -> Callable[[MagicFunc], Magic]:
+    def __call__(self, *types: TagType) -> Callable[[MagicFunc[T]], Magic]:
         return Magic.m(self.sorting, types)
 
 
@@ -103,7 +103,7 @@ class Magic:
     @staticmethod
     def m(
         sorting: Optional[SortingFunc], types: Sequence[TagType]
-    ) -> Callable[[MagicFunc], Magic]:
+    ) -> Callable[[MagicFunc[Any]], Magic]:
         """
         Create an instance of Magic and call `magic` on it with these
         arguments.
@@ -114,7 +114,7 @@ class Magic:
             res = Magic(sorting)
         return res.magic(types)
 
-    def magic(self, types: Sequence[TagType]) -> Callable[[MagicFunc], Magic]:
+    def magic(self, types: Sequence[TagType]) -> Callable[[MagicFunc[Any]], Magic]:
         """
         To register an existing function for some argument types, call
         this method, passing it the argument types, and pass the
@@ -129,7 +129,7 @@ class Magic:
             argument types passed to `magic`.
         """
 
-        def _magic(func: MagicFunc) -> Magic:
+        def _magic(func: MagicFunc[Any]) -> Magic:
             registration = MagicRegistration(types=types, function=func)
             self.funcref.append(registration)
             return self
@@ -177,7 +177,7 @@ class Magic:
             func = self.__select(tuple(arg.expr.sort() for arg in arg_tuple))
             if func is None:
                 continue
-            functions.append((func, cast(Tuple, arg_tuple)))
+            functions.append((func, cast(Tuple[Any], arg_tuple)))
         exprs = []
         sorts: SortSet = set()
         found_none = False
@@ -216,7 +216,7 @@ class Magic:
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
-        self, func: Callable[..., Expression], args: Tuple
+        self, func: Callable[..., Expression], args: Tuple[Any]
     ) -> Optional[CExpr]:
         log.info(f"Trying to run implementation for type-pair {args}")
 

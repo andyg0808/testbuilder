@@ -28,10 +28,11 @@ from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
+    AnyT,
     Expression,
-    Nil,
     Reference,
     ReferenceT,
+    ReferentT,
     SortMarker,
     SortSet,
     bool_and,
@@ -61,7 +62,6 @@ class SortNamer:
                 self.values.append(value)
 
     def __call__(self, expr: Expression) -> Optional[SortMarker]:
-        # print(expr)
         sort = expr.sort()
         decl = expr.decl()
         if decl in self.values:
@@ -245,7 +245,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             f"Unexpected target type {type(target)} of assign target {target}"
         )
 
-    def visit_Expr(self, node: n.Expr) -> TypeUnion:
+    def visit_Expr(self, node: n.Expr[Any]) -> TypeUnion:
         v = self.visit(node.value)
         assert v is not None
         return v
@@ -379,7 +379,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return not_func
 
     def visit_USub(self, node: n.USub) -> OpFunc:
-        return self.fount(IntSort)(lambda x: -x)
+        return self.fount(IntSort)(lambda x: -x)  # type: ignore
 
 
 # T = TypeVar("T")

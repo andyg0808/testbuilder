@@ -2,14 +2,14 @@ import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Mapping, Optional, Set, Tuple, Union
-
-from toolz import concat, pipe
+from typing import Any, List, Optional, Set, Tuple, Union
 
 from logbook import Logger
+from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
+from .dataclass_utils import make_extended_instance
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
@@ -17,7 +17,7 @@ from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
-from .renderer import prompt_and_render_test
+from .renderer import get_test_func, prompt_for_test, render_test, run_for_test
 from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -37,6 +37,7 @@ def generate_tests(
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
+    autogen: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -59,9 +60,10 @@ def generate_tests(
         function = request.code
         _ssa_to_expression = partial(ssa_to_expression, source, registrar)
 
-        cleaned_expr: sbb.TestData = pipe(
+        cleaned_expr: sbb.Request = pipe(
             request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
         )
+        assert isinstance(cleaned_expr, sbb.Request)
         log.debug(
             "\n=====Cleaned expression=====\n"
             + utils.dataclass_dump(cleaned_expr)
@@ -78,16 +80,21 @@ def generate_tests(
             return ""
         _filter_inputs = partial(filter_inputs, function)
 
-        def _render_test(args: Mapping[str, Any]) -> str:
-            return prompt_and_render_test(
-                requester=requester,
-                prompt=prompt,
-                test=testdata,
-                test_number=test_number,
-                args=args,
+        def get_expected_test_result(args: sbb.Solution) -> sbb.ExpectedTestData:
+            updated_testdata = make_extended_instance(
+                testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
+            if autogen:
+                func = get_test_func(updated_testdata)
+                return run_for_test(requester, func, updated_testdata)
+            else:
+                return prompt_for_test(
+                    requester=requester, prompt=prompt, test=updated_testdata
+                )
 
-        test: str = pipe(solution, _filter_inputs, _render_test)
+        test: str = pipe(
+            solution, _filter_inputs, get_expected_test_result, render_test
+        )
         return test
 
     def parse_file(text: str) -> AST:
@@ -117,14 +124,18 @@ def generate_tests(
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
         if lines is not None:
             _filter = partial(filter, lambda x: x in lines)
-            return pipe(
+            return pipe(  # type: ignore
                 unit, LineSplitter(), _filter, enumerate, liftIter(_generate_test), list
             )
         else:
-            return pipe(unit, LineSplitter(), enumerate, liftIter(_generate_test), list)
+            return pipe(  # type: ignore
+                unit, LineSplitter(), enumerate, liftIter(_generate_test), list
+            )
 
     log.debug("Splitting on lines", LineSplitter()(module))
-    return pipe(module, function_splitter, liftIter(generate_unit_tests), concat, list)
+    return pipe(  # type: ignore
+        module, function_splitter, liftIter(generate_unit_tests), concat, list
+    )
 
 
 def filter_inputs(function: sbb.FunctionDef, inputs: Solution) -> Solution:

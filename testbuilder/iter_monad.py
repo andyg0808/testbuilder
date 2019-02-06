@@ -1,25 +1,25 @@
 from functools import reduce
-from typing import Callable, Iterator, Optional, TypeVar
+from typing import Callable, Iterable, Iterator, Optional, TypeVar, Union
 
 A = TypeVar("A")
 B = TypeVar("B")
 T = TypeVar("T")
 
 
-def liftIter(func: Callable[[A], B]) -> Callable[[Iterator[A]], Iterator[B]]:
+def liftIter(func: Callable[[A], B]) -> Callable[[Iterable[A]], Iterator[B]]:
     """
     Takes a function which operates on individual values and returns a
     function which operates on iterators of such values. Lifts a
     function into the iterator monad
     """
 
-    def _lift(i: Iterator[A]) -> Iterator[B]:
+    def _lift(i: Iterable[A]) -> Iterator[B]:
         return map(func, i)
 
     return _lift
 
 
-def bind(data: Iterator[A], func: Callable[[A], Iterator[B]]) -> Iterator[B]:
+def bind(data: Iterable[A], func: Callable[[A], Iterable[B]]) -> Iterator[B]:
     """
     Takes a function converting values to iterators and an iterator
     and concatenates the iterators resulting from running the function
@@ -30,14 +30,14 @@ def bind(data: Iterator[A], func: Callable[[A], Iterator[B]]) -> Iterator[B]:
             yield x
 
 
-def chain(*func: Callable[[A], Iterator[B]]) -> Callable[[Iterator[A]], Iterator[B]]:
+def chain(*func: Callable[[A], Iterable[B]]) -> Callable[[Iterable[A]], Iterator[B]]:
     """
     Takes a function taking values to iterators and returns a function
     taking an iterator and returning the concatenation of all the
     resulting iterators.
     """
 
-    def _chain(data: Iterator[A]) -> Iterator[B]:
+    def _chain(data: Iterable[A]) -> Iterator[B]:
         # reversed necessary to call functions in normal composition order
         return reduce(bind, reversed(func), data)  # type: ignore
 
