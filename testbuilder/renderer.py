@@ -1,3 +1,4 @@
+import copy
 import re
 from importlib.machinery import SourceFileLoader
 from typing import Any, Callable, Mapping, cast
@@ -46,6 +47,8 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
 
 def run_for_test(test: SolvedTestData, func: Callable[..., Any]) -> ExpectedTestData:
     result = func(**test.args)
+    args = copy.deepcopy(test.args)
+    result = func(**args)
     return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
 
 
