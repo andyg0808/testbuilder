@@ -86,7 +86,7 @@ def generate_tests(
             )
             if autogen:
                 func = get_test_func(updated_testdata)
-                return run_for_test(updated_testdata, func)
+                return run_for_test(requester, func, updated_testdata)
             else:
                 return prompt_for_test(
                     requester=requester, prompt=prompt, test=updated_testdata

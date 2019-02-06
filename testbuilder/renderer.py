@@ -45,8 +45,10 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
         return cast(Callable[..., Any], funcs[0])
 
 
-def run_for_test(test: SolvedTestData, func: Callable[..., Any]) -> ExpectedTestData:
-    result = func(**test.args)
+def run_for_test(
+    requester: Requester, func: Callable[..., Any], test: SolvedTestData
+) -> ExpectedTestData:
+    requester.output(f"Generating test {test.test_number} for {test.name}")
     args = copy.deepcopy(test.args)
     result = func(**args)
     return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
