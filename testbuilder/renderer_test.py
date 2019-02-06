@@ -19,6 +19,7 @@ def test_expected_failure():
     actual = render_test(test_data)
     expected = """
 import pytest
+from importlib import import_module
 from testbuilder.pair import Pair
 Example = import_module("null").Example
 def test_Example():

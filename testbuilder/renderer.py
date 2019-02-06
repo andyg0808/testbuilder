@@ -57,6 +57,8 @@ def render_test(test: ExpectedTestData) -> str:
     call_string = f"{test.name}({call_args_string})"
     expected = str(test.expected_result).strip()
     log.info(f"Building test number {test.test_number}")
+    boilerplate = """from importlib import import_module
+from testbuilder.pair import Pair"""
     if test.test_number > 0:
         number_str = f"_{test.test_number+1}"
     else:
@@ -66,7 +68,7 @@ def render_test(test: ExpectedTestData) -> str:
         exception_name = throw_match[1]
         return f"""
 import pytest
-from testbuilder.pair import Pair
+{boilerplate}
 {test.name} = import_module("{test.filepath.stem}").{test.name}
 def test_{test.name}{number_str}():
     {args_string}
@@ -78,7 +80,7 @@ def test_{test.name}{number_str}():
         # This allows correct importing of modules with unacceptable
         # Python names
         return f"""
-from testbuilder.pair import Pair
+{boilerplate}
 {test.name} = import_module("{test.filepath.stem}").{test.name}
 def test_{test.name}{number_str}():
     {args_string}
