@@ -17,7 +17,7 @@ from .line_splitter import LineSplitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
-from .renderer import prompt_for_test, render_test, run_for_test
+from .renderer import get_test_func, prompt_for_test, render_test, run_for_test
 from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -85,7 +85,8 @@ def generate_tests(
                 testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
             if autosolve:
-                return run_for_test(updated_testdata)
+                func = get_test_func(updated_testdata)
+                return run_for_test(updated_testdata, func)
             else:
                 return prompt_for_test(
                     requester=requester, prompt=prompt, test=updated_testdata

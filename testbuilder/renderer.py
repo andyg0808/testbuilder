@@ -1,5 +1,6 @@
 import re
-from typing import Any, Mapping
+from importlib.machinery import SourceFileLoader
+from typing import Any, Callable, Mapping, cast
 
 from logbook import Logger
 
@@ -29,12 +30,21 @@ def prompt_for_test(
     return make_extended_instance(test, ExpectedTestData, expected_result=expected)
 
 
-def run_for_test(test: SolvedTestData) -> ExpectedTestData:
-    glo = globals()
-    loc: Mapping[str, Any] = {}
-    exec(test.source_text, glo, loc)
-    funcs = list(loc.values())
-    func = funcs[0]
+def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
+    try:
+        loader = SourceFileLoader("mod" + test.filepath.stem, str(test.filepath))
+        mod = loader.load_module()  # type: ignore
+        print(dir(mod))
+        return cast(Callable[..., Any], getattr(mod, test.name))
+    except FileNotFoundError:
+        glo = globals()
+        loc: Mapping[str, Any] = {}
+        exec(test.source_text, glo, loc)
+        funcs = list(loc.values())
+        return cast(Callable[..., Any], funcs[0])
+
+
+def run_for_test(test: SolvedTestData, func: Callable[..., Any]) -> ExpectedTestData:
     result = func(**test.args)
     return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
 

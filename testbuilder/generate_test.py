@@ -1,4 +1,6 @@
+import sys
 from pathlib import Path
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import create_autospec
 
 from hypothesis import assume, given
@@ -9,7 +11,9 @@ from .generate import generate_tests
 from .hypothesis_entities import functions
 from .renderer import render_test
 
-Requester = create_autospec(requester.Requester)
+
+def Requester():
+    return create_autospec(requester.Requester)()
 
 
 @given(functions, integers(), integers())
@@ -150,9 +154,31 @@ def test_id():
     assert actual == expected
     """
     }
+
     requester = Requester()
     tests = generate_tests(
         source=Path("id.py"), text=code, requester=requester, autosolve=True
     )
     requester.input.assert_not_called()
     assert set(tests) == expected
+
+
+def test_autosolve_real_module():
+    code = """
+from math import sin
+def example(val):
+    return sin(val)
+    """
+    requester = Requester()
+    with TemporaryDirectory() as d:
+        with NamedTemporaryFile(suffix=".py", mode="w", dir=d) as fi:
+            fi.write(code)
+            fi.flush()
+            tests = generate_tests(
+                source=Path(fi.name), text=code, requester=requester, autosolve=True
+            )
+            sys.path.append(d)
+            for test in tests:
+                exec(test)
+            sys.path.pop()
+    requester.input.assert_not_called()
