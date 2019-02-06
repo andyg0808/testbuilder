@@ -1,8 +1,44 @@
 from pathlib import Path
 
+from hypothesis import assume, given
+from hypothesis.strategies import integers
+
 from . import ssa_basic_blocks as sbb
+from .hypothesis_entities import functions
 from .renderer import render_test
 from .z3_types import BOOL_TRUE
+
+
+@given(functions, integers(), integers())
+def test_generate_basic(op, a, b):
+    assume(b != 0)
+    function_name = op.__name__
+    function_args = {"a": a, "b": b}
+    function_expectation = op(a, b)
+    function = render_test(
+        sbb.ExpectedTestData(
+            filepath=Path("mycode.py"),
+            name=function_name,
+            source_text="",
+            free_variables=[sbb.Variable("a"), sbb.Variable("b")],
+            expression=None,
+            expected_result=function_expectation,
+            args=function_args,
+            test_number=0,
+        )
+    )
+    expected = f"""
+from importlib import import_module
+from testbuilder.pair import Pair
+{op.__name__} = import_module("mycode").{op.__name__}
+def test_{op.__name__}():
+    a = {a}
+    b = {b}
+    actual = {op.__name__}(a, b)
+    expected = {op(a, b)}
+    assert actual == expected
+    """
+    assert function == expected
 
 
 def test_expected_failure():
