@@ -19,7 +19,7 @@ class Preprocessor:
         self.commands: List[ast.NodeTransformer] = []
         for line in text.splitlines():
             match = ActionMarker.fullmatch(line)
-            print("match", line, match)
+            log.debug("match {} {}", line, match)
             if match is not None:
                 self.add_rewrite_rule(match[1], match[2], match[3])
             elif not CommentLine.match(line):

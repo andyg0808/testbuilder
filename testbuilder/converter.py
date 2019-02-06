@@ -62,7 +62,6 @@ class SortNamer:
                 self.values.append(value)
 
     def __call__(self, expr: Expression) -> Optional[SortMarker]:
-        print(expr)
         sort = expr.sort()
         decl = expr.decl()
         if decl in self.values:

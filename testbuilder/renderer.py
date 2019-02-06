@@ -35,7 +35,6 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
     try:
         loader = SourceFileLoader("mod" + test.filepath.stem, str(test.filepath))
         mod = loader.load_module()  # type: ignore
-        print(dir(mod))
         return cast(Callable[..., Any], getattr(mod, test.name))
     except FileNotFoundError:
         glo = globals()
