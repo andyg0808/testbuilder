@@ -37,7 +37,7 @@ def generate_tests(
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
-    autosolve: bool = False,
+    autogen: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -84,7 +84,7 @@ def generate_tests(
             updated_testdata = make_extended_instance(
                 testdata, sbb.SolvedTestData, args=args, test_number=test_number
             )
-            if autosolve:
+            if autogen:
                 func = get_test_func(updated_testdata)
                 return run_for_test(updated_testdata, func)
             else:
