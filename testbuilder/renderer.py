@@ -49,7 +49,10 @@ def run_for_test(
 ) -> ExpectedTestData:
     requester.output(f"Generating test {test.test_number} for {test.name}")
     args = copy.deepcopy(test.args)
-    result = func(**args)
+    try:
+        result = func(**args)
+    except Exception as e:
+        result = f"fail::{type(e)}"
     return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
 
 
