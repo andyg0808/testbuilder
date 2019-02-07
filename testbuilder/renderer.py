@@ -52,7 +52,7 @@ def run_for_test(
     try:
         result = func(**args)
     except Exception as e:
-        result = f"fail::{type(e)}"
+        result = f"fail::{type(e).__name__}"
     return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
 
 
