@@ -1,5 +1,7 @@
 #!/bin/bash
+pip install pipenv
 pipenv install --dev &
+git submodule update --init
 cd z3_source
 mkdir -p build
 cd build
