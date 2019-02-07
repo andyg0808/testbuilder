@@ -1,0 +1,10 @@
+#!/bin/bash
+pipenv install --dev &
+cd z3_source
+mkdir -p build
+cd build
+cmake -D BUILD_PYTHON_BINDINGS:BOOL=ON -D INSTALL_PYTHON_BINDINGS:BOOL=OFF ..
+make -j $(nproc)
+cd ../..
+wait
+make
