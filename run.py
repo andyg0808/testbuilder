@@ -19,11 +19,12 @@ Options:
 import json
 from pathlib import Path
 
-import typeassert
 from docopt import docopt
-from logbook import NullHandler
 
+import _z3config  # noqa: F401
 import logconfig
+import typeassert
+from logbook import NullHandler
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
