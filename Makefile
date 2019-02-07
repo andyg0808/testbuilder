@@ -62,7 +62,7 @@ runtests:
 
 .PHONY: snippets
 snippets:
-	cd private && $(MAKE)
+	if [[ -d private ]]; then cd private && $(MAKE); fi
 
 .PHONY: docs
 docs:
