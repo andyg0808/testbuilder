@@ -83,9 +83,11 @@ def pipe(
     ...
 
 
-@overload
-def pipe(data: T, funcs: Callable[..., Any]) -> U:
-    ...
+# mypy doesn't accept this currently, although I think it's more
+# general than the other overloads
+# @overload
+# def pipe(data: T, funcs: Callable[..., Any]) -> U:
+#     ...
 
 
 def mapcat(func: Callable[[T], Iterable[U]], seqs: Iterable[T]) -> Sequence[U]:

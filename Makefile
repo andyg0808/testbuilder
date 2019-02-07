@@ -3,7 +3,7 @@ SHELL=/bin/bash -o pipefail
 
 RUN = fastbuild
 
-MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
+MYPY = mypy testbuilder/generate.py
 export MYPYPATH=./stubs
 
 TESTFILE = testbuilder
