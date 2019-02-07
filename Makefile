@@ -75,4 +75,5 @@ doc-server:
 
 .PHONY: clean
 clean:
-	rm -r build
+	rm -rf build
+	rm -rf .pytest_cache
