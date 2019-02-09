@@ -107,7 +107,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         )
         var_updates = groupby(lambda c: c[0], var_constraints)
         for varname, constraints in var_updates.items():
-            self.type_manager.put(varname, {c[1] for c in constraints})
+            self.type_manager.put(
+                varname, {c[1] for c in constraints if c[1] is not None}
+            )
         return expr
 
     def visit_UnaryOp(self, node: n.UnaryOp) -> TypeUnion:

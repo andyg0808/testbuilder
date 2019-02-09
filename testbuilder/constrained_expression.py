@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Generic, List, Set, Tuple, TypeVar, cast
+from typing import Set, Tuple, TypeVar, cast
 
 import z3
+from dataclasses import dataclass, field
 
 from .z3_types import Expression, bool_and, bool_not
 
