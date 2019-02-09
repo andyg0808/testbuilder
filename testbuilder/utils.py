@@ -5,8 +5,9 @@ import sys
 from pprint import pprint
 from typing import Any, NoReturn, TypeVar, cast
 
-import rainbow  # type: ignore
 from termcolor import cprint
+
+import rainbow  # type: ignore
 
 from .test_utils import write_dot
 
@@ -69,6 +70,20 @@ def colorize(code: str) -> str:
 
 def dataclass_dump(code: Any) -> str:
     return colorize(code_format(ObjString.sub(r'"\0"', str(code))))
+
+
+def ast_dump(
+    code: Any, annotate_fields: bool = True, include_attributes: bool = True
+) -> str:
+    return colorize(
+        code_format(
+            ast.dump(
+                code,
+                annotate_fields=annotate_fields,
+                include_attributes=include_attributes,
+            )
+        )
+    )
 
 
 A = TypeVar("A")
