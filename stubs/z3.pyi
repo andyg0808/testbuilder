@@ -55,6 +55,7 @@ class ArithSortRef(SortRef):
 
 
 IntSort = ArithSortRef
+RealSort = ArithSortRef
 SeqSortRef = ArithSortRef
 StringSort = SeqSortRef
 
@@ -183,13 +184,11 @@ def BoolVal(value: bool) -> BoolRef:
 
 
 class ArithRef(ExprRef):
-    ...
-
-
-class Int(ArithRef):
     def __init__(self, name: str) -> None:
         ...
 
+
+class Int(ArithRef):
     def __mul__(self, other: Int) -> Int:
         ...
 
@@ -197,8 +196,18 @@ class Int(ArithRef):
         ...
 
 
+class Real(ArithRef):
+    def __truediv__(self, other: Real) -> Real:
+        ...
+
+
 class IntVal(Int):
     def __init__(self, value: int) -> None:
+        ...
+
+
+class RealVal(Real):
+    def __init__(self, value: float) -> None:
         ...
 
 
@@ -238,6 +247,10 @@ def Not(value: ExprRef) -> BoolRef:
 
 
 def is_int(value: Any) -> bool:
+    ...
+
+
+def is_real(value: Any) -> bool:
     ...
 
 
@@ -290,3 +303,7 @@ def substitute(expr: ExprRef, *pairs: Tuple[ExprRef, ExprRef]) -> ExprRef:
 
 
 DeclareSort = ...  # type: Any
+
+
+def ToReal(x: Int) -> Real:
+    ...
