@@ -182,7 +182,11 @@ def BoolVal(value: bool) -> BoolRef:
     ...
 
 
-class Int(ExprRef):
+class ArithRef(ExprRef):
+    ...
+
+
+class Int(ArithRef):
     def __init__(self, name: str) -> None:
         ...
 
