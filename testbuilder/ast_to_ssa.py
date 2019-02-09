@@ -17,6 +17,7 @@ import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
+from .utils import ast_dump
 from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
 
@@ -65,14 +66,15 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
         return sbb.Module(functions=functions, classes=classes, code=blocktree)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> sbb.ClassDef:
+        last_lineno = last_line(node)
         functions = [
             self.visit(line) for line in node.body if isinstance(line, ast.FunctionDef)
         ]
-        first_line = functions[0].first_line
-        last_line = functions[-1].last_line
+        first_lineno = node.lineno
+        last_lineno = last_line(node)
         return sbb.ClassDef(
-            first_line=first_line,
-            last_line=last_line,
+            first_line=first_lineno,
+            last_line=last_lineno,
             name=node.name,
             variables=[],
             functions=functions,
@@ -502,3 +504,35 @@ class AstBuilder(GenericVisitor[Any]):
             else:
                 fields.append(self.visit(value))
         return cast(n.Node, equivalent(*fields))
+
+
+def last_line(node: ast.AST) -> int:
+    """
+    Return the last line of an AST element
+    """
+    # `negatives` contains AST elements which should be given negative
+    # results, making them lower-priority than any element with a
+    # determinable position.
+
+    negatives = [ast.Load, ast.Store, ast.boolop, ast.operator, ast.unaryop, ast.cmpop]
+
+    # `linenos` contains AST elements which have no subparts, and thus
+    # must rely on their own `lineno` for their position.
+    linenos = {ast.Num, ast.arg, ast.Pass, ast.Name, ast.NameConstant}
+
+    cls: Type[ast.AST]
+    for cls in negatives:
+        if isinstance(node, cls):
+            return -1
+
+    for cls in linenos:
+        if isinstance(node, cls):
+            return node.lineno
+
+    try:
+        return max(last_line(x) for x in ast.iter_child_nodes(node))
+    except ValueError as e:
+        raise RuntimeError(
+            f"Cannot determine last line of a `{type(node).__name__}`"
+            f"\nDump:\n{ast_dump(node)}"
+        ) from e
