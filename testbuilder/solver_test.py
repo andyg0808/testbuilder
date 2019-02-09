@@ -20,7 +20,9 @@ def compare_values(expected, actual, actual_dict):
         print("actual", actual)
         print("dict", actual_dict)
         print("expected", expected)
-        assert expected(actual, actual_dict)
+        result = expected(actual, actual_dict)
+        print("result", result)
+        assert result
     else:
         print("expected", expected)
         print("actual", actual)
