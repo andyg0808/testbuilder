@@ -42,6 +42,7 @@ def test_neq():
         Or(
           And(Any.i(pyname_i) != 4,
               Any.is_Int(pyname_i)),
+          Any.is_Float(pyname_i),
           Any.is_Bool(pyname_i),
           Any.is_String(pyname_i)
         )
@@ -82,7 +83,12 @@ def test_lte():
 
 def test_div():
     check_expression(
-        "return i / 3", "ret == Any.Int(Any.i(pyname_i) / 3) and Any.is_Int(pyname_i)"
+        "return i / 3",
+        """Or(
+And(ret == Any.Float(z3.ToReal(Any.i(pyname_i)) / z3.ToReal(3)),
+    Any.is_Int(pyname_i)),
+And(ret == Any.Float(Any.f(pyname_i)/z3.ToReal(3)),
+    Any.is_Float(pyname_i)))""",
     )
 
 
@@ -467,6 +473,7 @@ def test(i):
     """,
         """
         Or(And(Not(Any.i(pyname_i) != 0), Any.is_Int(pyname_i)),
+           And(Not(Any.f(pyname_i) != z3.RealVal(0)), Any.is_Float(pyname_i)),
            And(Not(Any.b(pyname_i)), Any.is_Bool(pyname_i)),
            And(Not(Length(Any.s(pyname_i)) != 0), Any.is_String(pyname_i)))\
         and ret == Any.Int(2)
@@ -852,6 +859,7 @@ def test(S_text: str):
 Or(And(Any.s(spyname_S_text) == "win", Any.is_String(spyname_S_text),
     pyname_res == Any.Int(1)),
    Or(Any.is_Int(spyname_S_text),
+      Any.is_Float(spyname_S_text),
       Any.is_Bool(spyname_S_text),
       And(Not(Any.s(spyname_S_text) == "win"),
           Any.is_String(spyname_S_text)))\
@@ -954,6 +962,7 @@ And(
         pyname_ret == Any.Int(4))\
 or\
         Or(Any.is_Int(pyname_doit),
+           Any.is_Float(pyname_doit),
            And(Not(Any.b(pyname_doit) == true), Any.is_Bool(pyname_doit)),
            Any.is_String(pyname_doit))\
      and pyname_ret == Any.Int(5),
@@ -1001,11 +1010,29 @@ And(Or(
         Any.is_Int(pyname_a)),
     And(Or(
             Not(Any.i(pyname_b) == 2) and Any.is_Int(pyname_b),
+            Any.is_Float(pyname_b),
             Any.is_Bool(pyname_b),
             Any.is_String(pyname_b)),
         pyname_ret == pyname_a)),
 ret == pyname_ret)
 """,
+        #         """
+        # And(Or(
+        #     And(
+        #         Or(
+        #             Any.i(pyname_b) == 2 and Any.is_Int(pyname_b),
+        #             Any.f(pyname_b) == z3.RealVal(2) and Any.is_Float(pyname_b),
+        #         ),
+        #         pyname_ret == Any.Int(Any.i(pyname_a) * 1),
+        #         Any.is_Int(pyname_a)),
+        #     And(Or(
+        #             Not(Any.i(pyname_b) == 2) and Any.is_Int(pyname_b),
+        #             Not(Any.f(pyname_b) == z3.RealVal(2)) and Any.is_Float(pyname_b),
+        #             Any.is_Bool(pyname_b),
+        #             Any.is_String(pyname_b)),
+        #         pyname_ret == pyname_a)),
+        # ret == pyname_ret)
+        # """,
     )
 
 

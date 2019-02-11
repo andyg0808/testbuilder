@@ -172,6 +172,8 @@ class TypeRegistrar:
         """
         if val.sort() == z3.IntSort():
             return self._extract_or_wrap(val, "i", "Int")
+        if val.sort() == z3.RealSort():
+            return self._extract_or_wrap(val, "f", "Float")
         if val.sort() == z3.StringSort():
             return self._extract_or_wrap(val, "s", "String")
         if val.sort() == z3.BoolSort():
@@ -206,6 +208,8 @@ class TypeRegistrar:
         """
         if z3.is_int(expr):
             return expr != z3.IntVal(0)
+        elif z3.is_real(expr):
+            return expr != z3.RealVal(0)
         elif z3.is_bool(expr):
             return cast(z3.BoolRef, expr)
         elif z3.is_string(expr):

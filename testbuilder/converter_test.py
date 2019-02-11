@@ -190,6 +190,7 @@ def test_addition_to_variable():
 def test_equality_with_variable():
     conversion_assert(
         """Or(And(Any.i(pyname_a) != 32, Any.is_Int(pyname_a)),
+              Any.is_Float(pyname_a),
               Any.is_Bool(pyname_a),
               Any.is_String(pyname_a))""",
         "a != 32",

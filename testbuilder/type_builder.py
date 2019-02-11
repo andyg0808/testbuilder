@@ -29,6 +29,7 @@ class TypeBuilder:
 
     def wrappers(self) -> TypeBuilder:
         self.datatype.declare("Int", ("i", z3.IntSort()))
+        self.datatype.declare("Float", ("f", z3.RealSort()))
         self.datatype.declare("Bool", ("b", z3.BoolSort()))
         self.datatype.declare("String", ("s", z3.StringSort()))
         return self
