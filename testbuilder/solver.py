@@ -70,6 +70,8 @@ class Z3PythonConverter:
                 value = self.registrar.unwrap(value)
         if z3.is_int(value):
             return value.as_long()  # type: ignore
+        elif z3.is_rational_value(value):
+            return value.as_fraction()  # type: ignore
         elif z3.is_string(value):
             return value.as_string()  # type: ignore
         elif z3.is_bool(value) and not isinstance(value, z3.QuantifierRef):
