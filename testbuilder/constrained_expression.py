@@ -1,4 +1,4 @@
-from typing import Set, Tuple, TypeVar, cast
+from typing import Optional, Set, Tuple, TypeVar, cast
 
 import z3
 from dataclasses import dataclass, field
@@ -10,10 +10,26 @@ VarConstraint = Tuple[str, z3.SortRef, z3.BoolRef]
 ConstraintSet = Set[VarConstraint]
 
 
+def constraint_reduce(t: VarConstraint) -> Optional[VarConstraint]:
+    reduced = z3.simplify(t[2])
+    if z3.eq(reduced, z3.BoolVal(True)):
+        return None
+    else:
+        return (t[0], t[1], reduced)
+
+
 @dataclass
 class ConstrainedExpression:
     expr: Expression
     constraints: ConstraintSet = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        reduced = set()
+        for t in self.constraints:
+            r = constraint_reduce(t)
+            if r is not None:
+                reduced.add(r)
+        self.constraints = reduced
 
     def constrained(self) -> bool:
         return len(self.constraints) > 0
