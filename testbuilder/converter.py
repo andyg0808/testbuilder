@@ -96,6 +96,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
 
+    def visit_Float(self, node: n.Float) -> TypeUnion:
+        return TypeUnion.wrap(z3.RealVal(node.v))
+
     def visit_Str(self, node: n.Str) -> TypeUnion:
         return TypeUnion.wrap(z3.StringVal(node.s))
 

@@ -429,8 +429,8 @@ class AstBuilder(GenericVisitor[Any]):
         self.variables = variables
 
     def visit_Num(self, node: ast.Num) -> Union[n.Int, n.Float]:
-        if int(node.n) == node.n:
-            return n.Int(int(node.n))
+        if isinstance(node.n, int):
+            return n.Int(node.n)
         else:
             return n.Float(node.n)
 

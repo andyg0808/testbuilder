@@ -67,6 +67,10 @@ def test_int():
     conversion_assert("3")
 
 
+def test_float():
+    conversion_assert("z3.RealVal(3)", "3.0")
+
+
 def test_string():
     # conversion_assert('String("abc")', '"abc"')
     # conversion_assert('String("def") + String("hjk")', '"def" + "hjk"')
