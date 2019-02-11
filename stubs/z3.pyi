@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union, overload
 
 
@@ -218,9 +219,16 @@ class IntVal(Int):
         ...
 
 
-class RealVal(Real):
+class RatNumRef(Real):
     def __init__(self, value: float) -> None:
         ...
+
+    def as_fraction(self) -> Fraction:
+        ...
+
+
+def RealVal(value: float) -> RatNumRef:
+    ...
 
 
 class SeqRef(ExprRef):
@@ -271,6 +279,10 @@ def is_bool(value: Any) -> bool:
 
 
 def is_string(value: Any) -> bool:
+    ...
+
+
+def is_rational_value(value: Any) -> bool:
     ...
 
 
