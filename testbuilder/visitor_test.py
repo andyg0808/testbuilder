@@ -32,7 +32,6 @@ leaf = builds(Leaf, value=integers())
 parent = recursive(
     leaf, lambda node: builds(Parent, left=node, right=node, links=lists(node))
 )
-# parent = builds(Parent, left=node, right=node, links=lists(node))
 node = one_of(leaf, parent)
 
 
