@@ -270,7 +270,10 @@ def eq(a: AstRef, b: AstRef) -> bool:
     ...
 
 
-def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
+E = TypeVar("E", bound=ExprRef)
+
+
+def simplify(a: E, *args: Any, **kwargs: Any) -> E:
     ...
 
 
