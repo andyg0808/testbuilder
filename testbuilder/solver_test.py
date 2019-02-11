@@ -319,3 +319,12 @@ def example(a):
             {"ret": lambda ret, d: Fraction(numerator=d["a"], denominator=3) == ret}
         ),
     )
+
+    check_solve(
+        """
+def example():
+    return 13//4
+        """,
+        None,
+        spotcheck({"ret": 3}),
+    )

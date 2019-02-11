@@ -28,11 +28,9 @@ from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
-    AnyT,
     Expression,
     Reference,
     ReferenceT,
-    ReferentT,
     SortMarker,
     SortSet,
     bool_and,
@@ -363,6 +361,9 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
                 return left / right
 
         return DivMagic(self.fount.sorting)
+
+    def visit_FloorDiv(self, node: n.FloorDiv) -> OpFunc:
+        return self.fount(IntSort, IntSort)(operator.truediv)
 
     def visit_LtE(self, node: n.LtE) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.le)

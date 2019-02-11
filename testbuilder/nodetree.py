@@ -80,6 +80,10 @@ class Div(Operator):
     pass
 
 
+class FloorDiv(Operator):
+    pass
+
+
 class Lt(Operator):
     pass
 
