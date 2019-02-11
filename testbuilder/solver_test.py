@@ -1,4 +1,5 @@
 import ast
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -295,4 +296,15 @@ def example(a):
         """,
         None,
         spotcheck({"a": None}),
+    )
+
+
+def test_division():
+    check_solve(
+        """
+def example():
+    return 13/4
+        """,
+        None,
+        spotcheck({"ret": Fraction(3.25)}),
     )
