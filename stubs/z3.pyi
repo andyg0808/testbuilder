@@ -171,6 +171,9 @@ class Solver:
     def model(self) -> ModelRef:
         ...
 
+    def reason_unknown(self) -> str:
+        ...
+
 
 class BoolRef(ExprRef):
     ...

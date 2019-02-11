@@ -166,11 +166,16 @@ def store_key(ref: z3.FuncDeclRef) -> str:
 
 @assertify
 def solve(registrar: TypeRegistrar, data: sbb.TestData) -> Optional[Solution]:
-    log.info("Solving expression {}", data.expression)
     solver = z3.Solver()
-    solver.add(z3.simplify(data.expression))
+    simplified = z3.simplify(data.expression)
+    log.info("Solving expression {}", simplified)
+    solver.add(simplified)
     res = solver.check()
     if res == z3.unsat:
+        log.notice("Unsat solve result")
+        return None
+    elif res == z3.unknown:
+        log.notice("Unknown solve result reason: {}", solver.reason_unknown())
         return None
     model = solver.model()
     log.debug(f"Model: {model}")
