@@ -47,8 +47,10 @@ TypeConstructor = Callable[[str], Expression]
 
 
 IntSort = z3.IntSort()
+RealSort = z3.RealSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
+ArithSort = z3.ArithSortRef
 
 
 class SortNamer:
@@ -345,7 +347,22 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return self.fount(IntSort, IntSort)(operator.mul)
 
     def visit_Div(self, node: n.Div) -> OpFunc:
-        return self.fount(IntSort, IntSort)(operator.truediv)
+        class DivMagic(Magic):
+            @magic(IntSort, IntSort)
+            def divInts(self, left: z3.Int, right: z3.Int) -> z3.Real:
+                left_real = z3.ToReal(left)
+                right_real = z3.ToReal(right)
+                return left_real / right_real
+
+            @magic(IntSort, RealSort)
+            def divIntReal(self, left: z3.Int, right: z3.Real) -> z3.Real:
+                return left / right
+
+            @magic(RealSort, ArithSort)
+            def divReal(self, left: z3.Real, right: z3.ArithRef) -> z3.Real:
+                return left / right
+
+        return DivMagic(self.fount.sorting)
 
     def visit_LtE(self, node: n.LtE) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.le)

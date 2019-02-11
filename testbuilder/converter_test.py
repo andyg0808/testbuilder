@@ -95,7 +95,10 @@ def test_multiply():
 
 
 def test_divide():
-    conversion_assert("4 / 3")
+    conversion_assert("z3.ToReal(4) / z3.ToReal(3)", "4/3")
+    conversion_assert("z3.ToReal(4) / z3.RealVal(3.0)", "4/3.0")
+    conversion_assert("z3.RealVal(4) / z3.ToReal(3)", "4.0/3")
+    conversion_assert("z3.RealVal(4) / z3.RealVal(3)", "4.0/3.0")
 
 
 def test_lt():
