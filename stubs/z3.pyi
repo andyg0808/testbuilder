@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union, overload
 
 
 class AstRef:
@@ -195,9 +195,21 @@ class Int(ArithRef):
     def __add__(self, other: Int) -> Int:
         ...
 
+    @overload
+    def __truediv__(self, other: Int) -> Int:
+        ...
+
+    @overload
+    def __truediv__(self, other: Real) -> Real:
+        ...
+
+    @overload
+    def __truediv__(self, other: ArithRef) -> Union[Int, Real]:
+        ...
+
 
 class Real(ArithRef):
-    def __truediv__(self, other: Real) -> Real:
+    def __truediv__(self, other: ArithRef) -> Real:
         ...
 
 
