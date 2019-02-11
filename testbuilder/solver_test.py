@@ -308,3 +308,14 @@ def example():
         None,
         spotcheck({"ret": Fraction(3.25)}),
     )
+
+    check_solve(
+        """
+def example(a):
+    return a/3
+        """,
+        "Any.is_Int(pyname_a)",
+        spotcheck(
+            {"ret": lambda ret, d: Fraction(numerator=d["a"], denominator=3) == ret}
+        ),
+    )
