@@ -11,6 +11,7 @@ from .expression_builder import get_expression
 from .pair import Pair
 from .solver import solve
 from .type_builder import TypeBuilder
+from .utils import colorize
 from .variable_expander import expand_variables
 
 Registrar = TypeBuilder().construct()
@@ -64,7 +65,7 @@ def check_solve(code, conditions, expected, unroll=1, slice=True):
         )
     else:
         expression = testdata
-    print("expression", expression)
+    print("testdata", colorize(str(expression)))
     res = solve(Registrar, expression)
     print(f"Solution: {res}")
     if isinstance(expected, spotcheck):
