@@ -1,4 +1,3 @@
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH":/home/andrew/Projects/Clones/z3/build
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(readlink -e ./z3_source/build/python/)"
 export MYPYPATH=./stubs
 pipenv shell
-#workon -n masters
