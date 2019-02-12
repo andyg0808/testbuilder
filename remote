@@ -1,2 +1,2 @@
 #!/bin/bash
-supervise ./remote_daemon
+pipenv run supervise ./remote_daemon
