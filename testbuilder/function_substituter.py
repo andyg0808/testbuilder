@@ -1,10 +1,14 @@
 from typing import Any, Generator, List, Optional, TypeVar
 
+from logbook import Logger
+
 import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .variable_manager import VAR_START_VALUE
 from .visitor import CoroutineVisitor, UpdateVisitor
+
+log = Logger("function_substituter")
 
 E = TypeVar("E", bound=n.expr)
 
@@ -83,7 +87,7 @@ class FunctionSubstitute(UpdateVisitor):
         func: sbb.FunctionDef,
         parent: sbb.BasicBlock,
     ) -> sbb.BasicBlock:
-        print("reparenting")
+        log.info("reparenting")
         prefixer = VariablePrefix()
         prefixed: sbb.BasicBlock = prefixer(func.blocks.end, call_info)
         reparent = Reparent()
