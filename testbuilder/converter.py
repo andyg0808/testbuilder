@@ -407,35 +407,6 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return self.fount(IntSort)(lambda x: -x)  # type: ignore
 
 
-# T = TypeVar("T")
-
-
-# def safify(
-#     exception: Type[BaseException], op: Callable[..., T]
-# ) -> Callable[..., Optional[T]]:
-#     def _safify(*args: Any, **kwargs: Any) -> Optional[T]:
-#         try:
-#             return op(*args, **kwargs)
-#         except exception as e:
-#             return None
-
-#     return _safify
-
-
-# Options:
-# * Map == between the z3 variable and the values (which have to be wrapped)
-# * Map == between each element of the unwrapped z3 variable and the values
-
-# Not options:
-# * Can't do If(cond, case1, If(cond2, case2, ...)) # because final
-#   else has no good return value
-#
-
-
-# E = TypeVar("E", bound=n.expr)
-# B = TypeVar("B")
-
-
 def get_variable(name: str, idx: int) -> str:
     name = "pyname_" + name
 
