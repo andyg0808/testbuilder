@@ -328,3 +328,21 @@ def example():
         None,
         spotcheck({"ret": 3}),
     )
+def test_division_not_by_zero():
+    check_solve(
+        """
+def example(a):
+    return 1/a
+    """,
+        "Any.is_Float(pyname_a) and Any.f(pyname_a) == z3.RealVal(0)",
+        None,
+    )
+
+    check_solve(
+        """
+def example(a):
+    return 1//a
+        """,
+        "Any.i(pyname_a) == 0",
+        None,
+    )

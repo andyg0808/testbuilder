@@ -346,24 +346,26 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
     def visit_Div(self, node: n.Div) -> OpFunc:
         class DivMagic(Magic):
-            @magic(IntSort, IntSort)
+            @magic(IntSort, IntSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
             def divInts(self, left: z3.Int, right: z3.Int) -> z3.Real:
                 left_real = z3.ToReal(left)
                 right_real = z3.ToReal(right)
                 return left_real / right_real
 
-            @magic(IntSort, RealSort)
+            @magic(IntSort, RealSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
             def divIntReal(self, left: z3.Int, right: z3.Real) -> z3.Real:
                 return left / right
 
-            @magic(RealSort, ArithSort)
+            @magic(RealSort, ArithSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
             def divReal(self, left: z3.Real, right: z3.ArithRef) -> z3.Real:
                 return left / right
 
         return DivMagic(self.fount.sorting)
 
     def visit_FloorDiv(self, node: n.FloorDiv) -> OpFunc:
-        return self.fount(IntSort, IntSort)(operator.truediv)
+        return self.fount(
+            IntSort, IntSort, constraint=(lambda n, d: {d != z3.IntVal(0)})
+        )(operator.truediv)
 
     def visit_LtE(self, node: n.LtE) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.le)
