@@ -392,7 +392,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return NotEqMagic(self.fount.sorting, self.store, self.registrar.reftype)
 
     def visit_Lt(self, node: n.Lt) -> OpFunc:
-        return self.fount(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
+        return self.fount(IntSort, IntSort)(operator.lt)
 
     def visit_Gt(self, node: n.Gt) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.gt)
