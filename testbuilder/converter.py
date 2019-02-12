@@ -284,11 +284,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, constructor: Callable[..., Expression], args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
-        print("Constructing call", constructor, args)
+        # print("Constructing call", constructor, args)
         exprs = []
         sorts: SortSet = set()
         for arg_tuple in Magic.cartesian_product(args):
-            print("running for", arg_tuple)
+            # print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
             expr = self.store.add(cast(z3.DatatypeRef, target))
             constraints = set(mapcat(lambda x: x.constraints, arg_tuple))
@@ -475,7 +475,7 @@ class IsMagic(Magic):
             return True
         if not isinstance(right, ExpandableTypeUnion):
             return True
-        print("not expanding")
+        # print("not expanding")
         return False
 
     @magic(z3.SortRef, z3.SortRef)
