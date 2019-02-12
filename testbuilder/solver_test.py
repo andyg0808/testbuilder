@@ -328,6 +328,17 @@ def example():
         None,
         spotcheck({"ret": 3}),
     )
+
+    check_solve(
+        """
+def example(a, b):
+    return a//b
+        """,
+        "Any.is_Int(pyname_a) and Any.is_Int(pyname_b)",
+        spotcheck({"ret": lambda ret, d: d["a"] // d["b"] == ret}),
+    )
+
+
 def test_division_not_by_zero():
     check_solve(
         """
