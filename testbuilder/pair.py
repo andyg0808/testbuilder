@@ -1,5 +1,10 @@
+from __future__ import annotations
+
+from typing import Any, Set
+
+
 class Pair:
-    def __init__(self, left, right):  # type: ignore
+    def __init__(self, left: Any, right: Any):
         self.left = left
         self.right = right
 
@@ -23,4 +28,22 @@ class Pair:
         return bool(l_eq and r_eq)
 
     def __repr__(self) -> str:
-        return "Pair(" + str(self.left) + ", " + str(self.right) + ")"
+        return self.__repr_helper(set())
+
+    def __repr_helper(self, seen: Set[int]) -> str:
+        if id(self) in seen:
+            return f"<Pair {id(self)}>"
+        else:
+            seen.add(id(self))
+            if isinstance(self.left, Pair):
+                left = self.left.__repr_helper(seen)
+            else:
+                left = repr(self.left)
+
+            if isinstance(self.right, Pair):
+                right = self.right.__repr_helper(seen)
+            else:
+                right = repr(self.right)
+
+            ret: str = ("Pair(" + left + ", " + right + ")")
+            return ret
