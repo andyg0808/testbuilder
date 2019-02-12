@@ -72,7 +72,10 @@ def main(filename: str) -> None:
         autogen=autogen,
     )
     with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
-        tests.write("from importlib import import_module")
+    with open(filename, "x") as tests:
+        tests.write("from importlib import import_module\n")
+        tests.write("from testbuilder.pair import Pair\n")
+        tests.write("import pytest\n")
         tests.write("\n\n".join(test_cases))
 
 

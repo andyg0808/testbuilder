@@ -27,8 +27,6 @@ def test_generate_list_handler():
         )
     )
     expected = """
-from importlib import import_module
-from testbuilder.pair import Pair
 min = import_module("mycode").min
 def test_min():
     a = [1, 2, 3]
@@ -71,8 +69,6 @@ def caller(fishy):
     """
     expected = {
         """
-from importlib import import_module
-from testbuilder.pair import Pair
 boring = import_module("boring").boring
 def test_boring():
     fishy = 1234567890
@@ -81,8 +77,6 @@ def test_boring():
     assert actual == expected
     """,
         """
-from importlib import import_module
-from testbuilder.pair import Pair
 caller = import_module("boring").caller
 def test_caller():
     fishy = None
