@@ -14,17 +14,23 @@ Options:
                                   rules in <file.json> on each input file.
     --autogen  Run the function under test with the suggested inputs to
                determine the expected output
+    --basename=<name>  Filename for resulting tests. {parent} will be
+                       replaced with the name of the parent directory
+                       of the target file, {basename} will be replaced
+                       with the full path and filename without the
+                       extension, and {stem} will be replaced with the
+                       filename alone without the extension.
 """
 
 import json
 from pathlib import Path
 
+import typeassert
 from docopt import docopt
+from logbook import NullHandler
 
 import _z3config  # noqa: F401
 import logconfig
-import typeassert
-from logbook import NullHandler
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
@@ -71,7 +77,14 @@ def main(filename: str) -> None:
         changes=changes,
         autogen=autogen,
     )
-    with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
+    if opts["--basename"]:
+        filename = opts["--basename"].format(
+            parent=filepath.parent.as_posix(),
+            basename=(filepath.parent / filepath.stem).as_posix(),
+            stem=filepath.stem,
+        )
+    else:
+        filename = (filepath.parent / filepath.stem).as_posix() + "_test.py"
     with open(filename, "x") as tests:
         tests.write("from importlib import import_module\n")
         tests.write("from testbuilder.pair import Pair\n")
