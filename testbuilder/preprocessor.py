@@ -1,6 +1,6 @@
 import ast
 import re
-from typing import List, Tuple, cast
+from typing import List, Tuple, Union
 
 from logbook import Logger
 
@@ -70,11 +70,19 @@ class AttrName(NodeFinder):
         return ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
 
 
+class Subscript(NodeFinder):
+    def visit_Subscript(self, sub: ast.Subscript) -> ast.AST:
+        return self.transformer.visit(sub)  # type: ignore
 
 
 class Name(NodeFinder):
     def visit_Name(self, name: ast.Name) -> ast.Name:
         return self.transformer.visit(name)  # type: ignore
+
+
+class TupleFinder(NodeFinder):
+    def visit_Tuple(self, tup: ast.Tuple) -> ast.AST:
+        return self.transformer.visit(tup)  # type: ignore
 
 
 class Action(ast.NodeTransformer):
@@ -92,5 +100,31 @@ class Rename(Action):
         return re.sub(self.search, self.replace, string)
 
 
-Nodefinders = {"ATTR": Attr, "ATTRNAME": AttrName, "NAME": Name}
-Actions = {"RENAME": Rename}
+class Parify(Action):
+    def visit_Subscript(
+        self, sub: ast.Subscript
+    ) -> Union[ast.Attribute, ast.Subscript]:
+        if isinstance(sub.slice, ast.Index):
+            index = sub.slice.value
+            if isinstance(index, ast.Num):
+                if index.n == int(self.search):
+                    return ast.copy_location(
+                        ast.Attribute(sub.value, self.replace), sub
+                    )
+        return sub
+
+    def visit_Tuple(self, tup: ast.Tuple) -> Union[ast.Tuple, ast.Call]:
+        if len(tup.elts) == 2:
+            pair = ast.copy_location(ast.Name("Pair"), tup)
+            return ast.copy_location(ast.Call(pair, tup.elts, []), tup)
+        return tup
+
+
+Nodefinders = {
+    "ATTR": Attr,
+    "ATTRNAME": AttrName,
+    "NAME": Name,
+    "SUBSCRIPT": Subscript,
+    "TUPLE": TupleFinder,
+}
+Actions = {"RENAME": Rename, "PARIFY": Parify}

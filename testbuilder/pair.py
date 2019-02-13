@@ -8,6 +8,13 @@ class Pair:
         self.left = left
         self.right = right
 
+    def __getitem__(self, key: int) -> Any:
+        if key == 0:
+            return self.left
+        if key == 1:
+            return self.right
+        raise IndexError()
+
     @property
     def first(self):  # type: ignore
         return self.left

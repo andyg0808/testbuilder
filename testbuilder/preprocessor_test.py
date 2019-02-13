@@ -1,5 +1,6 @@
 import ast
 
+import pytest
 from astor import to_source
 
 from .preprocessor import AutoPreprocessor, Preprocessor
@@ -140,3 +141,24 @@ a.right = 5
             ("ATTRNAME", "RENAME", "rest -> right"),
         ],
     )
+
+
+def test_preprocess_subscript():
+    check_preprocess(
+        """
+s[0] = 4
+s[1] = 5
+        """,
+        """
+s.left = 4
+s.right = 5
+        """,
+        auto=[
+            ("SUBSCRIPT", "PARIFY", "0 -> left"),
+            ("SUBSCRIPT", "PARIFY", "1 -> right"),
+        ],
+    )
+
+
+def test_preprocess_tuple():
+    check_preprocess("val = (1, 2)", "val = Pair(1, 2)", auto=[("TUPLE", "PARIFY", "")])
