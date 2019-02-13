@@ -1,10 +1,10 @@
 import ast
 import re
-from abc import ABC
-from dataclasses import dataclass
 from typing import List, Tuple, cast
 
 from logbook import Logger
+
+from dataclasses import dataclass
 
 ActionMarker = re.compile(r"# ([A-Z]+)/([A-Z]+): (.*)")
 CommentLine = re.compile(r"\s*#|^\s*$")
@@ -55,34 +55,36 @@ class MissingRewrite(RuntimeError):
 
 
 @dataclass
-class Attr(ast.NodeTransformer):
+class NodeFinder(ast.NodeTransformer):
     transformer: ast.NodeTransformer
 
+
+class Attr(NodeFinder):
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         return self.transformer.visit(attr)  # type: ignore
 
 
-@dataclass
-class AttrName(ast.NodeTransformer):
-    transformer: ast.NodeTransformer
-
+class AttrName(NodeFinder):
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         new_attr = self.transformer.visit_String(attr.attr)  # type: ignore
         return ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
 
 
-@dataclass
-class Name(ast.NodeTransformer):
-    transformer: ast.NodeTransformer
 
+
+class Name(NodeFinder):
     def visit_Name(self, name: ast.Name) -> ast.Name:
         return self.transformer.visit(name)  # type: ignore
 
 
-class Rename(ast.NodeTransformer):
+class Action(ast.NodeTransformer):
     def __init__(self, action: str) -> None:
-        self.search, self.replace = re.split(r"\s*->\s*", action)
+        self.action = action
+        if len(action) > 2:
+            self.search, self.replace = re.split(r"\s*->\s*", action)
 
+
+class Rename(Action):
     def visit_Name(self, name: ast.Name) -> ast.Name:
         return ast.copy_location(ast.Name(self.visit_String(name.id)), name)
 
