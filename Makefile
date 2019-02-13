@@ -48,9 +48,14 @@ mypy:
 	$(MYPY)
 
 .PHONY: pytest
+ifndef remote
 pytest:
 	$(PYTEST_FAST)
 	$(PYTEST_COMPLETE)
+else
+pytest:
+	$(PYTEST_COMPLETE)
+endif
 
 .PHONY: plaintest
 plaintest:
