@@ -518,7 +518,7 @@ def last_line(node: ast.AST) -> int:
 
     # `linenos` contains AST elements which have no subparts, and thus
     # must rely on their own `lineno` for their position.
-    linenos = {ast.Num, ast.arg, ast.Pass, ast.Name, ast.NameConstant}
+    linenos = {ast.Num, ast.arg, ast.Pass, ast.Name, ast.NameConstant, ast.Str}
 
     cls: Type[ast.AST]
     for cls in negatives:
