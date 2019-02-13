@@ -68,13 +68,11 @@ class ComputedLineFilterer(UpdateVisitor):
             )
             return None
         else:
-            return sbb.FunctionDef(
+            return dataclasses.replace(
+                function,
                 first_line=blocktree.start.line,
                 last_line=blocktree.end.line,
-                name=function.name,
-                args=function.args,
                 blocks=blocktree,
-                original=function.original,
             )
         pass
 

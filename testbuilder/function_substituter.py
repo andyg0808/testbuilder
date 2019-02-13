@@ -153,8 +153,25 @@ def bind_arguments(
         )
         return n.ArgumentBind(line=line, target=name, e=value)
 
-    assert len(call.args) == len(func.args)
-    return [bind_arg(*arg) for arg in zip(func.args, call.args)]
+    if len(call.args) > len(func.args):
+        raise RuntimeError(
+            "Too many arguments in call:\n"
+            f"\tDefinition: {func.args}\n"
+            f"\tCall: {call.args}"
+        )
+    if len(call.args) + len(func.defaults) < len(func.args):
+        raise RuntimeError(
+            "Too few arguments in call:\n"
+            f"\tDefinition: {func.args}\n"
+            f"\tCall: {call.args}\n"
+            f"\tDefaults: {func.defaults}"
+        )
+
+    args = list(call.args)
+    if len(call.args) < len(func.args):
+        missing = len(func.args) - len(call.args)
+        args += func.defaults[-missing:]
+    return [bind_arg(*arg) for arg in zip(func.args, args)]
 
 
 class CallFinder(CoroutineVisitor[n.Call, None]):

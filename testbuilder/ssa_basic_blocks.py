@@ -220,6 +220,7 @@ class FunctionDef(Positioned):
     name: str
     args: List[str]
     blocks: BlockTree
+    defaults: List[n.expr]
     original: ast.FunctionDef
 
 

@@ -208,3 +208,23 @@ def second_func(b):
         """,
         "ret == Any.Int(Any.i(pyname_b) + 8) and Any.is_Int(pyname_b)",
     )
+
+
+def test_default_arguments():
+    check_expression(
+        """
+def defaulted(a, b=1):
+    return a + b
+
+def caller(a):
+    return defaulted(a)
+        """,
+        """
+And(
+        function_defaulted_1_pyname_a == pyname_a,
+        function_defaulted_1_pyname_b == Any.Int(1),
+        function_defaulted_1_return == Any.Int(Any.i(function_defaulted_1_pyname_a) + Any.i(function_defaulted_1_pyname_b)),
+        Any.is_Int(function_defaulted_1_pyname_a),
+        ret == function_defaulted_1_return)
+""",
+    )

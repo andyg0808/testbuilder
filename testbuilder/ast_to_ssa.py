@@ -82,6 +82,7 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
+        defaults = [self.expr_visitor(e) for e in node.args.defaults]
         self.variables.push()
         self.variables.add(args)
         blocktree = self.body_visit(node.body)
@@ -92,6 +93,7 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
             name=node.name,
             args=args,
             blocks=blocktree,
+            defaults=defaults,
             original=node,
         )
 
