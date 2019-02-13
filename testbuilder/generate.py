@@ -2,13 +2,14 @@ import re
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, Iterable, List, Optional, Set, Tuple, Union
 
 from logbook import Logger
 from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb, utils
 from .ast_to_ssa import ast_to_ssa
+from .converter import TupleError
 from .dataclass_utils import make_extended_instance
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
@@ -58,7 +59,6 @@ def generate_tests(
             )
             return ""
         function = request.code
-        _ssa_to_expression = partial(ssa_to_expression, source, registrar)
 
         cleaned_expr: sbb.Request = pipe(
             request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
@@ -69,7 +69,10 @@ def generate_tests(
             + utils.dataclass_dump(cleaned_expr)
             + "\n=====END cleaned expression====="
         )
-        testdata = _ssa_to_expression(cleaned_expr)
+        try:
+            testdata = ssa_to_expression(source, registrar, cleaned_expr)
+        except TupleError:
+            return ""
         solution: Optional[Solution] = solve(registrar, testdata)
         if not solution:
             log.error(
@@ -122,15 +125,19 @@ def generate_tests(
     _generate_test = partial(generate_test, registrar, module)
 
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
+        splits: Iterable[int]
         if lines is not None:
             _filter = partial(filter, lambda x: x in lines)
-            return pipe(  # type: ignore
-                unit, LineSplitter(), _filter, enumerate, liftIter(_generate_test), list
-            )
+            splits = pipe(unit, LineSplitter(), _filter)  # type: ignore
         else:
-            return pipe(  # type: ignore
-                unit, LineSplitter(), enumerate, liftIter(_generate_test), list
-            )
+            splits = pipe(unit, LineSplitter())
+        # Filter out blank tests. These are the tests which were
+        # ignored for some reason (e.g., we couldn't find a solution
+        # or they had unsupported code in their function.)
+        _drop_blank = partial(filter, lambda x: x)
+        return pipe(  # type: ignore
+            splits, enumerate, liftIter(_generate_test), _drop_blank, list
+        )
 
     log.debug("Splitting on lines", LineSplitter()(module))
     return pipe(  # type: ignore

@@ -470,8 +470,8 @@ class AstBuilder(GenericVisitor[Any]):
         value = self.visit(node.value)
         return n.Attribute(e=value, value=value, attr=node.attr)
 
-    def visit_Tuple(self, node: ast.Tuple) -> n.Call:
-        raise RuntimeError("Cannot work with tuple in input")
+    def visit_Tuple(self, node: ast.Tuple) -> n.TupleVal:
+        return n.TupleVal(elts=[self.visit(v) for v in node.elts])
 
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v

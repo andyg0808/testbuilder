@@ -1,11 +1,13 @@
 import ast
 from typing import Optional
 
+import pytest
+
 import z3
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
-from .converter import ExpressionConverter
+from .converter import ExpressionConverter, TupleError
 from .ssa_repair import repair
 from .store import Store
 from .type_builder import TypeBuilder
@@ -257,3 +259,8 @@ def test_augmutation():
 def test_booleans():
     conversion_assert("true", "True", expected_type=Bool)
     conversion_assert("false", "False", expected_type=Bool)
+
+
+def test_fail_tuple():
+    with pytest.raises(TupleError):
+        conversion_assert("(1,2,3)")

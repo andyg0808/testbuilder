@@ -187,6 +187,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         expr = self.visit(node.test)
         return expr
 
+    def visit_TupleVal(self, node: n.TupleVal) -> TypeUnion:
+        log.warn("Skipping test case due to use of tuple")
+        raise TupleError()
+
     def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
         if isinstance(target, n.Name):
             log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
@@ -548,3 +552,7 @@ class NotEqMagic(IsNotMagic):
             )
         else:
             return left != right
+
+
+class TupleError(NotImplementedError):
+    pass

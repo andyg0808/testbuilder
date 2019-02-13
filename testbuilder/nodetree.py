@@ -218,6 +218,11 @@ class Attribute(expr, LValue):
 
 
 @dataclass
+class TupleVal(expr):
+    elts: List[expr]
+
+
+@dataclass
 class Name(expr, LValue):
     id: str
     set_count: int

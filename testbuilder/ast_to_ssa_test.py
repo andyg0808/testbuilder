@@ -1,6 +1,7 @@
 import ast
 
-from .ast_to_ssa import ast_to_ssa, last_line
+from . import nodetree as n
+from .ast_to_ssa import ast_to_ssa
 
 
 def check_bounds(src):
@@ -11,6 +12,14 @@ def check_bounds(src):
     cls = next(iter(ssa.classes.values()))
     assert cls.first_line == 1
     assert cls.last_line == len(src.splitlines())
+
+
+def check_parse(src, expected):
+    src = src.strip()
+    tree = ast.parse(src)
+    ssa = ast_to_ssa(depth=1, variables={}, node=tree)
+    contents = ssa.code.end.parents[0].code[0]
+    assert contents == expected
 
 
 def test_basic_class_bounds():
@@ -80,4 +89,11 @@ class Fishes:
 
     brain = True
 """
+    )
+
+
+def test_tuples():
+    check_parse(
+        "(1,2,a)",
+        n.Expr(line=1, value=n.TupleVal([n.Int(1), n.Int(2), n.Name("a", 0)])),
     )

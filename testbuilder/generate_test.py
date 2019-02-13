@@ -58,6 +58,25 @@ def boring(fishy):
     assert tests == expected
 
 
+def test_generate_understandable_functions():
+    code = """
+def tupley():
+    return (1,2,3)
+
+def not_tupley():
+    return 42
+    """
+
+    requester = Requester()
+    requester.input.return_value = [42]
+    tests = generate_tests(Path("tupley.py"), code, requester)
+    assert requester.input.call_count == 1
+    from .utils import code_format
+
+    print(code_format(str(tests)))
+    assert len(tests) == 1
+
+
 def test_uninteresting_function_call():
     code = """
 def boring(fishy):
