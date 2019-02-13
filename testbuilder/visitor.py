@@ -75,13 +75,15 @@ class SimpleVisitor(Generic[B]):
         suggestion = None
         if start_class in cache:
             return cast(Callable[..., B], cache[start_class])
-        log.trace("Finding functions in {}", type(self))
+        if __debug__:
+            log.trace("Finding functions in {}", type(self))
         for cls in inspect.getmro(start_class):
             func = self.__scan_functions(cls)
             if func is not None:
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
-                log.trace(f"Found function {func}")
+                if __debug__:
+                    log.trace(f"Found function {func}")
                 return func
             elif suggestion is None:
                 suggestions = getattr(self, "__suggestions", {})
@@ -113,13 +115,16 @@ class SimpleVisitor(Generic[B]):
                     # base class.
                     if isinstance(annotation, typing._GenericAlias):  # type: ignore
                         annotation = annotation.__origin__
-                    log.debug("Found visitor {} for {}", name, annotation)
+                    if __debug__:
+                        log.debug("Found visitor {} for {}", name, annotation)
                     typecache[annotation] = method
                 elif SuggestionRegex.match(name):
-                    log.debug("Found suggestion {}", name)
+                    if __debug__:
+                        log.debug("Found suggestion {}", name)
                     suggestions[annotations[param.name]] = name
                 else:
-                    log.debug("Ignoring {}", name)
+                    if __debug__:
+                        log.debug("Ignoring {}", name)
 
             setattr(self, "__type_cache", typecache)
             setattr(self, "__suggestions", suggestions)
@@ -131,7 +136,10 @@ class GenericVisitor(SimpleVisitor[A]):
         try:
             return super().visit(v, *args, **kwargs)
         except VisitError as err:
-            log.debug("VisitError received; visiting generically [Error is {}]", err)
+            if __debug__:
+                log.debug(
+                    "VisitError received; visiting generically [Error is {}]", err
+                )
             # If we get a VisitError, fall through to using the
             # `generic_visit` function. Trying to call `generic_visit`
             # here causes later, genuine VisitErrors to be caused
