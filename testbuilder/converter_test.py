@@ -101,6 +101,10 @@ def test_divide():
     conversion_assert("z3.RealVal(4) / z3.RealVal(3)", "4.0/3.0")
 
 
+def test_mod():
+    conversion_assert("5 % 3")
+
+
 def test_lt():
     conversion_assert("4 < 3")
 

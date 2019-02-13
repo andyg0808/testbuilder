@@ -84,6 +84,10 @@ class FloorDiv(Operator):
     pass
 
 
+class Mod(Operator):
+    pass
+
+
 class Lt(Operator):
     pass
 

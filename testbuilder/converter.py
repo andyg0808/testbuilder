@@ -367,6 +367,9 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
             IntSort, IntSort, constraint=(lambda n, d: {d != z3.IntVal(0)})
         )(operator.truediv)
 
+    def visit_Mod(self, node: n.Mod) -> OpFunc:
+        return self.fount(IntSort, IntSort)(operator.mod)
+
     def visit_LtE(self, node: n.LtE) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.le)
 
