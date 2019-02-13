@@ -85,6 +85,9 @@ def main(filename: str) -> None:
         )
     else:
         filename = (filepath.parent / filepath.stem).as_posix() + "_test.py"
+    if Path(filename).resolve().as_posix() == "/dev/null":
+        # Special-case /dev/null to throw out output
+        return
     with open(filename, "x") as tests:
         tests.write("from importlib import import_module\n")
         tests.write("from testbuilder.pair import Pair\n")
