@@ -64,11 +64,12 @@ def generate_tests(
             request, repair, PhiFilterer(), FunctionSubstitute(), ExprStripper()
         )
         assert isinstance(cleaned_expr, sbb.Request)
-        log.debug(
-            "\n=====Cleaned expression=====\n"
-            + utils.dataclass_dump(cleaned_expr)
-            + "\n=====END cleaned expression====="
-        )
+        # This log sometimes takes an enormous amount of memory.
+        # log.debug(
+        #     "\n=====Cleaned expression=====\n"
+        #     + utils.dataclass_dump(cleaned_expr)
+        #     + "\n=====END cleaned expression====="
+        # )
         try:
             testdata = ssa_to_expression(source, registrar, cleaned_expr)
         except TupleError:
@@ -130,7 +131,8 @@ def generate_tests(
     _ast_to_ssa = partial(ast_to_ssa, depth, {})
 
     module: sbb.Module = pipe(text, parse_file, _ast_to_ssa)
-    log.debug("\n=====SSA module=====\n{}\n=====END SSA module=====", module)
+    # if __debug__:
+    #     log.debug("\n=====SSA module=====\n{}\n=====END SSA module=====", module)
     builder = TypeBuilder()
     registrar = builder.construct()
     _generate_test = partial(generate_test, registrar, module)
@@ -150,7 +152,7 @@ def generate_tests(
             splits, enumerate, liftIter(_generate_test), _drop_blank, list
         )
 
-    log.debug("Splitting on lines", LineSplitter()(module))
+    log.debug("Splitting on lines")
     return pipe(  # type: ignore
         module, function_splitter, liftIter(generate_unit_tests), concat, list
     )
