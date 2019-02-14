@@ -282,18 +282,21 @@ class UpdateVisitor(GenericVisitor[Any], CacheVisitor):
         return visited
 
     def generic_visit(self, v: A, *args: Any, **kwargs: Any) -> A:
-        try:
-            fields = dataclasses.fields(v)
-        except TypeError:
-            # If we are trying to look for fields on something
-            # that isn't a dataclass, it's probably a primitive
-            # field type, so just stop here.
-            return v
+        fields = getattr(v, "__fields_cache", None)
+        if fields is None:
+            try:
+                fields = [
+                    f.name for f in dataclasses.fields(v) if not f.name.startswith("_")
+                ]
+                setattr(v, "__fields_cache", fields)
+            except TypeError:
+                # If we are trying to look for fields on something
+                # that isn't a dataclass, it's probably a primitive
+                # field type, so just stop here.
+                return v
         results: MMapping[str, Any] = {}
         for f in fields:
-            if f.name.startswith("_"):
-                continue
-            data = getattr(v, f.name)
+            data = getattr(v, f)
             res: Any
             if isinstance(data, list):
                 res = [self.visit(x, *args, **kwargs) for x in data]
@@ -301,5 +304,5 @@ class UpdateVisitor(GenericVisitor[Any], CacheVisitor):
                 res = {k: self.visit(v, *args, **kwargs) for k, v in data.items()}
             else:
                 res = self.visit(data, *args, **kwargs)
-            results[f.name] = res
+            results[f] = res
         return v.__class__(**results)  # type: ignore
