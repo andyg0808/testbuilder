@@ -38,7 +38,7 @@ watch:
 	fd ".py|.exp|.tcl|Makefile" | entr -c test.sh $(MAKE) $(RUN)
 
 .PHONY: fastbuild
-fastbuild: mypy pytest runtests snippets
+fastbuild: mypy pytest runtests #snippets
 
 .PHONY: livetest
 livetest: mypy runtests snippets
