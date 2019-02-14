@@ -244,7 +244,7 @@ class Request:
     code: Union[FunctionDef, BlockTree]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Variable:
     id: str
 

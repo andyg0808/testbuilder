@@ -1,6 +1,6 @@
 from functools import singledispatch
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import List, Optional, Set, cast
 
 from astor import to_source  # type: ignore
 from logbook import Logger
@@ -19,7 +19,7 @@ from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .utils import dataclass_dump
-from .visitor import GatherVisitor, SimpleVisitor
+from .visitor import SetGatherVisitor, SimpleVisitor
 from .z3_types import BOOL_TRUE, bool_all, bool_any
 
 log = Logger("ssa_to_expression")
@@ -207,19 +207,19 @@ def process_sut(
     )
 
 
-class VariableFinder(GatherVisitor[sbb.Variable]):
-    def visit_Set(self, stmt: n.Set) -> List[sbb.Variable]:
-        return []
+class VariableFinder(SetGatherVisitor[sbb.Variable]):
+    def visit_Set(self, stmt: n.Set) -> Set[sbb.Variable]:
+        return set()
 
-    def visit_Name(self, expr: n.Name) -> List[sbb.Variable]:
+    def visit_Name(self, expr: n.Name) -> Set[sbb.Variable]:
         if expr.set_count == 0:
-            return [sbb.Variable(expr.id)]
+            return {sbb.Variable(expr.id)}
         else:
-            return []
+            return set()
 
 
 def find_variables(code: sbb.BlockTree) -> List[sbb.Variable]:
-    return VariableFinder().visit(code)
+    return list(VariableFinder()(code))
 
 
 def ssa_to_expression(
