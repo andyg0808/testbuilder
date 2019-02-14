@@ -268,6 +268,7 @@ Solution = Mapping[str, Any]
 @dataclass
 class SolvedTestData(TestData):
     test_number: int
+    target_line: int
     args: Solution
 
 

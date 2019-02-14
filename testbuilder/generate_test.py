@@ -24,6 +24,7 @@ def test_generate_list_handler():
             expected_result=function_expectation,
             args=function_args,
             test_number=0,
+            target_line=1,
         )
     )
     expected = """

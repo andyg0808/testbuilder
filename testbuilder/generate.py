@@ -85,7 +85,11 @@ def generate_tests(
 
         def get_expected_test_result(args: sbb.Solution) -> sbb.ExpectedTestData:
             updated_testdata = make_extended_instance(
-                testdata, sbb.SolvedTestData, args=args, test_number=test_number
+                testdata,
+                sbb.SolvedTestData,
+                args=args,
+                test_number=test_number,
+                target_line=target_line,
             )
             if autogen:
                 func = get_test_func(updated_testdata)

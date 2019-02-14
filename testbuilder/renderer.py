@@ -47,7 +47,9 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
 def run_for_test(
     requester: Requester, func: Callable[..., Any], test: SolvedTestData
 ) -> ExpectedTestData:
-    requester.output(f"Generating test {test.test_number} for {test.name}")
+    requester.output(
+        f"Generating test {test.test_number} for {test.name} at line {test.target_line}"
+    )
     args = copy.deepcopy(test.args)
     try:
         result = func(**args)

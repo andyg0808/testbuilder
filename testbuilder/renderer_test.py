@@ -25,6 +25,7 @@ def test_generate_basic(op, a, b):
             expected_result=function_expectation,
             args=function_args,
             test_number=0,
+            target_line=1,
         )
     )
     expected = f"""
@@ -49,6 +50,7 @@ def test_expected_failure():
         expected_result="fail::RuntimeError",
         args={"fish": 44},
         test_number=0,
+        target_line=1,
     )
     actual = render_test(test_data)
     expected = """
