@@ -14,7 +14,7 @@ from logbook import NullHandler
 
 import _z3config  # noqa: F401
 import logconfig
-from testbuilder.generate import generate_tests
+from testbuilder.generate import generate_tests  # noqa: F401
 from testbuilder.requester import Requester
 
 Docs = """
