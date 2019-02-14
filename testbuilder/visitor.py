@@ -14,6 +14,7 @@ from typing import (
     MutableMapping as MMapping,
     Optional,
     Sequence,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -226,6 +227,42 @@ class GatherVisitor(GenericVisitor[List[A]]):
                 results += mapcat(arg_visit, list(data.values()))
             else:
                 results += arg_visit(data)
+        return results
+
+
+class SetGatherVisitor(GenericVisitor[Set[A]], CacheVisitor):
+    def visit(self, v: Any, *args: Any, **kwargs: Any) -> Set[A]:
+        val: Optional[Set[A]] = self.cacheget(v)
+        if val is not None:
+            return val
+        val = set()
+        self.cacheput(v, val)
+        res = super().visit(v, *args, **kwargs)
+        val |= res
+        return val
+
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Set[A]:
+        def arg_visit(v: Any) -> Set[A]:
+            return self.visit(v, *args, **kwargs)
+
+        try:
+            fields = dataclasses.fields(v)
+        except TypeError:
+            # If we are trying to look for fields on something
+            # that isn't a dataclass, it's probably a primitive
+            # field type, so just stop here.
+            return set()
+        results: Set[A] = set()
+        for f in fields:
+            data = getattr(v, f.name)
+            if isinstance(data, Sequence):
+                for i in data:
+                    results |= arg_visit(i)
+            if isinstance(data, Mapping):
+                for i in data.values():
+                    results |= arg_visit(i)
+            else:
+                results |= arg_visit(data)
         return results
 
 
