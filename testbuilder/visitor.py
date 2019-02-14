@@ -71,9 +71,12 @@ class SimpleVisitor(Generic[B]):
 
     def __find_function(self, start_class: Type[T]) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
+        errs = getattr(self, "__err_cache", {})
         suggestion = None
         if start_class in cache:
             return cast(Callable[..., B], cache[start_class])
+        if start_class in errs:
+            raise VisitError(*errs[start_class])
         if __debug__:
             log.trace("Finding functions in {}", type(self))
         for cls in inspect.getmro(start_class):
@@ -88,9 +91,11 @@ class SimpleVisitor(Generic[B]):
                 suggestions = getattr(self, "__suggestions", {})
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
-            raise VisitError(start_class, suggestion)
+            errs[start_class] = (start_class, suggestion)
         else:
-            raise VisitError(start_class)
+            errs[start_class] = (start_class,)
+        setattr(self, "__err_cache", errs)
+        raise VisitError(*errs[start_class])
 
     def __scan_functions(self, target_class: Type[T]) -> Callable[..., B]:
         typecache = getattr(self, "__type_cache", None)
