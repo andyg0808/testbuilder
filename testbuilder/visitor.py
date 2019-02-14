@@ -9,7 +9,6 @@ from typing import (
     Generator,
     Generic,
     Iterator,
-    List,
     Mapping,
     MutableMapping as MMapping,
     Optional,
@@ -23,7 +22,6 @@ from typing import (
 )
 
 from logbook import Logger
-from toolz import mapcat
 
 import dataclasses
 
@@ -204,30 +202,6 @@ class SearchVisitor(GenericVisitor[Optional[A]]):
                 if res is not None:
                     return res
         return None
-
-
-class GatherVisitor(GenericVisitor[List[A]]):
-    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> List[A]:
-        def arg_visit(v: Any) -> List[A]:
-            return self.visit(v, *args, **kwargs)
-
-        try:
-            fields = dataclasses.fields(v)
-        except TypeError:
-            # If we are trying to look for fields on something
-            # that isn't a dataclass, it's probably a primitive
-            # field type, so just stop here.
-            return []
-        results: List[A] = []
-        for f in fields:
-            data = getattr(v, f.name)
-            if isinstance(data, Sequence):
-                results += mapcat(arg_visit, data)
-            if isinstance(data, Mapping):
-                results += mapcat(arg_visit, list(data.values()))
-            else:
-                results += arg_visit(data)
-        return results
 
 
 class SetGatherVisitor(GenericVisitor[Set[A]], CacheVisitor):
