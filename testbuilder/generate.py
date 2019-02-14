@@ -73,6 +73,13 @@ def generate_tests(
             testdata = ssa_to_expression(source, registrar, cleaned_expr)
         except TupleError:
             return ""
+        except RuntimeError as e:
+            log.error(
+                "Caught error while generating test for line {}. Error:\n\t{}",
+                target_line,
+                str(e),
+            )
+            return ""
         solution: Optional[Solution] = solve(registrar, testdata)
         if not solution:
             log.error(
