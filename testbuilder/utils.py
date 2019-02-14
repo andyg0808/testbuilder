@@ -123,8 +123,16 @@ def walker_print(obj: Any, prefix: str, seen: Set[int], hide: bool = False) -> N
         if not field.startswith("_"):
             walker_print(getattr(obj, field), prefix + "." + field, seen, hide)
     try:
+        for k, v in obj.items():
+            walker_print(v, prefix + "[" + str(k) + "]", seen, hide)
+        return
+    except AttributeError:
+        # We don't have a dict here
+        pass
+    try:
         for i, o in enumerate(obj):
             walker_print(o, prefix + "[" + str(i) + "]", seen, hide)
+        return
     except TypeError:
         # It's not enumerable, probably.
         pass
