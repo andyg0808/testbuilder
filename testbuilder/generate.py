@@ -1,14 +1,17 @@
+import cProfile
 import os
-import re
+import pstats
+import time
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
 
 from logbook import Logger
+from pympler import tracker  # type: ignore
 from toolz import concat, pipe
 
-from . import ssa_basic_blocks as sbb, utils
+from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
 from .converter import TupleError
 from .dataclass_utils import make_extended_instance
@@ -43,12 +46,14 @@ def generate_tests(
     prompt: str = "",
     depth: int = 10,
     lines: Optional[Set[int]] = None,
+    ignores: Set[int] = set(),  # noqa: B006
     autogen: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
     ) -> str:
         test_number, target_line = target_info
+        requester.output(f"Working on test {test_number} at {target_line}")
         request = filter_lines(target_line, module)
         if request is None:
             log.error(
@@ -115,6 +120,7 @@ def generate_tests(
         test: str = pipe(
             solution, _filter_inputs, get_expected_test_result, render_test
         )
+
         return test
 
     def parse_file(text: str) -> AST:
@@ -140,21 +146,52 @@ def generate_tests(
     #     log.debug("\n=====SSA module=====\n{}\n=====END SSA module=====", module)
     builder = TypeBuilder()
     registrar = builder.construct()
-    _generate_test = partial(generate_test, registrar, module)
+
+    def monitored_test_generation(name: str) -> Callable[[Tuple[int, int]], str]:
+        def _monitored_test_generation(target_info: Tuple[int, int]) -> str:
+            if active("memory"):
+                tr = tracker.SummaryTracker()
+            if active("profile"):
+                pr = cProfile.Profile()
+                pr.enable()
+            if active("time"):
+                start = time.time()
+            res = generate_test(registrar, module, target_info)
+            if active("time"):
+                end = time.time() - start
+            if active("profile"):
+                pr.disable()
+                pstats.Stats(pr).sort_stats("cumulative").dump_stats(
+                    f"{name}_{target_info[0]}_results"
+                )
+            if active("time"):
+                print(f"Took {end} seconds")
+            if active("memory"):
+                tr.print_diff()
+            return res
+
+        return _monitored_test_generation
 
     def generate_unit_tests(unit: Union[sbb.FunctionDef, sbb.BlockTree]) -> List[str]:
+        name = getattr(unit, "name", "<code>")
+        requester.output(f"Generating unit tests for {name}")
         splits: Iterable[int]
         if lines is not None:
-            _filter = partial(filter, lambda x: x in lines)
-            splits = pipe(unit, LineSplitter(), _filter)  # type: ignore
+            _filter = partial(filter, lambda x: x in lines and x not in ignores)
         else:
-            splits = pipe(unit, LineSplitter())
+            _filter = partial(filter, lambda x: x not in ignores)
         # Filter out blank tests. These are the tests which were
         # ignored for some reason (e.g., we couldn't find a solution
         # or they had unsupported code in their function.)
         _drop_blank = partial(filter, lambda x: x)
         return pipe(  # type: ignore
-            splits, enumerate, liftIter(_generate_test), _drop_blank, list
+            unit,
+            line_splitter,
+            _filter,
+            enumerate,
+            liftIter(monitored_test_generation(name)),
+            _drop_blank,
+            list,
         )
 
     log.debug("Splitting on lines")
