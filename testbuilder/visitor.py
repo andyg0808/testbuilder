@@ -298,9 +298,9 @@ class UpdateVisitor(GenericVisitor[Any], CacheVisitor):
         for f in fields:
             data = getattr(v, f)
             res: Any
-            if isinstance(data, list):
+            if type(data) == list:
                 res = [self.visit(x, *args, **kwargs) for x in data]
-            elif isinstance(data, dict):
+            elif type(data) == dict:
                 res = {k: self.visit(v, *args, **kwargs) for k, v in data.items()}
             else:
                 res = self.visit(data, *args, **kwargs)
