@@ -1,0 +1,2 @@
+#!/bin/zsh
+pkill -f -SIGUSR2 profiling_run.py

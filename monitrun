@@ -1,0 +1,23 @@
+#!/bin/zsh
+worst() {
+  ps -e --sort=-%mem --no-headers | sed -nr 's/\s*([0-9]+).*/\1/; 1p'
+}
+
+freemem () {
+  cat /proc/meminfo | awk '/MemAvailable/{print $2}'
+}
+
+activate () {
+  until [[ $(freemem) -lt $1 ]]
+  do
+    sleep .1
+  done
+}
+
+monitrun () {
+  kill -SIGCONT $(worst)
+  activate $1
+  kill -SIGSTOP $(worst)
+}
+
+monitrun $@
