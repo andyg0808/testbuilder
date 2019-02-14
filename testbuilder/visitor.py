@@ -88,7 +88,7 @@ class SimpleVisitor(Generic[B]):
                     log.trace(f"Found function {func}")
                 return func
             elif suggestion is None:
-                suggestions = getattr(self, "__suggestions", {})
+                suggestions = getattr(self.__class__, "__suggestions", {})
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
             errs[start_class] = (start_class, suggestion)
@@ -98,7 +98,7 @@ class SimpleVisitor(Generic[B]):
         raise VisitError(*errs[start_class])
 
     def __scan_functions(self, target_class: Type[T]) -> Callable[..., B]:
-        typecache = getattr(self, "__type_cache", None)
+        typecache = getattr(self.__class__, "__type_cache", None)
         if typecache is None:
             typecache = {}
             suggestions = {}
@@ -121,7 +121,7 @@ class SimpleVisitor(Generic[B]):
                         annotation = annotation.__origin__
                     if __debug__:
                         log.debug("Found visitor {} for {}", name, annotation)
-                    typecache[annotation] = method
+                    typecache[annotation] = name
                 elif SuggestionRegex.match(name):
                     if __debug__:
                         log.debug("Found suggestion {}", name)
@@ -130,9 +130,12 @@ class SimpleVisitor(Generic[B]):
                     if __debug__:
                         log.debug("Ignoring {}", name)
 
-            setattr(self, "__type_cache", typecache)
-            setattr(self, "__suggestions", suggestions)
-        return cast(Callable[..., B], typecache.get(target_class, None))
+            setattr(self.__class__, "__type_cache", typecache)
+            setattr(self.__class__, "__suggestions", suggestions)
+        name = typecache.get(target_class)
+        if name is None:
+            return None
+        return cast(Optional[Callable[..., B]], getattr(self, name))
 
 
 class GenericVisitor(SimpleVisitor[A]):
