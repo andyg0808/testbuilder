@@ -1,3 +1,4 @@
+import os
 import re
 from ast import AST, parse
 from functools import partial
@@ -27,6 +28,10 @@ from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
 
 log = Logger("generator")
+
+
+def active(key: str) -> bool:
+    return key in os.environ
 
 
 def generate_tests(
