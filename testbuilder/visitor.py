@@ -270,28 +270,16 @@ class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
         return
 
 
-class UpdateVisitor(GenericVisitor[Any]):
-    def __init__(self) -> None:
-        self.visited_nodes: MMapping[int, Any] = {}
-
+class UpdateVisitor(GenericVisitor[Any], CacheVisitor):
     def visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         # Use already-visited object if it exists.
         # This makes handling trees with joins well-behaved.
-        if self.id(v) in self.visited_nodes:
-            return self.get_updated(v)
+        val: Optional[A] = self.cacheget(v)
+        if val is not None:
+            return val
         visited: A = super().visit(v, *args, **kwargs)
-        self.visited_nodes[self.id(v)] = visited
+        self.cacheput(v, visited)
         return visited
-
-    def get_updated(self, original: A) -> A:
-        return cast(A, self.visited_nodes[self.id(original)])
-
-    def id(self, obj: Any) -> Any:
-        """
-        Returns a unique identifier for a node. Can be overridden to
-        modify the notion of equivalence.
-        """
-        return id(obj)
 
     def generic_visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         try:
