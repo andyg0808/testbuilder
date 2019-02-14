@@ -86,7 +86,7 @@ def ast_dump(
     )
 
 
-def walker_print(obj: Any, prefix: str, seen: Set[int]) -> None:
+def walker_print(obj: Any, prefix: str, seen: Set[int], hide: bool = False) -> None:
     """Dump `obj` in a brute-force way
 
     This is designed not to call any special operations as much as
@@ -107,7 +107,8 @@ def walker_print(obj: Any, prefix: str, seen: Set[int]) -> None:
               is fine as a user.
     """
     if id(obj) in seen:
-        print(prefix + "=", id(obj), "(seen)")
+        if not hide:
+            print(prefix + "=", id(obj), "(seen)")
         return
     seen.add(id(obj))
     print(f"{prefix}={type(obj).__name__}@({id(obj)})", end="")
@@ -120,10 +121,10 @@ def walker_print(obj: Any, prefix: str, seen: Set[int]) -> None:
     print("(", ", ".join(field_numbers), ")")
     for field in dir(obj):
         if not field.startswith("_"):
-            walker_print(getattr(obj, field), prefix + "." + field, seen)
+            walker_print(getattr(obj, field), prefix + "." + field, seen, hide)
     try:
         for i, o in enumerate(obj):
-            walker_print(o, prefix + "[" + str(i) + "]", seen)
+            walker_print(o, prefix + "[" + str(i) + "]", seen, hide)
     except TypeError:
         # It's not enumerable, probably.
         pass
