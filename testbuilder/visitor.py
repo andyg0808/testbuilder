@@ -97,7 +97,7 @@ class SimpleVisitor(Generic[B]):
         setattr(self, "__err_cache", errs)
         raise VisitError(*errs[start_class])
 
-    def __scan_functions(self, target_class: Type[T]) -> Callable[..., B]:
+    def __scan_functions(self, target_class: Type[T]) -> Optional[Callable[..., B]]:
         typecache = getattr(self.__class__, "__type_cache", None)
         if typecache is None:
             typecache = {}
