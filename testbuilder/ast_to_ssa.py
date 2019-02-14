@@ -452,7 +452,8 @@ class AstBuilder(GenericVisitor[Any]):
             return n.BinOp(l, n.And(), r)
 
         res = reduce(all_pairs, binops)
-        log.debug(f"converting {ast.dump(node)} to {res}")
+        if __debug__:
+            log.debug(f"converting {ast.dump(node)} to {res}")
         return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
