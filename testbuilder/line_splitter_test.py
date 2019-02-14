@@ -35,3 +35,18 @@ def abc():
         """,
         [4],
     )
+
+
+def test_splitting_with_loop():
+    check_lines(
+        """
+def example(i):
+    while i != None:
+        fish = i
+        while fish != None:
+            fish = fish.right
+        i = i.left
+    return i
+        """,
+        [3, 5, 6, 7],
+    )
