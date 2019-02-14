@@ -4,14 +4,14 @@ from functools import partial
 from toolz import pipe
 
 from .ast_to_ssa import ast_to_ssa
-from .line_splitter import LineSplitter
+from .line_splitter import line_splitter
 
 
 def check_lines(code, expected):
     _ast_to_ssa = partial(ast_to_ssa, 2, {})
     ssa = pipe(code.strip(), parse, _ast_to_ssa)
     print("ssa", ssa)
-    actual = LineSplitter()(ssa)
+    actual = line_splitter(ssa)
     assert actual == expected
 
 

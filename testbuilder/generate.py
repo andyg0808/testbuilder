@@ -14,7 +14,7 @@ from .dataclass_utils import make_extended_instance
 from .expr_stripper import ExprStripper
 from .function_substituter import FunctionSubstitute
 from .iter_monad import liftIter
-from .line_splitter import LineSplitter
+from .line_splitter import line_splitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
