@@ -155,6 +155,31 @@ class GenericVisitor(SimpleVisitor[A]):
         ...
 
 
+class CacheVisitor:
+    CACHE_ATTR = "__generic_cache"
+
+    def cacheclear(self) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is not None:
+            cache.clear()
+
+    def cacheget(self, v: Any) -> A:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, {})
+        return cast(A, cache.get(id(v), None))
+
+    def cacheput(self, v: Any, val: A) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is None:
+            setattr(self, CacheVisitor.CACHE_ATTR, {id(v): val})
+        else:
+            cache[id(v)] = val
+
+    def cachedrop(self, v: Any) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is not None:
+            del cache[id(v)]
+
+
 class SearchVisitor(GenericVisitor[Optional[A]]):
     def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Optional[A]:
         try:
