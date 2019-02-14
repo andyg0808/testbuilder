@@ -7,7 +7,7 @@ import z3
 from dataclasses import dataclass, field
 
 from . import nodetree as n
-from .visitor import GatherVisitor
+from .visitor import SetGatherVisitor
 
 Expression = z3.ExprRef
 
@@ -328,9 +328,9 @@ def last_line(block: Any) -> int:
         raise RuntimeError(f"Unexpected end type: {type(block)}")
 
 
-class LineGatherer(GatherVisitor[int]):
-    def visit_Stmt(self, stmt: n.stmt) -> List[int]:
-        return [stmt.line]
+class LineGatherer(SetGatherVisitor[int]):
+    def visit_Stmt(self, stmt: n.stmt) -> Set[int]:
+        return {stmt.line}
 
 
 def lines(block: BasicBlock) -> Set[int]:
