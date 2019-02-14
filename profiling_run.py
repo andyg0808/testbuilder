@@ -28,9 +28,6 @@ Options:
 
 
 def signal_handler(num, f):
-    import traceback
-
-    traceback.print_stack()
     breakpoint()
     return
 
