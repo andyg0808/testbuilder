@@ -119,7 +119,7 @@ x = Pair(e, f)
 def test_unconstrained_variables_into_pair():
     """
     Create a pair from two unconstrained variables. We want the pair
-    to realize that the variables are both `Any`s, as are its slots,
+    to realize that the variables are both `Any` s, as are its slots,
     and just match the two, instead of expanding the variables and
     running a full Cartesian product on the possible subtypes
     """
