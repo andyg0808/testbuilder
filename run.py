@@ -23,16 +23,24 @@ Options:
 """
 
 import json
+import signal
 from pathlib import Path
-
-import typeassert
-from docopt import docopt
-from logbook import NullHandler
 
 import _z3config  # noqa: F401
 import logconfig
+import typeassert
+from docopt import docopt
+from logbook import NullHandler
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
+
+
+def signal_handler(num, f):
+    breakpoint()
+    return
+
+
+signal.signal(signal.SIGUSR1, signal_handler)
 
 typeassert.log.setLevel("ERROR")
 
