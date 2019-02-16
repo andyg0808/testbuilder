@@ -20,4 +20,14 @@ monitrun () {
   kill -SIGSTOP $(worst)
 }
 
-monitrun $@
+monitor() {
+  while true
+  do
+    echo -en "\033]0;Watching...\007"
+    monitrun $1
+    echo -en "\033]0;Triggered\007"
+    sleep 10
+  done
+}
+
+monitor $@
