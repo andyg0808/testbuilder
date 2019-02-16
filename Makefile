@@ -82,3 +82,4 @@ doc-server:
 clean:
 	rm -rf build
 	rm -rf .pytest_cache
+	rm -rf docs/api
