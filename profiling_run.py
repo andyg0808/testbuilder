@@ -11,6 +11,7 @@ from typing import Set
 import typeassert
 from docopt import docopt
 from logbook import NullHandler
+from pympler import muppy, refbrowser, summary, tracker  # type: ignore
 
 import _z3config  # noqa: F401
 import logconfig
@@ -44,7 +45,16 @@ def save_profile(num, f):
     return
 
 
+def view_mem(num, f):
+    all_objects = muppy.get_objects()
+    summ = summary.summarize(all_objects)
+    summary.print_(summ)
+    return
+
+
 signal.signal(signal.SIGUSR2, save_profile)
+
+signal.signal(signal.SIGRTMIN, view_mem)
 
 
 typeassert.log.setLevel("ERROR")
