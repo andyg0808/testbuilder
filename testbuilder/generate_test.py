@@ -33,7 +33,7 @@ def test_min():
     a = [1, 2, 3]
     actual = min(a)
     expected = 1
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """
     assert function == expected
 
@@ -94,7 +94,7 @@ def test_boring():
     fishy = 1234567890
     actual = boring(fishy)
     expected = 36
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """,
         """
 caller = import_module("boring").caller
@@ -102,7 +102,7 @@ def test_caller():
     fishy = None
     actual = caller(fishy)
     expected = 36
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """,
     }
     requester = Requester()

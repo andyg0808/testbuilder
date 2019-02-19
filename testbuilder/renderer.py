@@ -6,6 +6,7 @@ from typing import Any, Callable, Mapping, cast
 from logbook import Logger
 
 from .dataclass_utils import make_extended_instance
+from .pair import Pair
 from .requester import Requester
 from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
 
@@ -53,9 +54,36 @@ def run_for_test(
     args = copy.deepcopy(test.args)
     try:
         result = func(**args)
+        writeout = repr(convert_result(result))
     except Exception as e:
         result = f"fail::{type(e).__name__}"
-    return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
+        writeout = result
+    log.debug(
+        f"""Expected result information:
+        Type: {type(result)}
+        Attrs: `{'`, `'.join(dir(result))}`
+        repr:
+{repr(result)}
+        repr(converted):
+{repr(writeout)}"""
+    )
+    return make_extended_instance(test, ExpectedTestData, expected_result=writeout)
+
+
+PairExpr = re.compile(r"pair", re.IGNORECASE)
+ListExpr = re.compile(r"List")
+
+
+def convert_result(val: Any) -> Any:
+    """
+    If possible, convert a value to a known type from whatever type it was.
+    """
+    name = type(val).__name__
+    if PairExpr.search(name) or ListExpr.search(name):
+        pair = Pair.from_pair(val)
+        if pair is not None:
+            return pair
+    return val
 
 
 def render_test(test: ExpectedTestData) -> str:
@@ -90,5 +118,5 @@ def test_{test.name}{number_str}():
     {args_string}
     actual = {call_string}
     expected = {expected}
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """

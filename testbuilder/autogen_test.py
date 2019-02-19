@@ -30,7 +30,7 @@ def test_id():
     x = 0
     actual = id(x)
     expected = 0
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """
     }
 

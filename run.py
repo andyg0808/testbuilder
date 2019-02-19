@@ -26,11 +26,12 @@ import json
 import signal
 from pathlib import Path
 
-import _z3config  # noqa: F401
-import logconfig
 import typeassert
 from docopt import docopt
 from logbook import NullHandler
+
+import _z3config  # noqa: F401
+import logconfig
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
@@ -99,6 +100,8 @@ def main(filename: str) -> None:
     with open(filename, "x") as tests:
         tests.write("from importlib import import_module\n")
         tests.write("from testbuilder.pair import Pair\n")
+        tests.write("from testbuilder import renderer\n")
+        tests.write("from fractions import Fraction\n")
         tests.write("import pytest\n")
         tests.write("\n\n".join(test_cases))
 

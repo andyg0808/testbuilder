@@ -1,8 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, MutableMapping as MMapping, Optional, Set, Tuple, Union, cast
+import re
+from typing import (
+    Any,
+    Mapping,
+    MutableMapping as MMapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 Spec = Union[Tuple[int, Any, Any], str]
+
+LeftExpr = re.compile(r"left|first|value|song", re.IGNORECASE)
+RightExpr = re.compile(r"right|rest", re.IGNORECASE)
 
 
 class Pair:
@@ -11,7 +24,37 @@ class Pair:
         self.right = right
 
     @staticmethod
-    def pairnet(spec: Spec) -> Pair:
+    def from_pair(other: Any) -> Optional[Pair]:
+        """Attempt to take a foreign pair representation and convert it into
+        a `testbuilder.Pair`.
+
+        """
+
+        def _from_pair(other: Any, seen: MMapping[int, Pair]) -> Optional[Pair]:
+            key = id(other)
+            if key in seen:
+                return seen[key]
+
+            left_name = None
+            right_name = None
+            for n in dir(other):
+                if LeftExpr.search(n):
+                    left_name = n
+                elif RightExpr.search(n):
+                    right_name = n
+            if left_name and right_name:
+                pair = Pair(None, None)
+                seen[key] = pair
+                pair.left = _from_pair(getattr(other, left_name), seen)
+                pair.right = _from_pair(getattr(other, right_name), seen)
+                return pair
+            else:
+                return None
+
+        return _from_pair(other, {})
+
+    @staticmethod
+    def pairnet(spec: Spec, globals: Mapping[str, Any] = {}) -> Pair:  # noqa: B006
         """Creates a tree of Pair instances in the format described by the
         supplied `spec`.
 
@@ -38,9 +81,10 @@ class Pair:
                 pair.right = _pairnet(right, known)
                 return pair
             else:
-                return eval(spec)  # type: ignore
+                return eval(spec, globals)  # type: ignore
 
-        return _pairnet(spec, {})
+        res = _pairnet(spec, {})
+        return res
 
     def __getitem__(self, key: int) -> Any:
         if key == 0:
@@ -70,7 +114,7 @@ class Pair:
 
     def __repr__(self) -> str:
         pairnet = repr(self.to_pairnet(set()))
-        return f"Pair.pairnet({pairnet})"
+        return f"Pair.pairnet({pairnet}, globals=globals())"
 
     def to_pairnet(self, seen: Optional[Set[int]] = None) -> Spec:
         """This creates a representation of a pair which can be read by the
