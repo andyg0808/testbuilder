@@ -106,11 +106,46 @@ class Pair:
         return self.right
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Pair):
-            return False
-        l_eq = self.left == other.left
-        r_eq = self.right == other.right
-        return bool(l_eq and r_eq)
+        def _eq(self, other: object, matches: MMapping[int, int]) -> bool:
+            if not isinstance(other, Pair):
+                return False
+            if id(self) in matches:
+                return id(other) == matches[id(self)]
+            else:
+                matches[id(self)] = id(other)
+            if isinstance(self.left, Pair):
+                l_eq = _eq(self.left, other.left, matches)
+            else:
+                l_eq = self.left == other.left
+            if isinstance(self.right, Pair):
+                r_eq = _eq(self.right, other.right, matches)
+            else:
+                r_eq = self.right == other.right
+            return bool(l_eq and r_eq)
+
+        res = _eq(self, other, {})
+        print("equality", res)
+        return res
+
+    def __str__(self) -> str:
+        seen = set()
+
+        def _str(self) -> str:
+            if id(self) in seen:
+                return f"<Pair (recursive {id(self)})>"
+            seen.add(id(self))
+
+            if isinstance(self.left, Pair):
+                left = _str(self.left)
+            else:
+                left = str(self.left)
+            if isinstance(self.right, Pair):
+                right = _str(self.right)
+            else:
+                right = str(self.right)
+            return f"Pair({left}, {right})"
+
+        return _str(self)
 
     def __repr__(self) -> str:
         pairnet = repr(self.to_pairnet(set()))
