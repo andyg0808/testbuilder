@@ -14,8 +14,8 @@ from typing import (
 
 Spec = Union[Tuple[int, Any, Any], str]
 
-LeftExpr = re.compile(r"left|first|value|song", re.IGNORECASE)
-RightExpr = re.compile(r"right|rest", re.IGNORECASE)
+LeftExpr = re.compile(r"head|left|first|value|song", re.IGNORECASE)
+RightExpr = re.compile(r"tail|right|rest", re.IGNORECASE)
 
 
 class Pair:
