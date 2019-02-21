@@ -83,6 +83,8 @@ def convert_result(val: Any) -> Any:
         pair = Pair.from_pair(val)
         if pair is not None:
             return pair
+    elif isinstance(val, tuple):
+        return tuple(convert_result(v) for v in val)
     return val
 
 
