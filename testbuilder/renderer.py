@@ -56,6 +56,7 @@ def run_for_test(
         result = func(**args)
         writeout = repr(convert_result(result))
     except Exception as e:
+        log.error(f"Asserting failure due to code run failure: {e}")
         result = f"fail::{type(e).__name__}"
         writeout = result
     log.debug(
