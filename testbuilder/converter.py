@@ -263,6 +263,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.info(f"Found call to {node.func}")
         if isinstance(node.func, n.Name):
             function = node.func.id
+            if function == "input":
+                raise RuntimeError("`input` not supported in tested code")
             args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
