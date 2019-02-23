@@ -106,7 +106,7 @@ class Pair:
         return self.right
 
     def __eq__(self, other: object) -> bool:
-        def _eq(self, other: object, matches: MMapping[int, int]) -> bool:
+        def _eq(self: Pair, other: object, matches: MMapping[int, int]) -> bool:
             if not isinstance(other, Pair):
                 return False
             if id(self) in matches:
@@ -128,9 +128,9 @@ class Pair:
         return res
 
     def __str__(self) -> str:
-        seen = set()
+        seen: Set[int] = set()
 
-        def _str(self) -> str:
+        def _str(self: Pair) -> str:
             if id(self) in seen:
                 return f"<Pair (recursive {id(self)})>"
             seen.add(id(self))
