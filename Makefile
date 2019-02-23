@@ -21,10 +21,11 @@ TESTFILE = testbuilder
 #   --duration=n Show the `n` slowest tests.
 PYTEST_FLAGS = -x -ra -Wignore
 PYTEST_FAST_FLAGS = $(PYTEST_FLAGS) --last-failed --last-failed-no-failures none -p no:ordering
+PYTEST_COMPLETE_FLAGS = $(PYTEST_FLAGS) --failed-first --duration=5
 ifdef remote
-PYTEST_COMPLETE_FLAGS = $(PYTEST_FLAGS) --failed-first --duration=5 -d --tx=socket=$(remote):888{0..9} --rsyncdir $(TESTFILE) $(TESTFILE)
+PYTEST_COMPLETE_FLAGS += -d --tx=socket=$(remote):888{0..9} --rsyncdir $(TESTFILE)
 else
-PYTEST_COMPLETE_FLAGS = $(PYTEST_FLAGS) --failed-first --duration=5 -n=$(shell nproc)
+PYTEST_COMPLETE_FLAGS += -n=$(shell nproc)
 endif
 PYTEST_COMPLETE = pytest $(PYTEST_COMPLETE_FLAGS) $(TESTFILE)
 PYTEST_FAST = ./pytest_empty $(PYTEST_FAST_FLAGS) $(TESTFILE)
