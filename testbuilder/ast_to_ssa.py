@@ -408,7 +408,7 @@ class StatementVisitor(GenericVisitor[Any]):
             val = self.expr_visitor(node.value)
             return n.Attribute(e=val, value=val, attr=node.attr)
         else:
-            raise RuntimeError("Unknown target type")
+            raise RuntimeError(f"Unknown target type {type(node)}")
 
     def visit_AugAssign(self, node: ast.AugAssign) -> n.Set:
         value = self.expr_visitor(node.value)
