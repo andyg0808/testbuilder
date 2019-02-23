@@ -1,4 +1,5 @@
 import ast
+from copy import copy
 from functools import reduce, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
@@ -7,7 +8,7 @@ import z3
 from dataclasses import dataclass, field
 
 from . import nodetree as n
-from .visitor import GatherVisitor
+from .visitor import SetGatherVisitor
 
 Expression = z3.ExprRef
 
@@ -45,11 +46,21 @@ class ReturnBlock(BasicBlock):
     parents: List[BasicBlock] = _default_list()
 
     def append(self, item: BasicBlock) -> "ReturnBlock":
-        parents = self.parents + [item]
+        if id(item) in self.__parent_ids():
+            parents = copy(self.parents)
+        else:
+            parents = self.parents + [item]
         return ReturnBlock(number=self.number, parents=parents)
 
+    def __parent_ids(self) -> Set[int]:
+        return {id(x) for x in self.parents}
+
     def unify(self, other: "ReturnBlock") -> "ReturnBlock":
-        parents = self.parents + other.parents
+        parents = copy(self.parents)
+        ids = self.__parent_ids()
+        for p in other.parents:
+            if id(p) not in ids:
+                parents.append(p)
         return ReturnBlock(number=self.number, parents=parents)
 
     @property
@@ -135,10 +146,20 @@ T = TypeVar("T", bound=BasicBlock)
 
 @dataclass
 class BlockTree:
+    """Stores a tree of SSA basic blocks. Keeps a pointer to the top
+    block (the `StartBlock`) as well as the final block (the
+    `ReturnBlock`).
+
+    """
+
     start: StartBlock
     end: ReturnBlock
 
     def empty(self) -> bool:
+        """Returns true if the tree does not contain any blocks besides the
+        start and return blocks.
+
+        """
         if len(self.end.parents) == 0:
             return True
         if len(self.end.parents) == 1 and self.start is self.end.parents[0]:
@@ -146,9 +167,16 @@ class BlockTree:
         return False
 
     def deindex(self) -> "BlockTree":
+        """Return a basic BlockTree, throwing out any subclass data.
+
+        """
         return BlockTree(start=self.start, end=self.end)
 
     def unify_return(self, tree: "BlockTree") -> "BlockTree":
+        """Combines two BlockTrees by taking the union of the parents from
+        their respective ReturnBlocks.
+
+        """
         return BlockTree(start=self.start, end=self.end.unify(tree.end))
 
     def set_target(self, target: T) -> "BlockTreeIndex[T]":
@@ -220,6 +248,7 @@ class FunctionDef(Positioned):
     name: str
     args: List[str]
     blocks: BlockTree
+    defaults: List[n.expr]
     original: ast.FunctionDef
 
 
@@ -243,7 +272,7 @@ class Request:
     code: Union[FunctionDef, BlockTree]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Variable:
     id: str
 
@@ -267,6 +296,7 @@ Solution = Mapping[str, Any]
 @dataclass
 class SolvedTestData(TestData):
     test_number: int
+    target_line: int
     args: Solution
 
 
@@ -326,9 +356,9 @@ def last_line(block: Any) -> int:
         raise RuntimeError(f"Unexpected end type: {type(block)}")
 
 
-class LineGatherer(GatherVisitor[int]):
-    def visit_Stmt(self, stmt: n.stmt) -> List[int]:
-        return [stmt.line]
+class LineGatherer(SetGatherVisitor[int]):
+    def visit_Stmt(self, stmt: n.stmt) -> Set[int]:
+        return {stmt.line}
 
 
 def lines(block: BasicBlock) -> Set[int]:

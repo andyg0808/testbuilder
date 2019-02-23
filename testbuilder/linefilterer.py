@@ -8,6 +8,7 @@ from typing import (
     List,
     MutableMapping as MMapping,
     Optional,
+    Set,
     Tuple,
     TypeVar,
 )
@@ -20,7 +21,7 @@ from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
 from .coroutines import result, retrieve, run_to_suspend
 from .target_manager import TargetManager
-from .visitor import GatherVisitor, GenericVisitor, SearchVisitor, UpdateVisitor
+from .visitor import GenericVisitor, SearchVisitor, SetGatherVisitor, UpdateVisitor
 
 Coroutine = Generator[None, sbb.BasicBlock, sbb.BasicBlock]
 
@@ -68,13 +69,11 @@ class ComputedLineFilterer(UpdateVisitor):
             )
             return None
         else:
-            return sbb.FunctionDef(
+            return dataclasses.replace(
+                function,
                 first_line=blocktree.start.line,
                 last_line=blocktree.end.line,
-                name=function.name,
-                args=function.args,
                 blocks=blocktree,
-                original=function.original,
             )
         pass
 
@@ -121,17 +120,17 @@ class Discovery(SearchVisitor[sbb.BasicBlock]):
 SSAName = Tuple[str, int]
 
 
-class DepFinder(GatherVisitor[SSAName]):
-    def visit_Name(self, name: n.Name) -> List[SSAName]:
-        return [(name.id, name.set_count)]
+class DepFinder(SetGatherVisitor[SSAName]):
+    def visit_Name(self, name: n.Name) -> Set[SSAName]:
+        return {(name.id, name.set_count)}
 
-    def visit_Set(self, assign: n.Set) -> List[SSAName]:
+    def visit_Set(self, assign: n.Set) -> Set[SSAName]:
         deps = self.visit(assign.e)
         if isinstance(assign.target, n.Attribute):
             log.debug("adding target of attribute {}", assign.target)
             name = self.visit(assign.target.e)
             log.debug("found {} from attribute", name)
-            deps += name
+            deps |= name
 
         return deps
 

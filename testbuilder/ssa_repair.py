@@ -5,7 +5,7 @@ from logbook import Logger
 import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .visitor import GatherVisitor, UpdateVisitor
+from .visitor import SetGatherVisitor, UpdateVisitor
 
 log = Logger("ssa_repair")
 
@@ -24,16 +24,16 @@ class SSARepair(UpdateVisitor):
         return n.Name(id=name.id, set_count=uselist.index(name.set_count))
 
 
-class VariableVersions(GatherVisitor[Tuple[str, int]]):
-    def visit_Name(self, name: n.Name) -> List[Tuple[str, int]]:
-        return [(name.id, name.set_count)]
+class VariableVersions(SetGatherVisitor[Tuple[str, int]]):
+    def visit_Name(self, name: n.Name) -> Set[Tuple[str, int]]:
+        return {(name.id, name.set_count)}
 
 
 Tree = TypeVar("Tree", bound=Union[sbb.BlockTree, sbb.FunctionDef])
 
 
 def repair(request: sbb.Request) -> sbb.Request:
-    used_vars: List[Tuple[str, int]] = VariableVersions().visit(request.code)
+    used_vars: Set[Tuple[str, int]] = VariableVersions().visit(request.code)
     varmap: MMapping[str, Set[int]] = {}
     for key, value in used_vars:
         assert isinstance(key, str), f"{key} is not str"

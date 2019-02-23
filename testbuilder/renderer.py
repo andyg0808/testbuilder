@@ -6,6 +6,7 @@ from typing import Any, Callable, Mapping, cast
 from logbook import Logger
 
 from .dataclass_utils import make_extended_instance
+from .pair import Pair
 from .requester import Requester
 from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
 
@@ -47,10 +48,45 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
 def run_for_test(
     requester: Requester, func: Callable[..., Any], test: SolvedTestData
 ) -> ExpectedTestData:
-    requester.output(f"Generating test {test.test_number} for {test.name}")
+    requester.output(
+        f"Generating test {test.test_number} for {test.name} at line {test.target_line}"
+    )
     args = copy.deepcopy(test.args)
-    result = func(**args)
-    return make_extended_instance(test, ExpectedTestData, expected_result=str(result))
+    try:
+        result = func(**args)
+        writeout = repr(convert_result(result))
+    except Exception as e:
+        log.error(f"Asserting failure due to code run failure: {e}")
+        result = f"fail::{type(e).__name__}"
+        writeout = result
+    log.debug(
+        f"""Expected result information:
+        Type: {type(result)}
+        Attrs: `{'`, `'.join(dir(result))}`
+        repr:
+{repr(result)}
+        repr(converted):
+{repr(writeout)}"""
+    )
+    return make_extended_instance(test, ExpectedTestData, expected_result=writeout)
+
+
+PairExpr = re.compile(r"pair", re.IGNORECASE)
+ListExpr = re.compile(r"List")
+
+
+def convert_result(val: Any) -> Any:
+    """
+    If possible, convert a value to a known type from whatever type it was.
+    """
+    name = type(val).__name__
+    if PairExpr.search(name) or ListExpr.search(name):
+        pair = Pair.from_pair(val)
+        if pair is not None:
+            return pair
+    elif isinstance(val, tuple):
+        return tuple(convert_result(v) for v in val)
+    return val
 
 
 def render_test(test: ExpectedTestData) -> str:
@@ -61,8 +97,6 @@ def render_test(test: ExpectedTestData) -> str:
     call_string = f"{test.name}({call_args_string})"
     expected = str(test.expected_result).strip()
     log.info(f"Building test number {test.test_number}")
-    boilerplate = """from importlib import import_module
-from testbuilder.pair import Pair"""
     if test.test_number > 0:
         number_str = f"_{test.test_number+1}"
     else:
@@ -71,8 +105,6 @@ from testbuilder.pair import Pair"""
     if throw_match:
         exception_name = throw_match[1]
         return f"""
-import pytest
-{boilerplate}
 {test.name} = import_module("{test.filepath.stem}").{test.name}
 def test_{test.name}{number_str}():
     {args_string}
@@ -84,11 +116,10 @@ def test_{test.name}{number_str}():
         # This allows correct importing of modules with unacceptable
         # Python names
         return f"""
-{boilerplate}
 {test.name} = import_module("{test.filepath.stem}").{test.name}
 def test_{test.name}{number_str}():
     {args_string}
     actual = {call_string}
     expected = {expected}
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """

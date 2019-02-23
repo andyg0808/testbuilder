@@ -6,12 +6,11 @@ from itertools import product
 from typing import (
     Any,
     Callable,
-    Iterable,
     Iterator,
     List,
-    NewType,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -37,16 +36,20 @@ T = TypeVar("T")
 
 MagicFunc = Callable[..., T]
 TagType = Union[z3.SortRef, Type[Any]]
+ConstraintFunc = Callable[..., Set[z3.BoolRef]]
 
 
 @dataclass(frozen=True)
 class MagicTag:
     types: Sequence[TagType]
+    constraint_func: Optional[ConstraintFunc]
 
 
-def magic_tag(*types: TagType) -> Callable[[MagicFunc[T]], MagicFunc[T]]:
+def magic_tag(
+    *types: TagType, constraint: Optional[ConstraintFunc] = None
+) -> Callable[[MagicFunc[T]], MagicFunc[T]]:
     def _magic(func: MagicFunc[T]) -> MagicFunc[T]:
-        setattr(func, "__magic", MagicTag(types=types))
+        setattr(func, "__magic", MagicTag(types=types, constraint_func=constraint))
         return func
 
     return _magic
@@ -64,8 +67,10 @@ class MagicFountain:
     def __init__(self, sorting: SortingFunc) -> None:
         self.sorting = sorting
 
-    def __call__(self, *types: TagType) -> Callable[[MagicFunc[T]], Magic]:
-        return Magic.m(self.sorting, types)
+    def __call__(
+        self, *types: TagType, constraint: Optional[ConstraintFunc] = None
+    ) -> Callable[[MagicFunc[T]], Magic]:
+        return Magic.m(self.sorting, types, constraint=constraint)
 
 
 class Magic:
@@ -97,12 +102,18 @@ class Magic:
         for _, method in inspect.getmembers(self, inspect.ismethod):
             magic = getattr(method, "__magic", None)
             if magic is not None:
-                registration = MagicRegistration(function=method, types=magic.types)
+                registration = MagicRegistration(
+                    function=method,
+                    types=magic.types,
+                    constraint_func=magic.constraint_func,
+                )
                 self.funcref.append(registration)
 
     @staticmethod
     def m(
-        sorting: Optional[SortingFunc], types: Sequence[TagType]
+        sorting: Optional[SortingFunc],
+        types: Sequence[TagType],
+        constraint: Optional[ConstraintFunc],
     ) -> Callable[[MagicFunc[Any]], Magic]:
         """
         Create an instance of Magic and call `magic` on it with these
@@ -112,9 +123,11 @@ class Magic:
             res = Magic(lambda x: x.sort())
         else:
             res = Magic(sorting)
-        return res.magic(types)
+        return res.magic(types, constraint)
 
-    def magic(self, types: Sequence[TagType]) -> Callable[[MagicFunc[Any]], Magic]:
+    def magic(
+        self, types: Sequence[TagType], constraint: Optional[ConstraintFunc]
+    ) -> Callable[[MagicFunc[Any]], Magic]:
         """
         To register an existing function for some argument types, call
         this method, passing it the argument types, and pass the
@@ -130,7 +143,9 @@ class Magic:
         """
 
         def _magic(func: MagicFunc[Any]) -> Magic:
-            registration = MagicRegistration(types=types, function=func)
+            registration = MagicRegistration(
+                types=types, function=func, constraint_func=constraint
+            )
             self.funcref.append(registration)
             return self
 
@@ -182,7 +197,7 @@ class Magic:
         sorts: SortSet = set()
         found_none = False
         for func, arg_tuple in functions:
-            res = self.__call_on_exprs(func.function, arg_tuple)
+            res = self.__call_on_exprs(func, arg_tuple)
             if res is None:
                 continue
             exprs.append(res)
@@ -216,19 +231,23 @@ class Magic:
         return TypeUnion(exprs, sorts)
 
     def __call_on_exprs(
-        self, func: Callable[..., Expression], args: Tuple[Any]
+        self, reg: MagicRegistration, args: Tuple[Any]
     ) -> Optional[CExpr]:
         log.info(f"Trying to run implementation for type-pair {args}")
 
+        arg_exprs = [arg.expr for arg in args]
         try:
-            res = func(*(arg.expr for arg in args))
+            res = reg.function(*arg_exprs)
             if res is None:
                 return None
         except Exception as e:
             raise RuntimeError(
-                f"Problem running {func}({', '.join(str(a) for a in args)})"
+                f"Problem running {reg.function}({', '.join(str(a) for a in args)})"
             ) from e
         constraints = set(concat(arg.constraints for arg in args))
+        if reg.constraint_func:
+            new_constraint = reg.constraint_func(*arg_exprs)
+            constraints |= {(str(i), None, i) for i in new_constraint}
         return CExpr(expr=res, constraints=constraints)
 
     def __select(self, args: Sequence[z3.SortRef]) -> Optional[MagicRegistration]:

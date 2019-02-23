@@ -1,0 +1,3 @@
+#!/bin/bash
+set -x
+pipenv run supervise ./remote_daemon

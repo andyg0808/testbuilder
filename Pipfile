@@ -13,7 +13,8 @@ pygments-style-solarized = "==0.1.1"
 logbook = "*"
 toolz = "*"
 injectable = "*"
-typeassert = {git = "ssh://git@gitlab.com/andyg0808/typeassert.git",editable = true}
+typeassert = {git = "https://gitlab.com/andyg0808/typeassert.git",editable = true}
+rainbowparens = {git = "https://gitlab.com/andyg0808/rainbowparens.git",editable = true}
 
 [dev-packages]
 black = "==18.6b4"
@@ -31,6 +32,8 @@ pytest-cov = "*"
 pytest-xdist = "*"
 pytest-ordering = "*"
 execnet = "==1.5.0"
+pympler = "*"
+pdbpp = "*"
 
 [requires]
 python_version = "3.7"

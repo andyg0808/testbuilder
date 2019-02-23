@@ -1,5 +1,6 @@
 import cgitb
 
+import _z3config  # noqa: F401
 import logconfig
 
 cgitb.enable()

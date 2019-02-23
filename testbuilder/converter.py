@@ -28,11 +28,9 @@ from .variable_type_union import VariableTypeUnion
 from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
-    AnyT,
     Expression,
     Reference,
     ReferenceT,
-    ReferentT,
     SortMarker,
     SortSet,
     bool_and,
@@ -47,8 +45,10 @@ TypeConstructor = Callable[[str], Expression]
 
 
 IntSort = z3.IntSort()
+RealSort = z3.RealSort()
 StringSort = z3.StringSort()
 BoolSort = z3.BoolSort()
+ArithSort = z3.ArithSortRef
 
 
 class SortNamer:
@@ -96,6 +96,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
     def visit_Int(self, node: n.Int) -> TypeUnion:
         return TypeUnion.wrap(z3.IntVal(node.v))
 
+    def visit_Float(self, node: n.Float) -> TypeUnion:
+        return TypeUnion.wrap(z3.RealVal(node.v))
+
     def visit_Str(self, node: n.Str) -> TypeUnion:
         return TypeUnion.wrap(z3.StringVal(node.s))
 
@@ -107,7 +110,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         )
         var_updates = groupby(lambda c: c[0], var_constraints)
         for varname, constraints in var_updates.items():
-            self.type_manager.put(varname, {c[1] for c in constraints})
+            self.type_manager.put(
+                varname, {c[1] for c in constraints if c[1] is not None}
+            )
         return expr
 
     def visit_UnaryOp(self, node: n.UnaryOp) -> TypeUnion:
@@ -182,6 +187,10 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         expr = self.visit(node.test)
         return expr
 
+    def visit_TupleVal(self, node: n.TupleVal) -> TypeUnion:
+        log.warn("Skipping test case due to use of tuple")
+        raise TupleError()
+
     def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
         if isinstance(target, n.Name):
             log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
@@ -254,6 +263,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.info(f"Found call to {node.func}")
         if isinstance(node.func, n.Name):
             function = node.func.id
+            if function == "input":
+                raise RuntimeError("`input` not supported in tested code")
             args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
@@ -279,11 +290,11 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, constructor: Callable[..., Expression], args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
-        print("Constructing call", constructor, args)
+        # print("Constructing call", constructor, args)
         exprs = []
         sorts: SortSet = set()
         for arg_tuple in Magic.cartesian_product(args):
-            print("running for", arg_tuple)
+            # print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
             expr = self.store.add(cast(z3.DatatypeRef, target))
             constraints = set(mapcat(lambda x: x.constraints, arg_tuple))
@@ -340,7 +351,30 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return self.fount(IntSort, IntSort)(operator.mul)
 
     def visit_Div(self, node: n.Div) -> OpFunc:
-        return self.fount(IntSort, IntSort)(operator.truediv)
+        class DivMagic(Magic):
+            @magic(IntSort, IntSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
+            def divInts(self, left: z3.Int, right: z3.Int) -> z3.Real:
+                left_real = z3.ToReal(left)
+                right_real = z3.ToReal(right)
+                return left_real / right_real
+
+            @magic(IntSort, RealSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
+            def divIntReal(self, left: z3.Int, right: z3.Real) -> z3.Real:
+                return left / right
+
+            @magic(RealSort, ArithSort, constraint=(lambda n, d: {d != z3.IntVal(0)}))
+            def divReal(self, left: z3.Real, right: z3.ArithRef) -> z3.Real:
+                return left / right
+
+        return DivMagic(self.fount.sorting)
+
+    def visit_FloorDiv(self, node: n.FloorDiv) -> OpFunc:
+        return self.fount(
+            IntSort, IntSort, constraint=(lambda n, d: {d != z3.IntVal(0)})
+        )(operator.truediv)
+
+    def visit_Mod(self, node: n.Mod) -> OpFunc:
+        return self.fount(IntSort, IntSort)(operator.mod)
 
     def visit_LtE(self, node: n.LtE) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.le)
@@ -367,7 +401,7 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
         return NotEqMagic(self.fount.sorting, self.store, self.registrar.reftype)
 
     def visit_Lt(self, node: n.Lt) -> OpFunc:
-        return self.fount(z3.ArithSortRef, z3.ArithSortRef)(operator.lt)
+        return self.fount(IntSort, IntSort)(operator.lt)
 
     def visit_Gt(self, node: n.Gt) -> OpFunc:
         return self.fount(IntSort, IntSort)(operator.gt)
@@ -380,35 +414,6 @@ class OperatorConverter(SimpleVisitor[OpFunc]):
 
     def visit_USub(self, node: n.USub) -> OpFunc:
         return self.fount(IntSort)(lambda x: -x)  # type: ignore
-
-
-# T = TypeVar("T")
-
-
-# def safify(
-#     exception: Type[BaseException], op: Callable[..., T]
-# ) -> Callable[..., Optional[T]]:
-#     def _safify(*args: Any, **kwargs: Any) -> Optional[T]:
-#         try:
-#             return op(*args, **kwargs)
-#         except exception as e:
-#             return None
-
-#     return _safify
-
-
-# Options:
-# * Map == between the z3 variable and the values (which have to be wrapped)
-# * Map == between each element of the unwrapped z3 variable and the values
-
-# Not options:
-# * Can't do If(cond, case1, If(cond2, case2, ...)) # because final
-#   else has no good return value
-#
-
-
-# E = TypeVar("E", bound=n.expr)
-# B = TypeVar("B")
 
 
 def get_variable(name: str, idx: int) -> str:
@@ -450,7 +455,7 @@ class IsMagic(Magic):
             return True
         if not isinstance(right, ExpandableTypeUnion):
             return True
-        print("not expanding")
+        # print("not expanding")
         return False
 
     @magic(z3.SortRef, z3.SortRef)
@@ -549,3 +554,7 @@ class NotEqMagic(IsNotMagic):
             )
         else:
             return left != right
+
+
+class TupleError(NotImplementedError):
+    pass

@@ -1,0 +1,7 @@
+#!/bin/bash
+cd z3_source
+git clean -xdf
+cd ..
+make clean
+pipenv --rm
+./install

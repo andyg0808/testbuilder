@@ -9,11 +9,11 @@ from typing import (
     Generator,
     Generic,
     Iterator,
-    List,
     Mapping,
     MutableMapping as MMapping,
     Optional,
     Sequence,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -22,7 +22,6 @@ from typing import (
 )
 
 from logbook import Logger
-from toolz import mapcat
 
 import dataclasses
 
@@ -72,27 +71,34 @@ class SimpleVisitor(Generic[B]):
 
     def __find_function(self, start_class: Type[T]) -> Callable[..., B]:
         cache = getattr(self, "__fun_cache", {})
+        errs = getattr(self, "__err_cache", {})
         suggestion = None
         if start_class in cache:
             return cast(Callable[..., B], cache[start_class])
-        log.trace("Finding functions in {}", type(self))
+        if start_class in errs:
+            raise VisitError(*errs[start_class])
+        if __debug__:
+            log.trace("Finding functions in {}", type(self))
         for cls in inspect.getmro(start_class):
             func = self.__scan_functions(cls)
             if func is not None:
                 cache[start_class] = func
                 setattr(self, "__fun_cache", cache)
-                log.trace(f"Found function {func}")
+                if __debug__:
+                    log.trace(f"Found function {func}")
                 return func
             elif suggestion is None:
-                suggestions = getattr(self, "__suggestions", {})
+                suggestions = getattr(self.__class__, "__suggestions", {})
                 suggestion = suggestions.get(cls, None)
         if suggestion is not None:
-            raise VisitError(start_class, suggestion)
+            errs[start_class] = (start_class, suggestion)
         else:
-            raise VisitError(start_class)
+            errs[start_class] = (start_class,)
+        setattr(self, "__err_cache", errs)
+        raise VisitError(*errs[start_class])
 
-    def __scan_functions(self, target_class: Type[T]) -> Callable[..., B]:
-        typecache = getattr(self, "__type_cache", None)
+    def __scan_functions(self, target_class: Type[T]) -> Optional[Callable[..., B]]:
+        typecache = getattr(self.__class__, "__type_cache", None)
         if typecache is None:
             typecache = {}
             suggestions = {}
@@ -113,17 +119,23 @@ class SimpleVisitor(Generic[B]):
                     # base class.
                     if isinstance(annotation, typing._GenericAlias):  # type: ignore
                         annotation = annotation.__origin__
-                    log.debug("Found visitor {} for {}", name, annotation)
-                    typecache[annotation] = method
+                    if __debug__:
+                        log.debug("Found visitor {} for {}", name, annotation)
+                    typecache[annotation] = name
                 elif SuggestionRegex.match(name):
-                    log.debug("Found suggestion {}", name)
+                    if __debug__:
+                        log.debug("Found suggestion {}", name)
                     suggestions[annotations[param.name]] = name
                 else:
-                    log.debug("Ignoring {}", name)
+                    if __debug__:
+                        log.debug("Ignoring {}", name)
 
-            setattr(self, "__type_cache", typecache)
-            setattr(self, "__suggestions", suggestions)
-        return cast(Callable[..., B], typecache.get(target_class, None))
+            setattr(self.__class__, "__type_cache", typecache)
+            setattr(self.__class__, "__suggestions", suggestions)
+        name = typecache.get(target_class)
+        if name is None:
+            return None
+        return cast(Optional[Callable[..., B]], getattr(self, name))
 
 
 class GenericVisitor(SimpleVisitor[A]):
@@ -131,7 +143,10 @@ class GenericVisitor(SimpleVisitor[A]):
         try:
             return super().visit(v, *args, **kwargs)
         except VisitError as err:
-            log.debug("VisitError received; visiting generically [Error is {}]", err)
+            if __debug__:
+                log.debug(
+                    "VisitError received; visiting generically [Error is {}]", err
+                )
             # If we get a VisitError, fall through to using the
             # `generic_visit` function. Trying to call `generic_visit`
             # here causes later, genuine VisitErrors to be caused
@@ -145,6 +160,31 @@ class GenericVisitor(SimpleVisitor[A]):
     @abstractmethod
     def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> A:
         ...
+
+
+class CacheVisitor:
+    CACHE_ATTR = "__generic_cache"
+
+    def cacheclear(self) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is not None:
+            cache.clear()
+
+    def cacheget(self, v: Any) -> A:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, {})
+        return cast(A, cache.get(id(v), None))
+
+    def cacheput(self, v: Any, val: A) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is None:
+            setattr(self, CacheVisitor.CACHE_ATTR, {id(v): val})
+        else:
+            cache[id(v)] = val
+
+    def cachedrop(self, v: Any) -> None:
+        cache = getattr(self, CacheVisitor.CACHE_ATTR, None)
+        if cache is not None:
+            del cache[id(v)]
 
 
 class SearchVisitor(GenericVisitor[Optional[A]]):
@@ -172,9 +212,19 @@ class SearchVisitor(GenericVisitor[Optional[A]]):
         return None
 
 
-class GatherVisitor(GenericVisitor[List[A]]):
-    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> List[A]:
-        def arg_visit(v: Any) -> List[A]:
+class SetGatherVisitor(GenericVisitor[Set[A]], CacheVisitor):
+    def visit(self, v: Any, *args: Any, **kwargs: Any) -> Set[A]:
+        val: Optional[Set[A]] = self.cacheget(v)
+        if val is not None:
+            return val
+        val = set()
+        self.cacheput(v, val)
+        res = super().visit(v, *args, **kwargs)
+        val |= res
+        return val
+
+    def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Set[A]:
+        def arg_visit(v: Any) -> Set[A]:
             return self.visit(v, *args, **kwargs)
 
         try:
@@ -183,16 +233,18 @@ class GatherVisitor(GenericVisitor[List[A]]):
             # If we are trying to look for fields on something
             # that isn't a dataclass, it's probably a primitive
             # field type, so just stop here.
-            return []
-        results: List[A] = []
+            return set()
+        results: Set[A] = set()
         for f in fields:
             data = getattr(v, f.name)
             if isinstance(data, Sequence):
-                results += mapcat(arg_visit, data)
+                for i in data:
+                    results |= arg_visit(i)
             if isinstance(data, Mapping):
-                results += mapcat(arg_visit, list(data.values()))
+                for i in data.values():
+                    results |= arg_visit(i)
             else:
-                results += arg_visit(data)
+                results |= arg_visit(data)
         return results
 
 
@@ -218,48 +270,39 @@ class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
         return
 
 
-class UpdateVisitor(GenericVisitor[Any]):
-    def __init__(self) -> None:
-        self.visited_nodes: MMapping[int, Any] = {}
-
+class UpdateVisitor(GenericVisitor[Any], CacheVisitor):
     def visit(self, v: A, *args: Any, **kwargs: Any) -> A:
         # Use already-visited object if it exists.
         # This makes handling trees with joins well-behaved.
-        if self.id(v) in self.visited_nodes:
-            return self.get_updated(v)
+        val: Optional[A] = self.cacheget(v)
+        if val is not None:
+            return val
         visited: A = super().visit(v, *args, **kwargs)
-        self.visited_nodes[self.id(v)] = visited
+        self.cacheput(v, visited)
         return visited
 
-    def get_updated(self, original: A) -> A:
-        return cast(A, self.visited_nodes[self.id(original)])
-
-    def id(self, obj: Any) -> Any:
-        """
-        Returns a unique identifier for a node. Can be overridden to
-        modify the notion of equivalence.
-        """
-        return id(obj)
-
     def generic_visit(self, v: A, *args: Any, **kwargs: Any) -> A:
-        try:
-            fields = dataclasses.fields(v)
-        except TypeError:
-            # If we are trying to look for fields on something
-            # that isn't a dataclass, it's probably a primitive
-            # field type, so just stop here.
-            return v
+        fields = getattr(v, "__fields_cache", None)
+        if fields is None:
+            try:
+                fields = [
+                    f.name for f in dataclasses.fields(v) if not f.name.startswith("_")
+                ]
+                setattr(v, "__fields_cache", fields)
+            except TypeError:
+                # If we are trying to look for fields on something
+                # that isn't a dataclass, it's probably a primitive
+                # field type, so just stop here.
+                return v
         results: MMapping[str, Any] = {}
         for f in fields:
-            if f.name.startswith("_"):
-                continue
-            data = getattr(v, f.name)
+            data = getattr(v, f)
             res: Any
-            if isinstance(data, list):
+            if type(data) == list:
                 res = [self.visit(x, *args, **kwargs) for x in data]
-            elif isinstance(data, dict):
+            elif type(data) == dict:
                 res = {k: self.visit(v, *args, **kwargs) for k, v in data.items()}
             else:
                 res = self.visit(data, *args, **kwargs)
-            results[f.name] = res
+            results[f] = res
         return v.__class__(**results)  # type: ignore

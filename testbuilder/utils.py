@@ -3,10 +3,11 @@ import inspect
 import re
 import sys
 from pprint import pprint
-from typing import Any, NoReturn, TypeVar, cast
+from typing import Any, NoReturn, Set, TypeVar, cast
+
+from termcolor import cprint
 
 import rainbow  # type: ignore
-from termcolor import cprint
 
 from .test_utils import write_dot
 
@@ -69,6 +70,72 @@ def colorize(code: str) -> str:
 
 def dataclass_dump(code: Any) -> str:
     return colorize(code_format(ObjString.sub(r'"\0"', str(code))))
+
+
+def ast_dump(
+    code: Any, annotate_fields: bool = True, include_attributes: bool = True
+) -> str:
+    return colorize(
+        code_format(
+            ast.dump(
+                code,
+                annotate_fields=annotate_fields,
+                include_attributes=include_attributes,
+            )
+        )
+    )
+
+
+def walker_print(obj: Any, prefix: str, seen: Set[int], hide: bool = False) -> None:
+    """Dump `obj` in a brute-force way
+
+    This is designed not to call any special operations as much as
+    possible. It still uses normal `getattr`; in future, it might be
+    good to eliminate that as well. The goal with this function is to
+    get information about obj printing to the screen immediately, so
+    that even very large objects can be inspected. The need for this
+    came up during debugging, where formatting some values seemed to
+    take an unknown long amount of time. This also looks for loops and
+    prints out a clean message, so as to avoid being caught in an
+    infinite loop.
+
+    Arguments:
+        obj: The object to print
+        prefix: A string to prefix each printout line with. Empty
+                string will do.
+        seen: A set of `id` s which have been seen before. Empty set
+              is fine as a user.
+    """
+    if id(obj) in seen:
+        if not hide:
+            print(prefix + "=", id(obj), "(seen)")
+        return
+    seen.add(id(obj))
+    print(f"{prefix}={type(obj).__name__}@({id(obj)})", end="")
+    field_count = 0
+    field_numbers = []
+    for field in dir(obj):
+        if not field.startswith("_"):
+            field_numbers.append(f"{field}_{field_count}")
+            field_count += 1
+    print("(", ", ".join(field_numbers), ")")
+    for field in dir(obj):
+        if not field.startswith("_"):
+            walker_print(getattr(obj, field), prefix + "." + field, seen, hide)
+    try:
+        for k, v in obj.items():
+            walker_print(v, prefix + "[" + str(k) + "]", seen, hide)
+        return
+    except AttributeError:
+        # We don't have a dict here
+        pass
+    try:
+        for i, o in enumerate(obj):
+            walker_print(o, prefix + "[" + str(i) + "]", seen, hide)
+        return
+    except TypeError:
+        # It's not enumerable, probably.
+        pass
 
 
 A = TypeVar("A")

@@ -11,6 +11,13 @@ def Requester():
     return create_autospec(requester.Requester)()
 
 
+BOILERPLATE = """
+from importlib import import_module
+from testbuilder.pair import Pair
+import pytest
+"""
+
+
 def test_autosolve():
     code = """
 def id(x):
@@ -18,14 +25,12 @@ def id(x):
     """
     expected = {
         """
-from importlib import import_module
-from testbuilder.pair import Pair
 id = import_module("id").id
 def test_id():
     x = 0
     actual = id(x)
     expected = 0
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """
     }
 
@@ -53,6 +58,6 @@ def example(val):
             )
             sys.path.append(d)
             for test in tests:
-                exec(test)
+                exec(BOILERPLATE + test)
             sys.path.pop()
     requester.input.assert_not_called()

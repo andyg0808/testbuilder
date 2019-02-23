@@ -34,11 +34,11 @@ def configure_fancylog(verbosity):
         else:
             flag = os.environ.get("VERBOSE", False)
         ignores = os.environ.get("IGNORE", "").split(",")
-        if flag and flag.isnumeric():
+        if isinstance(flag, int) or isinstance(flag, str) and flag.isnumeric():
             StderrHandler(
                 level=int(flag), filter=lambda r, h: r.channel not in ignores
             ).push_application()
-        elif flag and LoggerName.match(flag):
+        elif isinstance(flag, str) and LoggerName.match(flag):
             print(f"Only logging from {flag}")
             StderrHandler(filter=lambda r, h: r.channel == flag).push_application()
         else:

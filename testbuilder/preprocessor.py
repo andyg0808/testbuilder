@@ -1,7 +1,6 @@
 import ast
 import re
-from abc import ABC
-from typing import List, Tuple, cast
+from typing import List, Tuple, Union
 
 from logbook import Logger
 
@@ -56,44 +55,76 @@ class MissingRewrite(RuntimeError):
 
 
 @dataclass
-class Attr(ast.NodeTransformer):
+class NodeFinder(ast.NodeTransformer):
     transformer: ast.NodeTransformer
 
+
+class Attr(NodeFinder):
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         return self.transformer.visit(attr)  # type: ignore
 
 
-@dataclass
-class AttrName(ast.NodeTransformer):
-    transformer: ast.NodeTransformer
-
+class AttrName(NodeFinder):
     def visit_Attribute(self, attr: ast.Attribute) -> ast.Attribute:
         new_attr = self.transformer.visit_String(attr.attr)  # type: ignore
-        return cast(
-            ast.Attribute, ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
-        )
+        return ast.copy_location(ast.Attribute(attr.value, new_attr), attr)
 
 
-@dataclass
-class Name(ast.NodeTransformer):
-    transformer: ast.NodeTransformer
+class Subscript(NodeFinder):
+    def visit_Subscript(self, sub: ast.Subscript) -> ast.AST:
+        return self.transformer.visit(sub)  # type: ignore
 
+
+class Name(NodeFinder):
     def visit_Name(self, name: ast.Name) -> ast.Name:
         return self.transformer.visit(name)  # type: ignore
 
 
-class Rename(ast.NodeTransformer):
-    def __init__(self, action: str) -> None:
-        self.search, self.replace = re.split(r"\s*->\s*", action)
+class TupleFinder(NodeFinder):
+    def visit_Tuple(self, tup: ast.Tuple) -> ast.AST:
+        return self.transformer.visit(tup)  # type: ignore
 
+
+class Action(ast.NodeTransformer):
+    def __init__(self, action: str) -> None:
+        self.action = action
+        if len(action) > 2:
+            self.search, self.replace = re.split(r"\s*->\s*", action)
+
+
+class Rename(Action):
     def visit_Name(self, name: ast.Name) -> ast.Name:
-        return cast(
-            ast.Name, ast.copy_location(ast.Name(self.visit_String(name.id)), name)
-        )
+        return ast.copy_location(ast.Name(self.visit_String(name.id)), name)
 
     def visit_String(self, string: str) -> str:
         return re.sub(self.search, self.replace, string)
 
 
-Nodefinders = {"ATTR": Attr, "ATTRNAME": AttrName, "NAME": Name}
-Actions = {"RENAME": Rename}
+class Parify(Action):
+    def visit_Subscript(
+        self, sub: ast.Subscript
+    ) -> Union[ast.Attribute, ast.Subscript]:
+        if isinstance(sub.slice, ast.Index):
+            index = sub.slice.value
+            if isinstance(index, ast.Num):
+                if index.n == int(self.search):
+                    return ast.copy_location(
+                        ast.Attribute(sub.value, self.replace), sub
+                    )
+        return sub
+
+    def visit_Tuple(self, tup: ast.Tuple) -> Union[ast.Tuple, ast.Call]:
+        if len(tup.elts) == 2:
+            pair = ast.copy_location(ast.Name("Pair"), tup)
+            return ast.copy_location(ast.Call(pair, tup.elts, []), tup)
+        return tup
+
+
+Nodefinders = {
+    "ATTR": Attr,
+    "ATTRNAME": AttrName,
+    "NAME": Name,
+    "SUBSCRIPT": Subscript,
+    "TUPLE": TupleFinder,
+}
+Actions = {"RENAME": Rename, "PARIFY": Parify}

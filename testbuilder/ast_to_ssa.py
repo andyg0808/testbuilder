@@ -17,6 +17,7 @@ import dataclasses
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
+from .utils import ast_dump
 from .variable_manager import VariableManager, VarMapping
 from .visitor import GenericVisitor, SimpleVisitor
 
@@ -65,14 +66,15 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
         return sbb.Module(functions=functions, classes=classes, code=blocktree)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> sbb.ClassDef:
+        last_lineno = last_line(node)
         functions = [
             self.visit(line) for line in node.body if isinstance(line, ast.FunctionDef)
         ]
-        first_line = functions[0].first_line
-        last_line = functions[-1].last_line
+        first_lineno = node.lineno
+        last_lineno = last_line(node)
         return sbb.ClassDef(
-            first_line=first_line,
-            last_line=last_line,
+            first_line=first_lineno,
+            last_line=last_lineno,
             name=node.name,
             variables=[],
             functions=functions,
@@ -80,6 +82,7 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> sbb.FunctionDef:
         args = [arg.arg for arg in node.args.args]
+        defaults = [self.expr_visitor(e) for e in node.args.defaults]
         self.variables.push()
         self.variables.add(args)
         blocktree = self.body_visit(node.body)
@@ -90,6 +93,7 @@ class AstToSSABasicBlocks(SimpleVisitor[Any]):
             name=node.name,
             args=args,
             blocks=blocktree,
+            defaults=defaults,
             original=node,
         )
 
@@ -427,8 +431,8 @@ class AstBuilder(GenericVisitor[Any]):
         self.variables = variables
 
     def visit_Num(self, node: ast.Num) -> Union[n.Int, n.Float]:
-        if int(node.n) == node.n:
-            return n.Int(int(node.n))
+        if isinstance(node.n, int):
+            return n.Int(node.n)
         else:
             return n.Float(node.n)
 
@@ -448,7 +452,8 @@ class AstBuilder(GenericVisitor[Any]):
             return n.BinOp(l, n.And(), r)
 
         res = reduce(all_pairs, binops)
-        log.debug(f"converting {ast.dump(node)} to {res}")
+        if __debug__:
+            log.debug(f"converting {ast.dump(node)} to {res}")
         return res
 
     def visit_BoolOp(self, node: ast.BoolOp) -> n.BinOp:
@@ -468,17 +473,15 @@ class AstBuilder(GenericVisitor[Any]):
         value = self.visit(node.value)
         return n.Attribute(e=value, value=value, attr=node.attr)
 
-    def visit_Tuple(self, node: ast.Tuple) -> n.Call:
-        raise RuntimeError("Cannot work with tuple in input")
+    def visit_Tuple(self, node: ast.Tuple) -> n.TupleVal:
+        return n.TupleVal(elts=[self.visit(v) for v in node.elts])
 
     def generic_visit(self, v: ast.AST, *args: Any, **kwargs: Any) -> n.Node:
         node = v
-        # print(f"visiting generically to {node}")
         if not isinstance(node, ast.AST):
             return node
 
         typename = type(node).__name__
-        # print("typename", typename)
         equivalent = getattr(n, typename, None)
         if equivalent is None:
             raise RuntimeError(
@@ -502,3 +505,35 @@ class AstBuilder(GenericVisitor[Any]):
             else:
                 fields.append(self.visit(value))
         return cast(n.Node, equivalent(*fields))
+
+
+def last_line(node: ast.AST) -> int:
+    """
+    Return the last line of an AST element
+    """
+    # `negatives` contains AST elements which should be given negative
+    # results, making them lower-priority than any element with a
+    # determinable position.
+
+    negatives = [ast.Load, ast.Store, ast.boolop, ast.operator, ast.unaryop, ast.cmpop]
+
+    # `linenos` contains AST elements which have no subparts, and thus
+    # must rely on their own `lineno` for their position.
+    linenos = {ast.Num, ast.arg, ast.Pass, ast.Name, ast.NameConstant, ast.Str}
+
+    cls: Type[ast.AST]
+    for cls in negatives:
+        if isinstance(node, cls):
+            return -1
+
+    for cls in linenos:
+        if isinstance(node, cls):
+            return node.lineno
+
+    try:
+        return max(last_line(x) for x in ast.iter_child_nodes(node))
+    except ValueError as e:
+        raise RuntimeError(
+            f"Cannot determine last line of a `{type(node).__name__}`"
+            f"\nDump:\n{ast_dump(node)}"
+        ) from e

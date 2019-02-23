@@ -1,4 +1,5 @@
 import ast
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from .expression_builder import get_expression
 from .pair import Pair
 from .solver import solve
 from .type_builder import TypeBuilder
+from .utils import colorize
 from .variable_expander import expand_variables
 
 Registrar = TypeBuilder().construct()
@@ -20,7 +22,9 @@ def compare_values(expected, actual, actual_dict):
         print("actual", actual)
         print("dict", actual_dict)
         print("expected", expected)
-        assert expected(actual, actual_dict)
+        result = expected(actual, actual_dict)
+        print("result", result)
+        assert result
     else:
         print("expected", expected)
         print("actual", actual)
@@ -61,7 +65,7 @@ def check_solve(code, conditions, expected, unroll=1, slice=True):
         )
     else:
         expression = testdata
-    print("expression", expression)
+    print("testdata", colorize(str(expression)))
     res = solve(Registrar, expression)
     print(f"Solution: {res}")
     if isinstance(expected, spotcheck):
@@ -293,4 +297,64 @@ def example(a):
         """,
         None,
         spotcheck({"a": None}),
+    )
+
+
+def test_division():
+    check_solve(
+        """
+def example():
+    return 13/4
+        """,
+        None,
+        spotcheck({"ret": Fraction(3.25)}),
+    )
+
+    check_solve(
+        """
+def example(a):
+    return a/3
+        """,
+        "Any.is_Int(pyname_a)",
+        spotcheck(
+            {"ret": lambda ret, d: Fraction(numerator=d["a"], denominator=3) == ret}
+        ),
+    )
+
+    check_solve(
+        """
+def example():
+    return 13//4
+        """,
+        None,
+        spotcheck({"ret": 3}),
+    )
+
+    check_solve(
+        """
+def example(a, b):
+    return a//b
+        """,
+        "Any.is_Int(pyname_a) and Any.is_Int(pyname_b)",
+        spotcheck({"ret": lambda ret, d: d["a"] // d["b"] == ret}),
+    )
+
+
+def test_division_not_by_zero():
+    check_solve(
+        """
+def example(a):
+    return 1/a
+    """,
+        "Any.is_Float(pyname_a) and Any.f(pyname_a) == z3.RealVal(0)",
+        None,
+    )
+
+    check_solve(
+        """
+def example(a):
+    return 1//a
+        """,
+        "Any.i(pyname_a) == 0",
+        None,
     )

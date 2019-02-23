@@ -11,11 +11,11 @@ SSAName = Tuple[str, int]
 class TargetManager:
     targets: Set[SSAName] = field(default_factory=set)
 
-    def replace(self, target: Optional[SSAName], deps: Sequence[SSAName]) -> None:
+    def replace(self, target: Optional[SSAName], deps: Set[SSAName]) -> None:
         if target:
-            self.targets = (self.targets - {target}) | set(deps)
+            self.targets = (self.targets - {target}) | deps
         else:
-            self.targets = self.targets | set(deps)
+            self.targets = self.targets | deps
 
     def __contains__(self, obj: Optional[SSAName]) -> bool:
         if obj is None:

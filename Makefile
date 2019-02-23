@@ -3,7 +3,7 @@ SHELL=/bin/bash -o pipefail
 
 RUN = fastbuild
 
-MYPY = mypy --strict --check-untyped-defs testbuilder/generate.py
+MYPY = mypy testbuilder/generate.py
 export MYPYPATH=./stubs
 
 TESTFILE = testbuilder
@@ -35,10 +35,10 @@ build:
 
 .PHONY: watch
 watch:
-	fd ".py|.exp|.tcl|Makefile" | entr -c test.sh $(MAKE) $(RUN)
+	fd ".py|.exp|.tcl|Makefile" | entr -c time test.sh $(MAKE) $(RUN)
 
 .PHONY: fastbuild
-fastbuild: mypy pytest runtests snippets
+fastbuild: mypy pytest runtests #snippets
 
 .PHONY: livetest
 livetest: mypy runtests snippets
@@ -48,9 +48,19 @@ mypy:
 	$(MYPY)
 
 .PHONY: pytest
+ifdef remote
+pytest:
+	$(PYTEST_COMPLETE)
+else
+ifdef complete
+pytest:
+	$(PYTEST_COMPLETE)
+else
 pytest:
 	$(PYTEST_FAST)
 	$(PYTEST_COMPLETE)
+endif
+endif
 
 .PHONY: plaintest
 plaintest:
@@ -62,7 +72,7 @@ runtests:
 
 .PHONY: snippets
 snippets:
-	cd private && $(MAKE)
+	if [[ -d private ]]; then cd private && $(MAKE); fi
 
 .PHONY: docs
 docs:
@@ -75,4 +85,6 @@ doc-server:
 
 .PHONY: clean
 clean:
-	rm -r build
+	rm -rf build
+	rm -rf .pytest_cache
+	rm -rf docs/api

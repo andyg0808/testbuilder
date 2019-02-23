@@ -25,18 +25,17 @@ def test_generate_basic(op, a, b):
             expected_result=function_expectation,
             args=function_args,
             test_number=0,
+            target_line=1,
         )
     )
     expected = f"""
-from importlib import import_module
-from testbuilder.pair import Pair
 {op.__name__} = import_module("mycode").{op.__name__}
 def test_{op.__name__}():
     a = {a}
     b = {b}
     actual = {op.__name__}(a, b)
     expected = {op(a, b)}
-    assert actual == expected
+    assert renderer.convert_result(actual) == expected
     """
     assert function == expected
 
@@ -51,12 +50,10 @@ def test_expected_failure():
         expected_result="fail::RuntimeError",
         args={"fish": 44},
         test_number=0,
+        target_line=1,
     )
     actual = render_test(test_data)
     expected = """
-import pytest
-from importlib import import_module
-from testbuilder.pair import Pair
 Example = import_module("null").Example
 def test_Example():
     fish = 44

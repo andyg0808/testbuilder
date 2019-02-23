@@ -80,6 +80,14 @@ class Div(Operator):
     pass
 
 
+class FloorDiv(Operator):
+    pass
+
+
+class Mod(Operator):
+    pass
+
+
 class Lt(Operator):
     pass
 
@@ -207,6 +215,11 @@ class Attribute(expr, LValue):
 
     def find_name(self) -> Name:
         return self.value.find_name()
+
+
+@dataclass
+class TupleVal(expr):
+    elts: List[expr]
 
 
 @dataclass

@@ -14,18 +14,34 @@ Options:
                                   rules in <file.json> on each input file.
     --autogen  Run the function under test with the suggested inputs to
                determine the expected output
+    --basename=<name>  Filename for resulting tests. {parent} will be
+                       replaced with the name of the parent directory
+                       of the target file, {basename} will be replaced
+                       with the full path and filename without the
+                       extension, and {stem} will be replaced with the
+                       filename alone without the extension.
 """
 
 import json
+import signal
 from pathlib import Path
 
 import typeassert
 from docopt import docopt
 from logbook import NullHandler
 
+import _z3config  # noqa: F401
 import logconfig
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
+
+
+def signal_handler(num, f):
+    breakpoint()
+    return
+
+
+signal.signal(signal.SIGUSR1, signal_handler)
 
 typeassert.log.setLevel("ERROR")
 
@@ -70,8 +86,23 @@ def main(filename: str) -> None:
         changes=changes,
         autogen=autogen,
     )
-    with open((filepath.parent / filepath.stem).as_posix() + "_test.py", "x") as tests:
-        tests.write("from importlib import import_module")
+    if opts["--basename"]:
+        filename = opts["--basename"].format(
+            parent=filepath.parent.as_posix(),
+            basename=(filepath.parent / filepath.stem).as_posix(),
+            stem=filepath.stem,
+        )
+    else:
+        filename = (filepath.parent / filepath.stem).as_posix() + "_test.py"
+    if Path(filename).resolve().as_posix() == "/dev/null":
+        # Special-case /dev/null to throw out output
+        return
+    with open(filename, "x") as tests:
+        tests.write("from importlib import import_module\n")
+        tests.write("from testbuilder.pair import Pair\n")
+        tests.write("from testbuilder import renderer\n")
+        tests.write("from fractions import Fraction\n")
+        tests.write("import pytest\n")
         tests.write("\n\n".join(test_cases))
 
 

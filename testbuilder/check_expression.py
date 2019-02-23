@@ -5,10 +5,10 @@ from pathlib import Path
 from toolz import pipe
 
 import z3
-from dataclasses import dataclass
 
 from .expression_builder import get_expression
 from .type_builder import TypeBuilder
+from .utils import colorize
 from .variable_expander import expand_variables
 from .z3_types import Reference, diff_expression, print_diff
 
@@ -73,8 +73,8 @@ class ExpressionChecker:
             expr = None
         else:
             expr = test_data.expression
-        print("expected  ", expected)
-        print("expression", expr)
+        print("expected  ", colorize(repr(expected)))
+        print("expression", colorize(repr(expr)))
         if simplify:
             expected = z3.simplify(expected)
             expr = z3.simplify(expr)

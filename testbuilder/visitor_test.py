@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Set
 
 import logbook
 import pytest
@@ -8,7 +8,7 @@ from hypothesis.strategies import builds, deferred, integers, lists, one_of, rec
 
 from dataclasses import dataclass
 
-from .visitor import GatherVisitor, SimpleVisitor, UpdateVisitor, VisitError
+from .visitor import SetGatherVisitor, SimpleVisitor, UpdateVisitor, VisitError
 
 
 class Node:
@@ -32,25 +32,24 @@ leaf = builds(Leaf, value=integers())
 parent = recursive(
     leaf, lambda node: builds(Parent, left=node, right=node, links=lists(node))
 )
-# parent = builds(Parent, left=node, right=node, links=lists(node))
 node = one_of(leaf, parent)
 
 
 def gather_from_tree(tree):
     if isinstance(tree, Leaf):
-        return [tree.value]
+        return {tree.value}
     else:
-        links = []
+        links = set()
         for link in tree.links:
-            links += gather_from_tree(link)
-        return gather_from_tree(tree.left) + gather_from_tree(tree.right) + links
+            links |= gather_from_tree(link)
+        return gather_from_tree(tree.left) | gather_from_tree(tree.right) | links
 
 
 @given(node)
 def test_gather_visitor(tree):
-    class Gatherer(GatherVisitor[int]):
-        def visit_Leaf(self, node: Leaf) -> List[int]:
-            return [node.value]
+    class Gatherer(SetGatherVisitor[int]):
+        def visit_Leaf(self, node: Leaf) -> Set[int]:
+            return {node.value}
 
     expected = gather_from_tree(tree)
     assert Gatherer()(tree) == expected

@@ -4,6 +4,8 @@ from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union, c
 
 import z3
 
+from .utils import colorize
+
 Expression = z3.ExprRef
 
 
@@ -187,4 +189,6 @@ def diff_expression(
 
 def print_diff(diff: List[Tuple[Expression, Expression]]) -> None:
     for left, right in diff:
-        print(f"Difference in\n\n{left}\n{right}\n")
+        left_color = colorize(repr(left))
+        right_color = colorize(repr(right))
+        print(f"Difference in\n\n{left_color}\n{right_color}\n")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union
+from fractions import Fraction
+from typing import Any, Callable, Generic, List, Tuple, TypeVar, Union, overload
 
 
 class AstRef:
@@ -55,6 +56,7 @@ class ArithSortRef(SortRef):
 
 
 IntSort = ArithSortRef
+RealSort = ArithSortRef
 SeqSortRef = ArithSortRef
 StringSort = SeqSortRef
 
@@ -169,6 +171,9 @@ class Solver:
     def model(self) -> ModelRef:
         ...
 
+    def reason_unknown(self) -> str:
+        ...
+
 
 class BoolRef(ExprRef):
     ...
@@ -182,20 +187,51 @@ def BoolVal(value: bool) -> BoolRef:
     ...
 
 
-class Int(ExprRef):
+class ArithRef(ExprRef):
     def __init__(self, name: str) -> None:
         ...
 
+
+class Int(ArithRef):
     def __mul__(self, other: Int) -> Int:
         ...
 
     def __add__(self, other: Int) -> Int:
         ...
 
+    @overload
+    def __truediv__(self, other: Int) -> Int:
+        ...
+
+    @overload
+    def __truediv__(self, other: Real) -> Real:
+        ...
+
+    @overload
+    def __truediv__(self, other: ArithRef) -> Union[Int, Real]:
+        ...
+
+
+class Real(ArithRef):
+    def __truediv__(self, other: ArithRef) -> Real:
+        ...
+
 
 class IntVal(Int):
     def __init__(self, value: int) -> None:
         ...
+
+
+class RatNumRef(Real):
+    def __init__(self, value: float) -> None:
+        ...
+
+    def as_fraction(self) -> Fraction:
+        ...
+
+
+def RealVal(value: float) -> RatNumRef:
+    ...
 
 
 class SeqRef(ExprRef):
@@ -237,11 +273,19 @@ def is_int(value: Any) -> bool:
     ...
 
 
+def is_real(value: Any) -> bool:
+    ...
+
+
 def is_bool(value: Any) -> bool:
     ...
 
 
 def is_string(value: Any) -> bool:
+    ...
+
+
+def is_rational_value(value: Any) -> bool:
     ...
 
 
@@ -253,7 +297,10 @@ def eq(a: AstRef, b: AstRef) -> bool:
     ...
 
 
-def simplify(a: ExprRef, *args: Any, **kwargs: Any) -> ExprRef:
+E = TypeVar("E", bound=ExprRef)
+
+
+def simplify(a: E, *args: Any, **kwargs: Any) -> E:
     ...
 
 
@@ -286,3 +333,7 @@ def substitute(expr: ExprRef, *pairs: Tuple[ExprRef, ExprRef]) -> ExprRef:
 
 
 DeclareSort = ...  # type: Any
+
+
+def ToReal(x: Int) -> Real:
+    ...

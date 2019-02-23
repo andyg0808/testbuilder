@@ -1,11 +1,13 @@
 import ast
 from typing import Optional
 
+import pytest
+
 import z3
 
 from . import ssa_basic_blocks as sbb
 from .ast_to_ssa import ast_to_ssa
-from .converter import ExpressionConverter
+from .converter import ExpressionConverter, TupleError
 from .ssa_repair import repair
 from .store import Store
 from .type_builder import TypeBuilder
@@ -67,6 +69,10 @@ def test_int():
     conversion_assert("3")
 
 
+def test_float():
+    conversion_assert("z3.RealVal(3)", "3.0")
+
+
 def test_string():
     # conversion_assert('String("abc")', '"abc"')
     # conversion_assert('String("def") + String("hjk")', '"def" + "hjk"')
@@ -91,7 +97,14 @@ def test_multiply():
 
 
 def test_divide():
-    conversion_assert("4 / 3")
+    conversion_assert("z3.ToReal(4) / z3.ToReal(3)", "4/3")
+    conversion_assert("z3.ToReal(4) / z3.RealVal(3.0)", "4/3.0")
+    conversion_assert("z3.RealVal(4) / z3.ToReal(3)", "4.0/3")
+    conversion_assert("z3.RealVal(4) / z3.RealVal(3)", "4.0/3.0")
+
+
+def test_mod():
+    conversion_assert("5 % 3")
 
 
 def test_lt():
@@ -190,6 +203,7 @@ def test_addition_to_variable():
 def test_equality_with_variable():
     conversion_assert(
         """Or(And(Any.i(pyname_a) != 32, Any.is_Int(pyname_a)),
+              Any.is_Float(pyname_a),
               Any.is_Bool(pyname_a),
               Any.is_String(pyname_a))""",
         "a != 32",
@@ -245,3 +259,8 @@ def test_augmutation():
 def test_booleans():
     conversion_assert("true", "True", expected_type=Bool)
     conversion_assert("false", "False", expected_type=Bool)
+
+
+def test_fail_tuple():
+    with pytest.raises(TupleError):
+        conversion_assert("(1,2,3)")
