@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import (
     Any,
@@ -8,14 +9,19 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
+
+log = logging.getLogger("pair")
 
 Spec = Union[Tuple[int, Any, Any], str]
 
 LeftExpr = re.compile(r"head|left|first|value|song", re.IGNORECASE)
 RightExpr = re.compile(r"tail|right|rest", re.IGNORECASE)
+
+T = TypeVar("T")
 
 
 class Pair:
@@ -24,13 +30,18 @@ class Pair:
         self.right = right
 
     @staticmethod
-    def from_pair(other: Any) -> Optional[Pair]:
+    def from_pair(other: T) -> Union[T, Pair]:
         """Attempt to take a foreign pair representation and convert it into
         a `testbuilder.Pair`.
 
+        Returns non-pair objects unchanged.
+
+        **Note:** This function does not convert Pairs inside of containers; it
+        returns the containers unchanged.
+
         """
 
-        def _from_pair(other: Any, seen: MMapping[int, Pair]) -> Optional[Pair]:
+        def _from_pair(other: T, seen: MMapping[int, Pair]) -> Union[T, Pair]:
             key = id(other)
             if key in seen:
                 return seen[key]
@@ -43,13 +54,16 @@ class Pair:
                 elif RightExpr.search(n):
                     right_name = n
             if left_name and right_name:
+                log.info(
+                    f"Converting `{left_name}` to `left` and `{right_name}` to `right`"
+                )
                 pair = Pair(None, None)
                 seen[key] = pair
                 pair.left = _from_pair(getattr(other, left_name), seen)
                 pair.right = _from_pair(getattr(other, right_name), seen)
                 return pair
             else:
-                return None
+                return other
 
         return _from_pair(other, {})
 
