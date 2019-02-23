@@ -88,3 +88,4 @@ clean:
 	rm -rf build
 	rm -rf .pytest_cache
 	rm -rf docs/api
+	rm -rf pair_test.py clements_example_test.py complex_test.py junky_test.py pair_test.py simple_test.py
