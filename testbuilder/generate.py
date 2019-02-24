@@ -22,7 +22,13 @@ from .line_splitter import line_splitter
 from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
-from .renderer import get_test_func, prompt_for_test, render_test, run_for_test
+from .renderer import (
+    get_golden_func,
+    get_test_func,
+    prompt_for_test,
+    render_test,
+    run_for_test,
+)
 from .requester import Requester
 from .solver import Solution, solve
 from .ssa_repair import repair
@@ -47,8 +53,7 @@ def generate_tests(
     depth: int = 10,
     lines: Optional[Set[int]] = None,
     ignores: Set[int] = set(),  # noqa: B006
-    autogen: bool = False,
-    golden: Optional[Path] = None,
+    autogen: Union[bool, Path] = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -103,7 +108,7 @@ def generate_tests(
         _filter_inputs = partial(filter_inputs, function)
 
         def get_expected_test_result(args: sbb.Solution) -> sbb.ExpectedTestData:
-            updated_testdata = make_extended_instance(
+            solved_testdata = make_extended_instance(
                 testdata,
                 sbb.SolvedTestData,
                 args=args,
@@ -111,13 +116,14 @@ def generate_tests(
                 target_line=target_line,
             )
             if autogen:
-                func = get_test_func(updated_testdata, golden)
-                result = run_for_test(requester, func, updated_testdata)
-                print("result", result)
-                return result
+                if autogen is True:
+                    func = get_test_func(solved_testdata)
+                else:
+                    func = get_golden_func(solved_testdata.name, autogen)
+                return run_for_test(requester, func, solved_testdata)
             else:
                 return prompt_for_test(
-                    requester=requester, prompt=prompt, test=updated_testdata
+                    requester=requester, prompt=prompt, test=solved_testdata
                 )
 
         test: str = pipe(

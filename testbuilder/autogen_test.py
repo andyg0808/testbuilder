@@ -57,8 +57,9 @@ def example(val):
         with NamedTemporaryFile(suffix=".py", mode="w", dir=d) as fi:
             fi.write(code)
             fi.flush()
+            filepath = Path(fi.name)
             tests = generate_tests(
-                source=Path(fi.name), text=code, requester=requester, autogen=True
+                source=filepath, text=code, requester=requester, autogen=filepath
             )
             sys.path.append(d)
             assert len(tests) == 1
@@ -93,8 +94,7 @@ def example(val):
                     source=Path(bad_fi.name),
                     text=bad_code,
                     requester=requester,
-                    autogen=True,
-                    golden=Path(good_fi.name),
+                    autogen=Path(good_fi.name),
                 )
                 sys.path.append(d)
                 assert len(tests) == 1
