@@ -126,9 +126,15 @@ def generate_tests(
                     requester=requester, prompt=prompt, test=solved_testdata
                 )
 
-        test: str = pipe(
-            solution, _filter_inputs, get_expected_test_result, render_test
-        )
+        try:
+            test: str = pipe(
+                solution, _filter_inputs, get_expected_test_result, render_test
+            )
+        except AttributeError as e:
+            if "module 'mod" in str(e):
+                log.error(f"Missing golden version of {testdata.name}; ignoring")
+                return ""
+            raise e
 
         return test
 
