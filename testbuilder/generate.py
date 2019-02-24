@@ -48,6 +48,7 @@ def generate_tests(
     lines: Optional[Set[int]] = None,
     ignores: Set[int] = set(),  # noqa: B006
     autogen: bool = False,
+    golden: Optional[Path] = None,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -110,8 +111,10 @@ def generate_tests(
                 target_line=target_line,
             )
             if autogen:
-                func = get_test_func(updated_testdata)
-                return run_for_test(requester, func, updated_testdata)
+                func = get_test_func(updated_testdata, golden)
+                result = run_for_test(requester, func, updated_testdata)
+                print("result", result)
+                return result
             else:
                 return prompt_for_test(
                     requester=requester, prompt=prompt, test=updated_testdata

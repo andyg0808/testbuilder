@@ -20,10 +20,12 @@ Options:
                        with the full path and filename without the
                        extension, and {stem} will be replaced with the
                        filename alone without the extension.
+    --golden=<file>  Substitute implementation to use when running autogen.
 """
 
 import json
 import signal
+import sys
 from pathlib import Path
 
 import typeassert
@@ -76,6 +78,13 @@ def main(filename: str) -> None:
         changes = None
 
     autogen = opts["--autogen"]
+    golden = opts["--golden"]
+    if golden and not autogen:
+        print(
+            "Warning: --golden will not do anything without --autogen", file=sys.stderr
+        )
+    if golden is not None:
+        golden = Path(golden)
 
     test_cases = generate_tests(
         filepath,
@@ -85,6 +94,7 @@ def main(filename: str) -> None:
         lines=lines,
         changes=changes,
         autogen=autogen,
+        golden=golden,
     )
     if opts["--basename"]:
         filename = opts["--basename"].format(
