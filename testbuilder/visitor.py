@@ -4,6 +4,7 @@ import traceback
 import typing
 from abc import abstractmethod
 from typing import (
+    Iterable,
     Any,
     Callable,
     Generator,
@@ -249,16 +250,23 @@ class SetGatherVisitor(GenericVisitor[Set[A]], CacheVisitor):
 
 
 class CoroutineVisitor(GenericVisitor[Generator[A, B, None]]):
+    def get_fields(self, v: Any) -> Optional[Iterable[str]]:
+        try:
+            return (f.name for f in dataclasses.fields(v))
+        except TypeError:
+            return None
+
+
     def generic_visit(self, v: Any, *args: Any, **kwargs: Any) -> Generator[A, B, None]:
         def arg_visit(v: Any) -> Generator[A, B, None]:
             return self.visit(v, *args, **kwargs)
 
-        try:
-            fields = dataclasses.fields(v)
-        except TypeError:
+        fields = self.get_fields(v)
+        if fields is None:
             return
+
         for f in fields:
-            data = getattr(v, f.name)
+            data = getattr(v, f)
             if isinstance(data, Sequence):
                 for d in data:
                     yield from arg_visit(d)
