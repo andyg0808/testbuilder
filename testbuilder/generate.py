@@ -5,7 +5,7 @@ import time
 from ast import AST, parse
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from logbook import Logger
 from pympler import tracker  # type: ignore
@@ -119,7 +119,7 @@ def generate_tests(
                 if autogen is True:
                     func = get_test_func(solved_testdata)
                 else:
-                    func = get_golden_func(solved_testdata.name, autogen)
+                    func = get_golden_func(solved_testdata.name, cast(Path,autogen))
                 return run_for_test(requester, func, solved_testdata)
             else:
                 return prompt_for_test(
