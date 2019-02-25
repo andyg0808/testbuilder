@@ -1,12 +1,12 @@
+import dataclasses
 from typing import Any, Generator, List, Optional, TypeVar
 
 from logbook import Logger
 
-import dataclasses
+from visitor import CoroutineVisitor, UpdateVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .variable_manager import VAR_START_VALUE
-from .visitor import CoroutineVisitor, UpdateVisitor
 
 log = Logger("function_substituter")
 

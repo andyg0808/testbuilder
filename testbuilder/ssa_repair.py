@@ -1,11 +1,11 @@
+import dataclasses
 from typing import List, Mapping, MutableMapping as MMapping, Set, Tuple, TypeVar, Union
 
 from logbook import Logger
 
-import dataclasses
+from visitor import SetGatherVisitor, UpdateVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .visitor import SetGatherVisitor, UpdateVisitor
 
 log = Logger("ssa_repair")
 

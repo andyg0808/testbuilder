@@ -2,8 +2,9 @@ from typing import Sequence
 
 from logbook import Logger
 
+from visitor import UpdateVisitor
+
 from . import ssa_basic_blocks as sbb
-from .visitor import UpdateVisitor
 
 log = Logger("conditional_elimination")
 

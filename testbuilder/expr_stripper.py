@@ -6,8 +6,9 @@ from typing import Optional, TypeVar
 
 from logbook import Logger
 
+from visitor import UpdateVisitor
+
 from . import nodetree as n, ssa_basic_blocks as sbb
-from .visitor import UpdateVisitor
 
 log = Logger("expr_stripper")
 

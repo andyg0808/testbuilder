@@ -1,11 +1,11 @@
+import dataclasses
 from copy import copy
 from typing import Optional
 
-import dataclasses
+from visitor import UpdateVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .target_manager import TargetManager
-from .visitor import UpdateVisitor
 
 
 class PhiFilterer(UpdateVisitor):

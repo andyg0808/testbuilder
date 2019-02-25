@@ -7,6 +7,7 @@ from logbook import Logger
 from toolz import mapcat, pipe
 
 import z3
+from visitor import SetGatherVisitor, SimpleVisitor
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
 from .function_substituter import FunctionSubstitute
@@ -19,7 +20,6 @@ from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .utils import dataclass_dump
-from .visitor import SetGatherVisitor, SimpleVisitor
 from .z3_types import BOOL_TRUE, bool_all, bool_any
 
 log = Logger("ssa_to_expression")

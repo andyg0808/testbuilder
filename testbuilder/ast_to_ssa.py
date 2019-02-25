@@ -1,4 +1,5 @@
 import ast
+import dataclasses
 from functools import reduce
 from typing import (
     Any,
@@ -13,13 +14,12 @@ from typing import (
 
 from logbook import Logger
 
-import dataclasses
+from visitor import GenericVisitor, SimpleVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .return_checker import contains_return
 from .utils import ast_dump
 from .variable_manager import VariableManager, VarMapping
-from .visitor import GenericVisitor, SimpleVisitor
 
 log = Logger("ast_to_ssa")
 
