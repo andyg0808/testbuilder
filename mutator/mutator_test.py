@@ -6,7 +6,7 @@ import pytest
 from mutator import Mutator
 
 
-def check_mutations(original, *expected, **kwargs):
+def check_mutations(original, *expected, complete=False):
     tree = ast.parse(original)
     mutations = set(Mutator(tree))
     for m in mutations:
@@ -18,6 +18,8 @@ def check_mutations(original, *expected, **kwargs):
     for mutation in expected:
         rebuild = astor.to_source(ast.parse(mutation)).strip()
         assert rebuild in sources
+    if complete:
+        assert len(expected) == len(sources)
 
 
 def test_cmpop_mutations():
@@ -47,3 +49,7 @@ b = 24
 c = a + b
 """,
     )
+
+
+def test_sdl_boolop_mutation():
+    check_mutations("a and b", "a", "b", "True", "False", "", complete=True)

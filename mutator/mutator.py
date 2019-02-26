@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Sequence,
     TypeVar,
+    Union,
 )
 
 from visitor import GenericVisitor
@@ -39,7 +40,7 @@ class _MutationGenerator(GenericVisitor):
     def rebuild(self, obj: A, **changes) -> A:
         fields = {f: getattr(obj, f) for f in obj._fields}
         fields.update(**changes)
-        return obj.__class__(**fields)
+        return ast.copy_location(obj.__class__(**fields))
 
     def generic_visit(self, obj: A) -> Variator[A]:
         field_names = getattr(obj, "_fields", None)
@@ -81,6 +82,24 @@ class _MutationGenerator(GenericVisitor):
     def dropout_list(self, lst: List[A]) -> Variator[List[A]]:
         for i in range(len(lst)):
             yield lst[:i] + lst[i + 1 :]
+
+    def visit_BoolOp(
+        self, op: ast.BoolOp
+    ) -> Variator[Union[ast.BoolOp, ast.NameConstant]]:
+        if len(op.values) > 2:
+            for i in self.list_visit(op.values):
+                yield self.rebuild(op, values=i)
+        else:
+            yield op.values[0]
+            yield op.values[1]
+            for i in self.mutate_list(op.values):
+                yield self.rebuild(op, values=i)
+        yield ast.copy_location(ast.NameConstant(True), op)
+        yield ast.copy_location(ast.NameConstant(False), op)
+
+    def visit_If(self, stmt: ast.If) -> Variator[ast.If]:
+        for i in self.list_visit(stmt.body):
+            yield self.rebuild(stmt, body=i)
 
     # def visit_Module(self, v: ast.Module) -> Variator[ast.Module]:
     #     for droppedout in self.dropout_list(v.body):
