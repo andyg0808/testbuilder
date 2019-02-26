@@ -12,6 +12,7 @@ visitor = {path = "../visitor"}
 [tool.poetry.dev-dependencies]
 astor = "^0.7.1"
 pytest = "^4.3"
+hunter = "^2.2"
 
 [build-system]
 requires = ["poetry>=0.12"]

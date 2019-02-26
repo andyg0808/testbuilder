@@ -30,11 +30,24 @@ tests = ["coverage", "hypothesis", "pympler", "pytest", "six", "zope.interface"]
 [[package]]
 category = "dev"
 description = "Cross-platform colored terminal text."
-marker = "sys_platform == \"win32\""
 name = "colorama"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.4.1"
+
+[[package]]
+category = "dev"
+description = "Hunter is a flexible code tracing toolkit."
+name = "hunter"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "2.2.1"
+
+[package.dependencies]
+colorama = "*"
+
+[package.extras]
+remote = ["manhole (>=1.5.0)"]
 
 [[package]]
 category = "main"
@@ -132,7 +145,7 @@ type = "directory"
 url = "../visitor"
 
 [metadata]
-content-hash = "1f36a7486a17631a0217aa704e807d88cbd63706d23d4014f630b10f3a1837da"
+content-hash = "fd5a6bc600726ef8a7d35b3c49619b1a6c65264fed28f86fc0493363f0d5138c"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -140,6 +153,7 @@ astor = ["95c30d87a6c2cf89aa628b87398466840f0ad8652f88eb173125a6df8533fb8d", "fb
 atomicwrites = ["03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4", "75a9445bac02d8d058d5e1fe689654ba5a6556a1dfd8ce6ec55a0ed79866cfa6"]
 attrs = ["10cbf6e27dbce8c30807caf056c8eb50917e0eaafe86347671b57254006c3e69", "ca4be454458f9dec299268d472aaa5a11f67a4ff70093396e1ceae9c76cf4bbb"]
 colorama = ["05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d", "f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"]
+hunter = ["0276f5cae4a3ef5a8aa777e0c28c994157eadba59742760ecda9de12e624241e", "054f8d9f9d81336250f0d9e054b773defbc69be2110862807634f8425eae71b2", "17a680ae2b1baaca563fcbf957f33ba8578e8698cc9020a00666c7dd96ca99ec", "182106318ad8983b1ead9583e54a1917a6db12c18c5e9717f044111f1dec2dd5", "35182ad2dc37d2e40e775a251c581f33d6d63b2b562d8c6c31cf1b403d76c3ef", "40689435dc1119f10cba9cbf2b4097e0a2d8d67749dfa08d818482cd2115ccd9", "4bd8219ecb3a362d453aa4e8ea24ffc18d59009ce5de200cb0786348a6374248", "4d5f5602a2590023b9504eb19ff6c8d0d5a92281f9283c4635da706225b3cad5", "5b7d0ca2ecc03fe548028f3d8368fa2c6cba6465b27324a402aabbc1491e7765", "6df1008dadff3e023d0ea668a7caa3ca0580333bf9d2e0bce240d8e16332ff29", "90e4a1900c03a97b67b74bd58f6a975daf5ad5a7c74017d5b9a452ad28a79d21", "9699b9797dcf11a21d8d888562002713c52dc7643ffd4b7d37b6e396c323833b", "b92af9b3c780501976c105ac2204fe0f764b1e9f2999887e09acdd47f79cda24", "bfab3e6be38b8d916b63867e01d6696909834d092a97eb31809613bbabddcd22", "dd0058dc73e838b7e986008e5af8ffa3028843b0bea583e1ff92056f3f0bf555", "eda111fb006c7a5704498a3cf560d5959dc96cbeefdda61aba6f6cbb3e476b69", "f48f6b682811299cbd3e99838b4d0752c85ee8c4d06a8c553d7ff7ac13744a0c", "fa8322a470bf34b24bb3d2a73fbce54a2757380cf0148143866266a4d94b00e5"]
 logbook = ["a5a96792abd8172c80d61b7530e134524f20e2841981038031e602ed5920fef5"]
 more-itertools = ["0125e8f60e9e031347105eb1682cef932f5e97d7b9a1a28d9bf00c22a5daef40", "590044e3942351a1bdb1de960b739ff4ce277960f2425ad4509446dbace8d9d1"]
 pluggy = ["19ecf9ce9db2fce065a7a0586e07cfb4ac8614fe96edf628a264b1c70116cf8f", "84d306a647cc805219916e62aab89caa97a33a1dd8c342e87a37f91073cd4746"]
