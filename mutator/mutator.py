@@ -39,8 +39,8 @@ class Mutator:
 class _MutationGenerator(GenericVisitor):
     def rebuild(self, obj: A, **changes) -> A:
         fields = {f: getattr(obj, f) for f in obj._fields}
-        fields.update(**changes)
-        return ast.copy_location(obj.__class__(**fields))
+        fields.update(changes)
+        return ast.copy_location(obj.__class__(**fields), obj)
 
     def generic_visit(self, obj: A) -> Variator[A]:
         field_names = getattr(obj, "_fields", None)
@@ -100,6 +100,9 @@ class _MutationGenerator(GenericVisitor):
     def visit_If(self, stmt: ast.If) -> Variator[ast.If]:
         for i in self.list_visit(stmt.body):
             yield self.rebuild(stmt, body=i)
+
+    def visit_conditional(self, op: ast.expr) -> ast.expr:
+        pass
 
     # def visit_Module(self, v: ast.Module) -> Variator[ast.Module]:
     #     for droppedout in self.dropout_list(v.body):
