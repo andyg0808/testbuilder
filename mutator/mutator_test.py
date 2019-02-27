@@ -3,12 +3,12 @@ from io import StringIO
 
 import astor
 import pytest
-from logbook import Logger
+from logbook import Logger, StderrHandler
 
 import hunter
-from hunter import Q
 from mutator import Mutator
 
+StderrHandler(level="NOTICE").push_application()
 log = Logger("mutator_test")
 
 
