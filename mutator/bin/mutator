@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+from typing import Generator
+import ast
+from dataclasses import dataclass
+from docopt import docopt
+from mutator import Mutator
+from types import ModuleType
+import astor
+from logbook import Logger, StderrHandler
+from importlib.machinery import SourceFileLoader, ModuleSpec
+from importlib.util import module_from_spec
+from pathlib import Path
+from difflib import unified_diff
+from textwrap import indent
+
+StderrHandler(level="NOTICE").push_application()
+log = Logger('bin/mutator')
+
+DOC = """
+Usage:
+    mutator <file.py>
+"""
+
+@dataclass
+class MutantInfo:
+    source: str
+    mutated: str
+    diff: Generator
+
+def run_mutator(source):
+    module_path = Path(source)
+    module_name = module_path.stem
+    with open(source) as fi:
+        code = fi.read()
+
+    missed_mutants = []
+    tree = ast.parse(code)
+    m = Mutator(tree)
+    for mutation in m:
+        loader = SourceFileLoader("mutator_test", "./mutator_test.py")
+        spec = ModuleSpec("mutator_test", loader)
+        tests = module_from_spec(spec)
+        loader.exec_module(tests)
+        try:
+            code = load_module(mutation, module_name, "<mutation>")
+            tests.Mutator = code.Mutator
+        except Exception as e:
+            log.warn(f"Module execution failure: {e}")
+            continue
+
+        # Load tests
+        # Execute tests
+        killed = False
+        for name in dir(tests):
+            if name.startswith("test"):
+                try:
+                    getattr(tests, name)()
+                except Exception:
+                    killed = True
+                    break
+        if not killed:
+            source_code = astor.to_source(tree)
+            mutant_source = astor.to_source(mutation)
+            diff = unified_diff(source_code.splitlines(), mutant_source.splitlines(), fromfile=source, tofile=source+" <mutant>")
+            info = MutantInfo(source_code, mutant_source, diff)
+            missed_mutants.append(info)
+    for mutant in missed_mutants:
+        print("[38;5;51m======================================[0m")
+        print("Missed mutant:")
+        diff = "\n".join(mutant.diff)
+        print(indent(diff, "   "))
+    assert not missed_mutants
+
+
+
+        
+def load_module(tree: ast.Module, fullname: str, path: str) -> ModuleType:
+    """
+    Compiles and executes a module AST to create an actual module.
+
+    Arguments:
+        tree: An ast for the module
+
+    Returns:
+        The resulting module
+    """
+    # Derived from Python's loader code in Lib/importlib. See also the
+    # spec in https://docs.python.org/3.5/reference/import.html#loaders
+    compiled = compile(tree, path, "exec")
+    loader = SourceFileLoader(fullname, path)
+    spec = ModuleSpec(fullname, loader)
+    module = module_from_spec(spec)
+    exec(compiled, module.__dict__)
+    return module
+
+
+if __name__ == "__main__":
+    opts = docopt(DOC)
+    run_mutator(opts["<file.py>"])
+

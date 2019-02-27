@@ -8,11 +8,15 @@ license = "MIT"
 [tool.poetry.dependencies]
 Python = "^3.7"
 visitor = {path = "../visitor"}
+docopt = {version = "^0.6.2",optional = true}
 
 [tool.poetry.dev-dependencies]
 astor = "^0.7.1"
 pytest = "^4.3"
 hunter = "^2.2"
+
+[tool.poetry.extras]
+cli = ["docopt"]
 
 [build-system]
 requires = ["poetry>=0.12"]
