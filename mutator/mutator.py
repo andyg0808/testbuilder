@@ -74,7 +74,10 @@ class _MutationGenerator(GenericVisitor):
 
     def dispatch(self, obj: A) -> Variator[A]:
         if type(obj) is list:
-            visitor = self.list_visit
+            if obj and isinstance(obj[0], ast.stmt):
+                visitor = self.stmt_list_visit
+            else:
+                visitor = self.list_visit
         else:
             visitor = self.visit
         yield from visitor(obj)
@@ -111,38 +114,32 @@ class _MutationGenerator(GenericVisitor):
     def empty(self, stmt: ast.stmt) -> List[ast.stmt]:
         return [ast.copy_location(ast.Pass(), stmt)]
 
-    def stmt_list_visit(self, stmt: ast.stmt, field: str) -> Variator[List[ast.stmt]]:
-        for lst in self.list_visit(getattr(stmt, field)):
-            if len(lst) == 0:
-                lst = self.empty(stmt)
-            yield self.rebuild(stmt, **{field: lst})
-
     def visit_If(self, stmt: ast.If) -> Variator[ast.If]:
-        # This one is not in the original paper
         if len(stmt.body) > 1:
+            # This one is not in the original paper
             yield self.rebuild(stmt, body=self.empty(stmt))
-        # Don't drop orelse if it's not present in the first place. That's not going to change anything
         if stmt.orelse:
+            # Don't drop orelse if it's not present in the first place.
+            # That's not going to change anything
             yield self.rebuild(stmt, orelse=[])
-        yield from self.stmt_list_visit(stmt, "body")
+        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
         yield from self.rebuilds(self.list_visit, stmt, "orelse")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
     def visit_While(self, stmt: ast.While) -> Variator[ast.While]:
         if stmt.orelse:
             yield self.rebuild(stmt, orelse=[])
-        yield from self.stmt_list_visit(stmt, "body")
+        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
         yield from self.rebuilds(self.list_visit, stmt, "orelse")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
     def visit_For(self, stmt: ast.For) -> Variator[ast.For]:
         if stmt.orelse:
             yield self.rebuild(stmt, orelse=[])
-        yield from self.stmt_list_visit(stmt, "body")
+        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
         yield from self.rebuilds(self.list_visit, stmt, "orelse")
         if isinstance(stmt.iter, ast.Call):
             yield from self.rebuilds(self.visit_call, stmt, "iter")
-        print("trying cycle call")
         cycle_call = ast.fix_missing_locations(
             ast.copy_location(
                 ast.Call(
@@ -151,11 +148,8 @@ class _MutationGenerator(GenericVisitor):
                 stmt.iter,
             )
         )
-        print("cycle call", ast.dump(cycle_call, include_attributes=True))
         rebuilt = self.rebuild(stmt, iter=cycle_call)
-        print("rebuilt", ast.dump(rebuilt, include_attributes=True))
         yield rebuilt
-        print("yielded cycle call")
 
     def visit_call(self, call: ast.Call) -> Variator[ast.Call]:
         if isinstance(call.func, ast.Name):
@@ -176,8 +170,12 @@ class _MutationGenerator(GenericVisitor):
         yield ast.copy_location(ast.NameConstant(True), op)
         yield ast.copy_location(ast.NameConstant(False), op)
 
-    def visit_FunctionDef(self, func: ast.FunctionDef) -> Variator[ast.FunctionDef]:
-        yield from self.rebuilds(self.visit, func, "args")
-        yield from self.stmt_list_visit(func, "body")
-        yield from self.rebuilds(self.list_visit, func, "decorator_list")
-        yield from self.rebuilds(self.visit, func, "returns")
+    def stmt_list_visit(self, stmt_lst: List[ast.stmt]) -> Variator[List[ast.stmt]]:
+        if len(stmt_lst) > 0:
+            item = stmt_lst[0]
+            for lst in self.list_visit(stmt_lst):
+                if len(lst) == 0:
+                    lst = self.empty(item)
+                yield lst
+        else:
+            yield lst

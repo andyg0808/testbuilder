@@ -79,13 +79,11 @@ c = a + b
 
 
 def test_sdl_boolop_mutation():
-    check_mutations("a and b", "a", "b", "True", "False", "", complete=True)
+    check_mutations("a and b", "a", "b", "True", "False")
 
-    check_mutations("a or b", "a", "b", "True", "False", "", complete=True)
+    check_mutations("a or b", "a", "b", "True", "False")
 
-    check_mutations(
-        "a or b or c", "a or b", "b or c", "a or c", "True", "False", "", complete=True
-    )
+    check_mutations("a or b or c", "a or b", "b or c", "a or c", "True", "False")
 
 
 def test_if_mutations():
