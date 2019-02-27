@@ -91,12 +91,6 @@ class _MutationGenerator(GenericVisitor):
             for repl in self.dispatch(changing):
                 yield first + [repl] + last
 
-    # def visit_Cmpop(self, v: ast.cmpop) -> Variator[ast.cmpop]:
-    #     options = {ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE}
-    #     available = options - {type(v)}
-    #     for op in available:
-    #         yield ast.copy_location(op(), v)
-
     def dropout_list(self, lst: List[A]) -> Variator[List[A]]:
         if lst:
             for i in range(len(lst)):
