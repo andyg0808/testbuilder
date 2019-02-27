@@ -3,13 +3,6 @@ from io import StringIO
 
 import astor
 import pytest
-from logbook import Logger, StderrHandler
-
-# import hunter
-from mutator import Mutator
-
-StderrHandler(level="NOTICE").push_application()
-log = Logger("mutator_test")
 
 
 def check_mutations(original, *expected, complete=False):
@@ -19,35 +12,21 @@ def check_mutations(original, *expected, complete=False):
     iterator = iter(Mutator(tree))
     while True:
         trace = StringIO()
-        # hunter_action = hunter.CallPrinter(stream=trace)
-        # hunter.trace(module="mutator", action=hunter_action)
         try:
             mutation = next(iterator)
         except StopIteration:
             break
-        # finally:
-        #     hunter.stop()
         source = astor.to_source(mutation).strip()
         logs[source] = trace.getvalue()
         mutations.append(source)
-    # print("Testing:")
     failed = False
     sources = set(mutations)
     for mutation in expected:
         rebuild = astor.to_source(ast.parse(mutation)).strip()
         if rebuild in sources:
-            # print("[32m✓ ", end="")
             sources.remove(rebuild)
         else:
             failed = True
-        #     print("[31m✗ ", end="")
-        # print("-----⇩[0m\n" + rebuild)
-    # if sources:
-    #     print("Extra mutations:\n------")
-    #     for source in sources:
-    #         print("------")
-    #         print(source)
-    #         log.debug(logs[source])
     if failed:
         raise AssertionError("Missing at least one expected result")
     if complete:
