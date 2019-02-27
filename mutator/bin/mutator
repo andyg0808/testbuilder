@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import ast
+from dataclasses import dataclass
 from difflib import unified_diff
 from importlib import import_module
 from importlib.machinery import ModuleSpec, SourceFileLoader
@@ -14,7 +15,6 @@ import astor
 from docopt import docopt
 from logbook import Logger, StderrHandler
 
-from dataclasses import dataclass
 from mutator import Mutator
 
 StderrHandler(level="NOTICE").push_application()
@@ -43,7 +43,6 @@ class MutationRunner:
         self.mutant_attr = mutant_attr
 
     def run_mutation(self, mutant):
-        # import_module(self.test_source)
         loader = SourceFileLoader("test", self.test_source)
         spec = ModuleSpec("test", loader)
         tests = module_from_spec(spec)
