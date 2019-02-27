@@ -63,12 +63,12 @@ class _MutationGenerator(GenericVisitor):
             updated[key] = update
             yield ast.copy_location(obj.__class__(**updated), obj)
 
-    def generic_visit(self, obj: A) -> Variator[A]:
+    def generic_visit(self, obj: A, ignore=set()) -> Variator[A]:  # noqa: B006
         field_names = getattr(obj, "_fields", None)
         if field_names is None:
             # This is not an AST object
             return obj
-        fields = set(obj._fields)
+        fields = set(obj._fields) - ignore
         for field in fields:
             yield from self.rebuilds(self.dispatch, obj, field)
 
@@ -115,29 +115,23 @@ class _MutationGenerator(GenericVisitor):
         return [ast.copy_location(ast.Pass(), stmt)]
 
     def visit_If(self, stmt: ast.If) -> Variator[ast.If]:
-        if len(stmt.body) > 1:
-            # This one is not in the original paper
-            yield self.rebuild(stmt, body=self.empty(stmt))
+        yield from self.generic_visit(stmt, {"test"})
         if stmt.orelse:
             # Don't drop orelse if it's not present in the first place.
             # That's not going to change anything
             yield self.rebuild(stmt, orelse=[])
-        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
-        yield from self.rebuilds(self.list_visit, stmt, "orelse")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
     def visit_While(self, stmt: ast.While) -> Variator[ast.While]:
+        yield from self.generic_visit(stmt, {"test"})
         if stmt.orelse:
             yield self.rebuild(stmt, orelse=[])
-        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
-        yield from self.rebuilds(self.list_visit, stmt, "orelse")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
     def visit_For(self, stmt: ast.For) -> Variator[ast.For]:
+        yield from self.generic_visit(stmt)
         if stmt.orelse:
             yield self.rebuild(stmt, orelse=[])
-        yield from self.rebuilds(self.stmt_list_visit, stmt, "body")
-        yield from self.rebuilds(self.list_visit, stmt, "orelse")
         if isinstance(stmt.iter, ast.Call):
             yield from self.rebuilds(self.visit_call, stmt, "iter")
         cycle_call = ast.fix_missing_locations(
