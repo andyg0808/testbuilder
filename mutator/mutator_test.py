@@ -193,3 +193,58 @@ def testWhile():
     pass
         """,
     )
+
+
+def test_for_mutaions():
+    """
+These examples are adapted from deng2013
+    """
+    check_mutations(
+        """
+def testFor():
+    for i in range(q, t):
+        a = a + b + c
+        b = b + c
+        """,
+        """
+def testFor():
+    for i in count(q):
+        a = a + b + c
+        b = b + c
+        """,
+        """
+def testFor():
+    for i in repeat(q):
+        a = a + b + c
+        b = b + c
+        """,
+        """
+def testFor():
+    for i in range(q, t):
+        b = b + c
+        """,
+        """
+def testFor():
+    for i in range(q, t):
+        a = a + b + c
+        """,
+    )
+
+
+def test_for_repeat_mutation():
+    """This example is not from deng2013, but it seems in the spirit of
+it while better adapted to how Python works
+
+    """
+    check_mutations(
+        """
+def testFor():
+    for i in lst:
+        print(i)
+""",
+        """
+def testFor():
+    for i in repeat(lst):
+        print(i)
+""",
+    )

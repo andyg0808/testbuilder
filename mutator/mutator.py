@@ -139,6 +139,42 @@ class _MutationGenerator(GenericVisitor):
         yield from self.stmt_list_visit(stmt, "body")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
+    def visit_For(self, stmt: ast.For) -> Variator[ast.For]:
+        if stmt.orelse:
+            yield self.rebuild(stmt, orelse=[])
+        yield from self.stmt_list_visit(stmt, "body")
+        yield from self.rebuilds(self.list_visit, stmt, "orelse")
+        if isinstance(stmt.iter, ast.Call):
+            yield from self.rebuilds(self.visit_call, stmt, "iter")
+        print("trying cycle call")
+        cycle_call = ast.fix_missing_locations(
+            ast.copy_location(
+                ast.Call(
+                    ast.Name(id="repeat", ctx=ast.Load()), args=[stmt.iter], keywords=[]
+                ),
+                stmt.iter,
+            )
+        )
+        print("cycle call", ast.dump(cycle_call, include_attributes=True))
+        rebuilt = self.rebuild(stmt, iter=cycle_call)
+        print("rebuilt", ast.dump(rebuilt, include_attributes=True))
+        yield rebuilt
+        print("yielded cycle call")
+
+    def visit_call(self, call: ast.Call) -> Variator[ast.Call]:
+        if isinstance(call.func, ast.Name):
+            if call.func.id == "range":
+                if len(call.args) > 1:
+                    start = call.args[0]
+                else:
+                    start = 0
+                yield self.rebuild(
+                    call, func=self.rebuild(call.func, id="count"), args=[start]
+                )
+                yield self.rebuild(
+                    call, func=self.rebuild(call.func, id="repeat"), args=[start]
+                )
+
     def visit_conditional(self, op: ast.expr) -> Variator[ast.expr]:
         yield from self.visit(op)
         yield ast.copy_location(ast.NameConstant(True), op)
