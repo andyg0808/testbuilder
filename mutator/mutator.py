@@ -19,6 +19,7 @@ from logbook import Logger
 from visitor import GenericVisitor
 
 log = Logger("mutator")
+
 A = TypeVar("A", bound=ast.AST)
 T = TypeVar("T")
 
@@ -137,6 +138,7 @@ class _MutationGenerator(GenericVisitor):
         if stmt.orelse:
             yield self.rebuild(stmt, orelse=[])
         yield from self.stmt_list_visit(stmt, "body")
+        yield from self.rebuilds(self.list_visit, stmt, "orelse")
         yield from self.rebuilds(self.visit_conditional, stmt, "test")
 
     def visit_For(self, stmt: ast.For) -> Variator[ast.For]:
