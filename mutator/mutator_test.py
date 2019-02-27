@@ -248,3 +248,39 @@ def testFor():
         print(i)
 """,
     )
+
+
+def test_try_catch_mutation():
+    """
+These examples are taken directly from deng2013
+    """
+    check_mutations(
+        """
+def testTry():
+    try:
+        inStr = input()
+        indata = int(inStr)
+    except IOError:
+        print("Could not read input")
+    except ValueError:
+        print("Must be numeric")
+        """,
+        """
+def testTry():
+    try:
+        indata = int(inStr)
+    except IOError:
+        print("Could not read input")
+    except ValueError:
+        print("Must be numeric")
+        """,
+        """
+def testTry():
+    try:
+        inStr = input()
+    except IOError:
+        print("Could not read input")
+    except ValueError:
+        print("Must be numeric")
+        """,
+    )
