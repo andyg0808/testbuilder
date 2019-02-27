@@ -54,11 +54,6 @@ def check_mutations(original, *expected, complete=False):
         assert len(expected) == len(mutations)
 
 
-# def test_cmpop_mutations():
-#     check_mutations("a < b", "a == b", "a > b")
-#     check_mutations("a != b", "a == b", "a < b")
-
-
 def test_sdl_mutations():
     check_mutations(
         """
@@ -94,41 +89,81 @@ def test_sdl_boolop_mutation():
 
 
 def test_if_mutations():
+    """
+    These examples are taken directly from deng2013
+    """
     check_mutations(
         """
-if a:
-    4
-else:
-    5
+def testIf():
+    if a < 5:
+        t = t + b + c
+        a += 1
+    elif a > 20:
+        t = t + a + c
+        b += 1
         """,
         """
-if True:
-    4
-else:
-    5
+def testIf():
+    if True:
+        t = t + b + c
+        a += 1
+    elif a > 20:
+        t = t + a + c
+        b += 1
         """,
         """
-if False:
-    4
-else:
-    5
+def testIf():
+    if a < 5:
+        a += 1
+    elif a > 20:
+        t = t + a + c
+        b += 1
         """,
         """
-if a:
-    pass
-else:
-    5
+def testIf():
+    if a < 5:
+        t = t + b + c
+    elif a > 20:
+        t = t + a + c
+        b += 1
         """,
         """
-if a:
-    4
+def testIf():
+    if a < 5:
+        t = t + b + c
+        a += 1
+        """,
+        """
+def testIf():
+    if a < 5:
+        t = t + b + c
+        a += 1
+    elif True:
+        t = t + a + c
+        b += 1
+        """,
+        """
+def testIf():
+    if a < 5:
+        t = t + b + c
+        a += 1
+    elif a > 20:
+        b += 1
+        """,
+        """
+def testIf():
+    if a < 5:
+        t = t + b + c
+        a += 1
+    elif a > 20:
+        t = t + a + c
         """,
     )
 
 
 def test_while_mutations():
     """
-These examples are taken directly from
+    These examples are taken directly from deng2013
     """
     check_mutations(
         """
