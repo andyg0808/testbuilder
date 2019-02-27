@@ -1,0 +1,2 @@
+#!/bin/zsh
+poetry run python3 bin/mutator mutator_test_example.py mutator.py Mutator Mutator
