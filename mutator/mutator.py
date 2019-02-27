@@ -1,15 +1,8 @@
 import ast
 from typing import (
-    Any,
     Callable,
     Generator,
-    Iterable,
-    Iterator,
     List,
-    Mapping,
-    MutableMapping as MMapping,
-    Optional,
-    Sequence,
     TypeVar,
     Union,
 )
@@ -39,8 +32,7 @@ class Mutator:
                 compile(mutation, "<mutation>", "exec")
                 yield mutation
             except Exception as e:
-                dump = ast.dump(mutation)
-                log.warn(f"Caught exception {e} while compiling {dump}")
+                log.warn(f"Caught exception: {e}")
 
 
 class _MutationGenerator(GenericVisitor):
