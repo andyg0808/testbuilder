@@ -1,11 +1,6 @@
 import ast
-from typing import (
-    Callable,
-    Generator,
-    List,
-    TypeVar,
-    Union,
-)
+from dataclasses import dataclass
+from typing import Callable, Generator, List, TypeVar, Union
 
 from logbook import Logger
 
@@ -17,6 +12,12 @@ A = TypeVar("A", bound=ast.AST)
 T = TypeVar("T")
 
 Variator = Generator[A, None, None]
+
+
+@dataclass
+class KilledMutation:
+    stage: str
+    reason: str
 
 
 class Mutator:
