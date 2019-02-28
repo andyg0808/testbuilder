@@ -32,8 +32,10 @@ class Mutator:
                 # valid Python. We throw out such mutations.
                 compile(mutation, "<mutation>", "exec")
                 yield mutation
-            except Exception as e:
-                log.warn(f"Caught exception: {e}")
+            except SyntaxError as e:
+                yield KilledMutation("Syntax Error", str(e))
+            except ValueError as e:
+                yield KilledMutation("Compile ValueError", str(e))
 
 
 class _MutationGenerator(GenericVisitor):
