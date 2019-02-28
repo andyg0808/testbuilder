@@ -4,7 +4,7 @@ run:
 	poetry run $(MAKE) test
 
 .PHONY: test
-test: mypy pytest clitest
+test: mypy pytest clitest run_test
 
 .PHONY: mypy
 mypy:
@@ -17,6 +17,10 @@ pytest:
 .PHONY: clitest
 clitest:
 	./cli_test
+
+.PHONY: run_test
+run_test:
+	./run_test 'pytest testcase.py' . testcase.py mutator_test.py mutator_test_example.py
 
 
 .PHONY: watch
