@@ -4,6 +4,8 @@ from io import StringIO
 import astor
 import pytest
 
+from testmutator import KilledMutation, Mutator
+
 
 def check_mutations(original, *expected, complete=False):
     tree = ast.parse(original)
@@ -16,6 +18,8 @@ def check_mutations(original, *expected, complete=False):
             mutation = next(iterator)
         except StopIteration:
             break
+        if isinstance(mutation, KilledMutation):
+            continue
         source = astor.to_source(mutation).strip()
         logs[source] = trace.getvalue()
         mutations.append(source)
