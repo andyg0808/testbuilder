@@ -125,7 +125,10 @@ def load_module(tree: ast.Module, fullname: str, path: str) -> ModuleType:
     loader = SourceFileLoader(fullname, path)
     spec = ModuleSpec(fullname, loader)
     module = module_from_spec(spec)
-    exec(compiled, module.__dict__)
+    try:
+        exec(compiled, module.__dict__)
+    except Exception as e:
+        return KilledMutation("Module exec", str(e))
     return module
 
 
