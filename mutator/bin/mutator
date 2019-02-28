@@ -67,6 +67,9 @@ class MutationRunner:
                 except Exception as e:
                     return KilledMutation("run", str(e))
 
+        return self.find_mutation_diff(mutant)
+
+    def find_mutation_diff(self, mutant):
         source_code = astor.to_source(self.tree)
         mutant_source = astor.to_source(mutant)
         diff = unified_diff(
