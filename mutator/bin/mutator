@@ -15,7 +15,7 @@ import astor
 from docopt import docopt
 from logbook import Logger, StderrHandler
 
-from mutator import Mutator
+from mutator import KilledMutation, Mutator
 
 StderrHandler(level="NOTICE").push_application()
 log = Logger("bin/mutator")
