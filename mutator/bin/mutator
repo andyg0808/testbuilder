@@ -102,15 +102,25 @@ def run_mutator(testfile, source, test_attr, mutant_attr):
         mutant_attr=mutant_attr,
     )
     p = Pool(8)
-    results = filter(lambda x: x is not None, p.map(runner.run_mutation, m))
-    # for result in results:
-    #     info = run_mutation(mutation, module_name, tree, source)
-    #     if info is not None:
-    #         missed_mutants.append(info)
+    results = list(map(runner.run_mutation, m))
+    missed = 0
+    killed = {}
     for mutant in results:
+        if isinstance(mutant, KilledMutation):
+            if mutant.stage in killed:
+                killed[mutant.stage] += 1
+            else:
+                killed[mutant.stage] = 1
+            continue
+        else:
+            missed += 1
         print("[38;5;51m======================================[0m")
         print("Missed mutant:")
         print(indent(mutant.diff, "   "))
+
+    print("Killed mutants", killed)
+    print("Total missed mutants:", missed)
+    print("Total mutants", len(results))
     assert not missed_mutants
 
 
