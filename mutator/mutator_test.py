@@ -6,7 +6,7 @@ import pytest
 from logbook import Logger, StderrHandler
 
 import hunter
-from mutator import Mutator
+from mutator import KilledMutation, Mutator
 
 StderrHandler(level="NOTICE").push_application()
 log = Logger("mutator_test")
@@ -27,6 +27,8 @@ def check_mutations(original, *expected, complete=False):
             break
         finally:
             hunter.stop()
+        if isinstance(mutation, KilledMutation):
+            continue
         source = astor.to_source(mutation).strip()
         logs[source] = trace.getvalue()
         mutations.append(source)
