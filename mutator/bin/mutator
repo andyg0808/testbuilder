@@ -43,6 +43,8 @@ class MutationRunner:
         self.mutant_attr = mutant_attr
 
     def run_mutation(self, mutant):
+        if isinstance(mutant, KilledMutation):
+            return mutant
         loader = SourceFileLoader("test", self.test_source)
         spec = ModuleSpec("test", loader)
         tests = module_from_spec(spec)
