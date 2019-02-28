@@ -49,19 +49,19 @@ class MutationRunner:
         spec = ModuleSpec("test", loader)
         tests = module_from_spec(spec)
         loader.exec_module(tests)
-        try:
-            code = load_module(mutant, self.module_name, "<mutation>")
-            if self.mutant_attr == "":
-                setattr(tests, self.test_attr, code)
-            else:
-                setattr(tests, self.test_attr, getattr(code, self.mutant_attr))
-        except Exception as e:
-            log.warn(f"Module execution failure: {e}")
-            return None
+        code = load_module(mutant, self.module_name, "<mutation>")
+        if isinstance(code, KilledMutation):
+            return code
+        if self.mutant_attr == "":
+            setattr(tests, self.test_attr, code)
+        else:
+            attr = getattr(code, self.mutant_attr, None)
+            if attr is None:
+                return KilledMutation(
+                    "attachment", self.mutant_attr + " doe s not exist"
+                )
+            setattr(tests, self.test_attr, attr)
 
-        # Load tests
-        # Execute tests
-        killed = False
         for name in dir(tests):
             if name.startswith("test"):
                 try:
