@@ -4,7 +4,11 @@ run:
 	poetry run $(MAKE) test
 
 .PHONY: test
-test: pytest clitest
+test: mypy pytest clitest
+
+.PHONY: mypy
+mypy:
+	mypy --strict run_test
 
 .PHONY: pytest
 pytest:
