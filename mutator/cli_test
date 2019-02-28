@@ -1,2 +1,4 @@
 #!/bin/zsh
-poetry run python3 bin/mutator mutator_test_example.py testmutator.py Mutator Mutator
+setopt err_exit
+unbuffer python3 bin/mutator mutator_test_example.py testmutator.py Mutator Mutator | tee output || true
+grep "Total missed mutants: 46" output
