@@ -143,7 +143,7 @@ class _MutationGenerator(GenericVisitor):
                 if len(call.args) > 1:
                     start = call.args[0]
                 else:
-                    start = 0
+                    start = ast.copy_location(ast.Num(0), call)
                 yield self.rebuild(
                     call, func=self.rebuild(call.func, id="count"), args=[start]
                 )
