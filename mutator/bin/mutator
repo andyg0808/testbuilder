@@ -64,8 +64,8 @@ class MutationRunner:
             if name.startswith("test"):
                 try:
                     getattr(tests, name)()
-                except Exception:
-                    return None
+                except Exception as e:
+                    return KilledMutation("run", str(e))
 
         source_code = astor.to_source(self.tree)
         mutant_source = astor.to_source(mutant)
