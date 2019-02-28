@@ -12,7 +12,7 @@ mypy:
 
 .PHONY: pytest
 pytest:
-	pytest
+	pytest mutator_test.py
 
 .PHONY: clitest
 clitest:
