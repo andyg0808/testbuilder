@@ -8,7 +8,7 @@ test: mypy pytest clitest run_test
 
 .PHONY: mypy
 mypy:
-	mypy --strict run_test
+	mypy --strict bin/run_test
 
 .PHONY: pytest
 pytest:
@@ -20,7 +20,7 @@ clitest:
 
 .PHONY: run_test
 run_test:
-	./run_test 'pytest testcase.py' . testcase.py mutator_test.py mutator_test_example.py
+	bin/run_test 'pytest testcase.py' . testcase.py mutator_test.py mutator_test_example.py
 
 
 .PHONY: watch
