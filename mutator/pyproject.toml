@@ -14,6 +14,7 @@ docopt = {version = "^0.6.2",optional = true}
 astor = "^0.7.1"
 pytest = "^4.3"
 hunter = "^2.2"
+mypy = "^0.670.0"
 
 [tool.poetry.extras]
 cli = ["docopt"]
