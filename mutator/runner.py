@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import DEVNULL, CompletedProcess, run
+from subprocess import DEVNULL, PIPE, CompletedProcess, run
 from tempfile import TemporaryDirectory
 from typing import Generic, List, TypeVar
 
@@ -40,7 +40,12 @@ class Runner(Generic[A], ABC):
     def get_variant(self, variant: A, dest: Path) -> None:
         ...
 
-    def run(self) -> CompletedProcess:
-        result = run(self.testrunner, stdout=DEVNULL, timeout=self.timeout)
-        print(".", end="")
+    def run(self, target: Path) -> CompletedProcess:
+        result = run(
+            self.testrunner,
+            timeout=self.timeout,
+            cwd=target
+            # , stdout=PIPE, stderr=PIPE
+        )
+        print(".", end="", flush=True)
         return result
