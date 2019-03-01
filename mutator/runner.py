@@ -31,9 +31,9 @@ class Runner(Generic[A], ABC):
             finally:
                 os.chdir(orig)
 
-    @abstractmethod
     def setup_base(self, dest: Path) -> None:
-        ...
+        if run(["cp", "-r", self.base, dest]).returncode != 0:
+            raise RuntimeError("rsync failed")
 
     @abstractmethod
     def get_variant(self, variant: A, dest: Path) -> None:

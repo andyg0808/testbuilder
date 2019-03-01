@@ -29,10 +29,6 @@ class CopyRunner(Runner[Path]):
     def get_variant(self, variant: Path, dest: Path) -> None:
         copy(variant, dest)
 
-    def setup_base(self, dest: Path) -> None:
-        if run(["rsync", "-r", self.base, dest]).returncode != 0:
-            raise RuntimeError("rsync failed")
-
 
 if __name__ == "__main__":
     opts = docopt(DOCS)
