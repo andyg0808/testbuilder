@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from subprocess import DEVNULL, CompletedProcess, run
 from tempfile import TemporaryDirectory
@@ -20,16 +21,16 @@ class Runner(Generic[A], ABC):
         """
         Executes a specific variant
         """
+        with self.target_dir(variant) as tmp:
+            self.get_variant(variant, tmp / self.target_name)
+            return self.run(tmp)
+
+    @contextmanager
+    def target_dir(self, variant: A) -> Path:
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             self.setup_base(tmp_path)
-            self.get_variant(variant, tmp_path / self.target_name)
-            orig = os.getcwd()
-            os.chdir(tmp)
-            try:
-                return self.run()
-            finally:
-                os.chdir(orig)
+            yield tmp_path
 
     def setup_base(self, dest: Path) -> None:
         if run(["cp", "-r", self.base, dest]).returncode != 0:
