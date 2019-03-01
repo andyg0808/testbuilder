@@ -1,28 +1,47 @@
 #!/usr/bin/env python3
 import ast
+import cProfile
+import marshal
+import os
+import struct
 import sys
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from difflib import unified_diff
-from importlib.machinery import ModuleSpec, SourceFileLoader
+from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
 from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
+from queue import Queue
+from subprocess import CompletedProcess, TimeoutExpired
+from tempfile import TemporaryDirectory
 from textwrap import indent
 from types import ModuleType
+from typing import Any
 
-import astor
+import pytest
 from docopt import docopt
 from logbook import Logger, StderrHandler
 
+import astor
 from mutator import KilledMutation, Mutator
+from runner import Runner
 
 StderrHandler(level="NOTICE").push_application()
 log = Logger("bin/mutator")
 
 DOC = """
 Usage:
-    mutator <file_test.py> <file.py> <test_attr> <mutant_attr>
+    mutator <target> <file.py>
 """
+pr = cProfile.Profile()
+
+
+def save_profile():
+    pr.dump_stats("endprofile")
+    return
 
 
 @dataclass
@@ -30,47 +49,108 @@ class MutantInfo:
     source: str
     mutated: str
     diff: str
+    stdout: str
+    stderr: str
+
+
+# class CompiledMutantRunner(Runner[ast.Module]):
+#     def get_variant(self, variant: ast.Module, dest: Path) -> None:
+#         """Writes bytecode into a faked pyc file
+
+#         See
+#         https://nedbatchelder.com/blog/200804/the_structure_of_pyc_files.html
+#         for details on the pyc format.
+
+#         """
+#         # source_code = astor.to_source(variant)
+#         with dest.with_suffix(".py").open("w") as fi:
+#             code = compile(variant, "<mutation>", "exec")
+#             spec = ModuleSpec("<mutation>", None)
+#             module = module_from_spec(spec)
+#             exec(code, module.__dict__)
+#             fi.write(
+
+
+class PycMutantRunner(Runner[ast.Module]):
+    def get_variant(self, variant: ast.Module, dest: Path) -> None:
+        """Writes bytecode into a faked pyc file
+
+        See
+        https://nedbatchelder.com/blog/200804/the_structure_of_pyc_files.html
+        for details on the pyc format.
+
+        """
+        # source_code = astor.to_source(variant)
+        with dest.with_suffix(".pyc").open("wb") as fi:
+            # Claim the file is from source created 10 seconds into
+            # the future. This is intended to avoid the source ever
+            # being recompled over it.
+            mod_date = int(time.time()) + 10
+            # See https://stackoverflow.com/a/47967834/2243495
+            fi.write(struct.pack("<4sLL", importlib.util.MAGIC_NUMBER, mod_date, 0))
+            marshal.dump(compile(variant, "<mutation>", "exec"), fi)
+
+
+class MutantRunner(Runner[ast.Module]):
+    # def __init__(self, *args: Any, **kwargs: Any) -> None:
+    #     super().__init__(*args, **kwargs)
+    #     self.dirs = Queue()
+    #     for i in range(4):
+    #         tmp = TemporaryDirectory()
+    #         self.setup_base(Path(tmp.name))
+    #         self.dirs.put(tmp)
+
+    def get_variant(self, variant: ast.Module, dest: Path) -> None:
+        # start = time.time()
+        source_code = astor.to_source(variant)
+        with dest.open("w") as fi:
+            fi.write(source_code)
+        # print("Dump time", time.time() - start)
+
+    # def run(self, target: Path) -> CompletedProcess:
+    #     curr = os.getcwd()
+    #     print("expecting", target)
+    #     os.chdir(target)
+    #     # tests = self.testrunner[1]
+    #     # os.system("ls -la")
+    #     # os.system("pwd")
+    #     try:
+    #         # result = pytest.main([tests])
+    #         result = os.system(" ".join(self.testrunner))
+    #     finally:
+    #         os.chdir(curr)
+    #     return CompletedProcess(args="", returncode=result, stdout="", stderr="")
+
+    # @contextmanager
+    # def target_dir(self, variant: ast.Module) -> Path:
+    #     tmp = self.dirs.get()
+    #     try:
+    #         print("reusing dir", tmp.name)
+    #         yield Path(tmp.name)
+    #     finally:
+    #         self.dirs.put(tmp)
 
 
 class MutationRunner:
-    def __init__(self, module_name, test_source, tree, source, test_attr, mutant_attr):
-        self.module_name = module_name
+    def __init__(self, module_name, test_source, tree, source):
         self.tree = tree
         self.source = source
-        self.test_source = test_source
-        self.test_attr = test_attr
-        self.mutant_attr = mutant_attr
+        cl = ["pytest", "-x", test_source]
+        print("running", cl)
+        self.runner = PycMutantRunner(test_source, module_name + ".py", cl)
 
     def run_mutation(self, mutant):
         if isinstance(mutant, KilledMutation):
             return mutant
-        loader = SourceFileLoader("test", self.test_source)
-        spec = ModuleSpec("test", loader)
-        tests = module_from_spec(spec)
-        loader.exec_module(tests)
-        code = load_module(mutant, self.module_name, "<mutation>")
-        if isinstance(code, KilledMutation):
-            return code
-        if self.mutant_attr == "":
-            setattr(tests, self.test_attr, code)
-        else:
-            attr = getattr(code, self.mutant_attr, None)
-            if attr is None:
-                return KilledMutation(
-                    "attachment", self.mutant_attr + " doe s not exist"
-                )
-            setattr(tests, self.test_attr, attr)
+        try:
+            res = self.runner.run_test(mutant)
+        except TimeoutExpired as e:
+            return KilledMutation(f"duration", str(e))
+        if res.returncode != 0:
+            return KilledMutation(f"run {res.returncode}", str(res))
+        return self.find_mutation_diff(mutant, res)
 
-        for name in dir(tests):
-            if name.startswith("test"):
-                try:
-                    getattr(tests, name)()
-                except Exception as e:
-                    return KilledMutation("run", str(e))
-
-        return self.find_mutation_diff(mutant)
-
-    def find_mutation_diff(self, mutant):
+    def find_mutation_diff(self, mutant, res):
         source_code = astor.to_source(self.tree)
         mutant_source = astor.to_source(mutant)
         diff = unified_diff(
@@ -80,28 +160,28 @@ class MutationRunner:
             tofile=self.source + " <mutant>",
         )
         diff = "\n".join(diff)
-        return MutantInfo(source_code, mutant_source, diff)
+        return MutantInfo(
+            source=source_code,
+            mutated=mutant_source,
+            diff=diff,
+            stdout=res.stdout,
+            stderr=res.stderr,
+        )
 
 
-def run_mutator(testfile, source, test_attr, mutant_attr):
+def run_mutator(target, source):
     module_path = Path(source)
     module_name = module_path.stem
     with open(source) as fi:
         code = fi.read()
 
-    missed_mutants = []
     tree = ast.parse(code)
     m = Mutator(tree)
     runner = MutationRunner(
-        module_name=module_name,
-        tree=tree,
-        source=source,
-        test_source=testfile,
-        test_attr=test_attr,
-        mutant_attr=mutant_attr,
+        module_name=module_name, tree=tree, source=source, test_source=target
     )
-    p = Pool(8)
-    results = list(map(runner.run_mutation, m))
+    p = Pool()
+    results = list(p.map(runner.run_mutation, m))
     missed = 0
     killed = {}
     for mutant in results:
@@ -120,38 +200,12 @@ def run_mutator(testfile, source, test_attr, mutant_attr):
     print("Killed mutants", killed)
     print("Total missed mutants:", missed)
     print("Total mutants", len(results))
+    save_profile()
     if missed > 0:
         sys.exit(2)
 
 
-def load_module(tree: ast.Module, fullname: str, path: str) -> ModuleType:
-    """
-    Compiles and executes a module AST to create an actual module.
-
-    Arguments:
-        tree: An ast for the module
-
-    Returns:
-        The resulting module
-    """
-    # Derived from Python's loader code in Lib/importlib. See also the
-    # spec in https://docs.python.org/3.5/reference/import.html#loaders
-    compiled = compile(tree, path, "exec")
-    loader = SourceFileLoader(fullname, path)
-    spec = ModuleSpec(fullname, loader)
-    module = module_from_spec(spec)
-    try:
-        exec(compiled, module.__dict__)
-    except Exception as e:
-        return KilledMutation("Module exec", str(e))
-    return module
-
-
 if __name__ == "__main__":
+    pr.enable()
     opts = docopt(DOC)
-    run_mutator(
-        opts["<file_test.py>"],
-        opts["<file.py>"],
-        opts["<test_attr>"],
-        opts["<mutant_attr>"],
-    )
+    run_mutator(opts["<target>"], opts["<file.py>"])
