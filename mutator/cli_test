@@ -1,4 +1,5 @@
 #!/bin/zsh
 setopt err_exit
-unbuffer python3 bin/mutator mutator_test_example.py testmutator.py Mutator Mutator | tee output || true
+unbuffer python3 bin/mutator mutator_test_example.py testmutator.py | tee output || true
 grep "Total missed mutants: 46" output
+grep "Total mutants 376"

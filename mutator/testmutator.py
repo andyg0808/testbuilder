@@ -2,10 +2,7 @@ import ast
 from dataclasses import dataclass
 from typing import Callable, Generator, List, TypeVar, Union
 
-from logbook import Logger
-
 from visitor import GenericVisitor
-
 
 A = TypeVar("A", bound=ast.AST)
 T = TypeVar("T")
