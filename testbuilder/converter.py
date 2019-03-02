@@ -14,6 +14,7 @@ from logbook import Logger
 from toolz import groupby, mapcat
 
 import z3
+from visitor import SimpleVisitor
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -25,7 +26,6 @@ from .type_manager import TypeManager
 from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
-from .visitor import SimpleVisitor
 from .z3_types import (
     BOOL_TRUE,
     Expression,

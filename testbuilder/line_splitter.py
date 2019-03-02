@@ -3,8 +3,9 @@ Produces a list of line numbers present in an SSA AST
 """
 from typing import Any, Generator, Iterable, List, Set
 
+from visitor import SetGatherVisitor
+
 from . import nodetree as n
-from .visitor import SetGatherVisitor
 
 
 def line_splitter(obj: Any) -> List[int]:

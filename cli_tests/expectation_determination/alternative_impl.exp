@@ -1,0 +1,14 @@
+source "./testing.tcl"
+file delete bad_impl_test.py
+set timeout 5
+spawn python3 ./run.py --no-color --golden=good_impl.py bad_impl.py
+expect "Generating test 0 for append"
+expect eof
+set status [catch {
+    system pytest bad_impl_test.py
+}]
+
+if {$status == 0} {
+    fail "Tests should not pass on bad implementation."
+}
+file delete bad_impl_test.py

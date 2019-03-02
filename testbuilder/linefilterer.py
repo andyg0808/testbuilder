@@ -1,4 +1,5 @@
 # from __future__ import annotations
+import dataclasses
 from collections.abc import Iterable
 from copy import copy
 from functools import singledispatch
@@ -15,13 +16,12 @@ from typing import (
 
 from logbook import Logger
 
-import dataclasses
+from visitor import GenericVisitor, SearchVisitor, SetGatherVisitor, UpdateVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb
 from .conditional_elimination import ConditionalElimination
 from .coroutines import result, retrieve, run_to_suspend
 from .target_manager import TargetManager
-from .visitor import GenericVisitor, SearchVisitor, SetGatherVisitor, UpdateVisitor
 
 Coroutine = Generator[None, sbb.BasicBlock, sbb.BasicBlock]
 

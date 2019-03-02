@@ -1,0 +1,3 @@
+dist/
+pip-wheel-metadata/
+visitor.egg-info/

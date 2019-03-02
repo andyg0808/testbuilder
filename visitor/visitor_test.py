@@ -8,7 +8,7 @@ from hypothesis.strategies import builds, deferred, integers, lists, one_of, rec
 
 from dataclasses import dataclass
 
-from .visitor import SetGatherVisitor, SimpleVisitor, UpdateVisitor, VisitError
+from visitor import SetGatherVisitor, SimpleVisitor, UpdateVisitor, VisitError
 
 
 class Node:

@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "mutator"
+version = "0.1.0"
+description = "Generates mutated Python ASTs"
+authors = ["Andrew Gilbert <andrewg800@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+Python = "^3.7"
+visitor = {path = "../visitor"}
+docopt = {version = "^0.6.2",optional = true}
+compiler = {path = "../compiled"}
+astor = "^0.7.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^4.3"
+mypy = "^0.670.0"
+
+[tool.poetry.extras]
+cli = ["docopt"]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

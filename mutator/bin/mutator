@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+import ast
+import sys
+from compiler import compiler
+from difflib import unified_diff
+from multiprocessing import Pool
+from pathlib import Path
+from subprocess import TimeoutExpired
+from textwrap import indent
+
+import astor
+from docopt import docopt
+from logbook import Logger, StderrHandler
+
+from dataclasses import dataclass
+from mutator import KilledMutation, Mutator
+from runner import Runner
+
+StderrHandler(level="NOTICE").push_application()
+log = Logger("bin/mutator")
+
+DOC = """
+Usage:
+    mutator <target> <file.py>
+"""
+
+
+@dataclass
+class MutantInfo:
+    source: str
+    mutated: str
+    diff: str
+    stdout: str
+    stderr: str
+
+
+class CompiledMutantRunner(Runner[ast.Module]):
+    def get_variant(self, variant: ast.Module, dest: Path) -> None:
+        """Writes bytecode into a faked pyc file
+
+        See
+        https://nedbatchelder.com/blog/200804/the_structure_of_pyc_files.html
+        for details on the pyc format.
+
+        """
+        with dest.open("w") as fi:
+            fi.write(compiler(variant))
+
+
+class MutantRunner(Runner[ast.Module]):
+    def get_variant(self, variant: ast.Module, dest: Path) -> None:
+        source_code = astor.to_source(variant)
+        with dest.open("w") as fi:
+            fi.write(source_code)
+
+
+class MutationRunner:
+    def __init__(self, module_name, test_source, tree, source):
+        self.tree = tree
+        self.source = source
+        cl = ["pytest", "-x", test_source]
+        self.runner = MutantRunner(test_source, module_name + ".py", cl)
+
+    def run_mutation(self, mutant):
+        if isinstance(mutant, KilledMutation):
+            return mutant
+        try:
+            res = self.runner.run_test(mutant)
+        except TimeoutExpired as e:
+            return KilledMutation(f"duration", str(e))
+        if res.returncode != 0:
+            return KilledMutation(f"run {res.returncode}", str(res))
+        return self.find_mutation_diff(mutant, res)
+
+    def find_mutation_diff(self, mutant, res):
+        source_code = astor.to_source(self.tree)
+        mutant_source = astor.to_source(mutant)
+        diff = unified_diff(
+            source_code.splitlines(),
+            mutant_source.splitlines(),
+            fromfile=self.source,
+            tofile=self.source + " <mutant>",
+        )
+        diff = "\n".join(diff)
+        return MutantInfo(
+            source=source_code,
+            mutated=mutant_source,
+            diff=diff,
+            stdout=res.stdout,
+            stderr=res.stderr,
+        )
+
+
+def run_mutator(target, source):
+    module_path = Path(source)
+    module_name = module_path.stem
+    with open(source) as fi:
+        code = fi.read()
+
+    tree = ast.parse(code)
+    m = Mutator(tree)
+    runner = MutationRunner(
+        module_name=module_name, tree=tree, source=source, test_source=target
+    )
+    p = Pool()
+    results = list(p.map(runner.run_mutation, m))
+    missed = 0
+    killed = {}
+    for mutant in results:
+        if isinstance(mutant, KilledMutation):
+            if mutant.stage in killed:
+                killed[mutant.stage] += 1
+            else:
+                killed[mutant.stage] = 1
+            continue
+        else:
+            missed += 1
+        print("[38;5;51m======================================[0m")
+        print("Missed mutant:")
+        print(indent(mutant.diff, "   "))
+
+    print("Killed mutants", killed)
+    print("Total missed mutants:", missed)
+    print("Total mutants", len(results))
+    if missed > 0:
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    opts = docopt(DOC)
+    run_mutator(opts["<target>"], opts["<file.py>"])

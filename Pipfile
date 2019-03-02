@@ -15,6 +15,7 @@ toolz = "*"
 injectable = "*"
 typeassert = {git = "https://gitlab.com/andyg0808/typeassert.git",editable = true}
 rainbowparens = {git = "https://gitlab.com/andyg0808/rainbowparens.git",editable = true}
+visitor = {path = "./visitor/dist/visitor-0.1.0-py3-none-any.whl"}
 
 [dev-packages]
 black = "==18.6b4"

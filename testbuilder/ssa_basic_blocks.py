@@ -1,14 +1,14 @@
 import ast
 from copy import copy
+from dataclasses import dataclass, field
 from functools import reduce, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Generic, List, Mapping, Set, TypeVar, Union, cast
 
 import z3
-from dataclasses import dataclass, field
+from visitor import SetGatherVisitor
 
 from . import nodetree as n
-from .visitor import SetGatherVisitor
 
 Expression = z3.ExprRef
 

@@ -2,7 +2,7 @@
 """
 generate_test_cases: Generates test cases for the return values of all functions in <source.py>
 
-Usage: run.py [options] <source.py>
+Usage: run.py [--autogen|--golden=<file>] [options] <source.py>
 
 Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
@@ -13,13 +13,17 @@ Options:
     --autopreprocess=<file.json>  Automatically run the preprocess
                                   rules in <file.json> on each input file.
     --autogen  Run the function under test with the suggested inputs to
-               determine the expected output
+               determine the expected output.
     --basename=<name>  Filename for resulting tests. {parent} will be
                        replaced with the name of the parent directory
                        of the target file, {basename} will be replaced
                        with the full path and filename without the
                        extension, and {stem} will be replaced with the
                        filename alone without the extension.
+    --golden=<file>  Equivalent to `--autogen`, except <file> will be
+                     run instead of the function under test and its
+                     result will be used as the expected output of the
+                     function under test.
 """
 
 import json
@@ -76,6 +80,11 @@ def main(filename: str) -> None:
         changes = None
 
     autogen = opts["--autogen"]
+    golden = opts["--golden"]
+    if autogen:
+        autogen = filepath
+    elif golden:
+        autogen = Path(golden)
 
     test_cases = generate_tests(
         filepath,

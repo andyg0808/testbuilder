@@ -1,7 +1,8 @@
 from typing import Any
 
+from visitor import SimpleVisitor
+
 from . import nodetree as n
-from .visitor import SimpleVisitor
 
 
 class SSAVisitor(SimpleVisitor[str]):

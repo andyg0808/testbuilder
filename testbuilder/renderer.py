@@ -1,7 +1,8 @@
 import copy
 import re
 from importlib.machinery import SourceFileLoader
-from typing import Any, Callable, Mapping, cast
+from pathlib import Path
+from typing import Any, Callable, Mapping, Optional, cast
 
 from logbook import Logger
 
@@ -32,17 +33,17 @@ def prompt_for_test(
     return make_extended_instance(test, ExpectedTestData, expected_result=expected)
 
 
+def get_golden_func(name: str, golden: Path) -> Callable[..., Any]:
+    loader = SourceFileLoader("mod" + golden.stem, str(golden))
+    mod = loader.load_module()  # type: ignore
+    return cast(Callable[..., Any], getattr(mod, name))
+
+
 def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
-    try:
-        loader = SourceFileLoader("mod" + test.filepath.stem, str(test.filepath))
-        mod = loader.load_module()  # type: ignore
-        return cast(Callable[..., Any], getattr(mod, test.name))
-    except FileNotFoundError:
-        glo = globals()
-        loc: Mapping[str, Any] = {}
-        exec(test.source_text, glo, loc)
-        funcs = list(loc.values())
-        return cast(Callable[..., Any], funcs[0])
+    loc: Mapping[str, Any] = {}
+    exec(test.source_text, {}, loc)
+    funcs = list(loc.values())
+    return cast(Callable[..., Any], funcs[0])
 
 
 def run_for_test(
