@@ -8,3 +8,8 @@ __pycache__
 /private
 pyexecnetcache
 /*_?_results
+/coverage
+/dist
+/.coverage
+/.ipynb_checkpoints
+.vscode
