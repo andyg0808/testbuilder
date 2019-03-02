@@ -1,5 +1,5 @@
 [[package]]
-category = "dev"
+category = "main"
 description = "Read/rewrite/write Python ASTs"
 name = "astor"
 optional = false
@@ -30,24 +30,32 @@ tests = ["coverage", "hypothesis", "pympler", "pytest", "six", "zope.interface"]
 [[package]]
 category = "dev"
 description = "Cross-platform colored terminal text."
+marker = "sys_platform == \"win32\""
 name = "colorama"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.4.1"
 
 [[package]]
-category = "dev"
-description = "Hunter is a flexible code tracing toolkit."
-name = "hunter"
+category = "main"
+description = ""
+name = "compiler"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "2.2.1"
+python-versions = "^3.7"
+version = "0.1.0"
 
-[package.dependencies]
-colorama = "*"
+[package.source]
+reference = ""
+type = "directory"
+url = "../compiled"
 
-[package.extras]
-remote = ["manhole (>=1.5.0)"]
+[[package]]
+category = "main"
+description = "Pythonic argument parser, that will make you smile"
+name = "docopt"
+optional = true
+python-versions = "*"
+version = "0.6.2"
 
 [[package]]
 category = "main"
@@ -76,6 +84,29 @@ name = "more-itertools"
 optional = false
 python-versions = ">=3.4"
 version = "6.0.0"
+
+[[package]]
+category = "dev"
+description = "Optional static typing for Python"
+name = "mypy"
+optional = false
+python-versions = "*"
+version = "0.670"
+
+[package.dependencies]
+mypy-extensions = ">=0.4.0,<0.5.0"
+typed-ast = ">=1.3.1,<1.4.0"
+
+[package.extras]
+dmypy = ["psutil (>=5.4.0,<5.5.0)"]
+
+[[package]]
+category = "dev"
+description = "Experimental type system extensions for programs checked with the mypy typechecker."
+name = "mypy-extensions"
+optional = false
+python-versions = "*"
+version = "0.4.1"
 
 [[package]]
 category = "dev"
@@ -129,6 +160,14 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*"
 version = "1.12.0"
 
 [[package]]
+category = "dev"
+description = "a fork of Python 2 and 3 ast modules with type comment support"
+name = "typed-ast"
+optional = false
+python-versions = "*"
+version = "1.3.1"
+
+[[package]]
 category = "main"
 description = ""
 name = "visitor"
@@ -144,8 +183,11 @@ reference = ""
 type = "directory"
 url = "../visitor"
 
+[extras]
+cli = ["docopt"]
+
 [metadata]
-content-hash = "fd5a6bc600726ef8a7d35b3c49619b1a6c65264fed28f86fc0493363f0d5138c"
+content-hash = "a486ea80399215a82424401db502d969d75215f5af6e787d509da9278ae637b7"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -153,11 +195,15 @@ astor = ["95c30d87a6c2cf89aa628b87398466840f0ad8652f88eb173125a6df8533fb8d", "fb
 atomicwrites = ["03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4", "75a9445bac02d8d058d5e1fe689654ba5a6556a1dfd8ce6ec55a0ed79866cfa6"]
 attrs = ["10cbf6e27dbce8c30807caf056c8eb50917e0eaafe86347671b57254006c3e69", "ca4be454458f9dec299268d472aaa5a11f67a4ff70093396e1ceae9c76cf4bbb"]
 colorama = ["05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d", "f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"]
-hunter = ["0276f5cae4a3ef5a8aa777e0c28c994157eadba59742760ecda9de12e624241e", "054f8d9f9d81336250f0d9e054b773defbc69be2110862807634f8425eae71b2", "17a680ae2b1baaca563fcbf957f33ba8578e8698cc9020a00666c7dd96ca99ec", "182106318ad8983b1ead9583e54a1917a6db12c18c5e9717f044111f1dec2dd5", "35182ad2dc37d2e40e775a251c581f33d6d63b2b562d8c6c31cf1b403d76c3ef", "40689435dc1119f10cba9cbf2b4097e0a2d8d67749dfa08d818482cd2115ccd9", "4bd8219ecb3a362d453aa4e8ea24ffc18d59009ce5de200cb0786348a6374248", "4d5f5602a2590023b9504eb19ff6c8d0d5a92281f9283c4635da706225b3cad5", "5b7d0ca2ecc03fe548028f3d8368fa2c6cba6465b27324a402aabbc1491e7765", "6df1008dadff3e023d0ea668a7caa3ca0580333bf9d2e0bce240d8e16332ff29", "90e4a1900c03a97b67b74bd58f6a975daf5ad5a7c74017d5b9a452ad28a79d21", "9699b9797dcf11a21d8d888562002713c52dc7643ffd4b7d37b6e396c323833b", "b92af9b3c780501976c105ac2204fe0f764b1e9f2999887e09acdd47f79cda24", "bfab3e6be38b8d916b63867e01d6696909834d092a97eb31809613bbabddcd22", "dd0058dc73e838b7e986008e5af8ffa3028843b0bea583e1ff92056f3f0bf555", "eda111fb006c7a5704498a3cf560d5959dc96cbeefdda61aba6f6cbb3e476b69", "f48f6b682811299cbd3e99838b4d0752c85ee8c4d06a8c553d7ff7ac13744a0c", "fa8322a470bf34b24bb3d2a73fbce54a2757380cf0148143866266a4d94b00e5"]
+compiler = []
+docopt = ["49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"]
 logbook = ["a5a96792abd8172c80d61b7530e134524f20e2841981038031e602ed5920fef5"]
 more-itertools = ["0125e8f60e9e031347105eb1682cef932f5e97d7b9a1a28d9bf00c22a5daef40", "590044e3942351a1bdb1de960b739ff4ce277960f2425ad4509446dbace8d9d1"]
+mypy = ["308c274eb8482fbf16006f549137ddc0d69e5a589465e37b99c4564414363ca7", "e80fd6af34614a0e898a57f14296d0dacb584648f0339c2e000ddbf0f4cc2f8d"]
+mypy-extensions = ["37e0e956f41369209a3d5f34580150bcacfabaa57b33a15c0b25f4b5725e0812", "b16cabe759f55e3409a7d231ebd2841378fb0c27a5d1994719e340e4f429ac3e"]
 pluggy = ["19ecf9ce9db2fce065a7a0586e07cfb4ac8614fe96edf628a264b1c70116cf8f", "84d306a647cc805219916e62aab89caa97a33a1dd8c342e87a37f91073cd4746"]
 py = ["64f65755aee5b381cea27766a3a147c3f15b9b6b9ac88676de66ba2ae36793fa", "dc639b046a6e2cff5bbe40194ad65936d6ba360b52b3c3fe1d08a82dd50b5e53"]
 pytest = ["067a1d4bf827ffdd56ad21bd46674703fce77c5957f6c1eef731f6146bfcef1c", "9687049d53695ad45cf5fdc7bbd51f0c49f1ea3ecfc4b7f3fde7501b541f17f4"]
 six = ["3350809f0555b11f552448330d0b52d5f24c91a322ea4a15ef22629740f3761c", "d16a0141ec1a18405cd4ce8b4613101da75da0e9a7aec5bdd4fa804d0e0eba73"]
+typed-ast = ["035a54ede6ce1380599b2ce57844c6554666522e376bd111eb940fbc7c3dad23", "037c35f2741ce3a9ac0d55abfcd119133cbd821fffa4461397718287092d9d15", "049feae7e9f180b64efacbdc36b3af64a00393a47be22fa9cb6794e68d4e73d3", "19228f7940beafc1ba21a6e8e070e0b0bfd1457902a3a81709762b8b9039b88d", "2ea681e91e3550a30c2265d2916f40a5f5d89b59469a20f3bad7d07adee0f7a6", "3a6b0a78af298d82323660df5497bcea0f0a4a25a0b003afd0ce5af049bd1f60", "5385da8f3b801014504df0852bf83524599df890387a3c2b17b7caa3d78b1773", "606d8afa07eef77280c2bf84335e24390055b478392e1975f96286d99d0cb424", "69245b5b23bbf7fb242c9f8f08493e9ecd7711f063259aefffaeb90595d62287", "6f6d839ab09830d59b7fa8fb6917023d8cb5498ee1f1dbd82d37db78eb76bc99", "730888475f5ac0e37c1de4bd05eeb799fdb742697867f524dc8a4cd74bcecc23", "9819b5162ffc121b9e334923c685b0d0826154e41dfe70b2ede2ce29034c71d8", "9e60ef9426efab601dd9aa120e4ff560f4461cf8442e9c0a2b92548d52800699", "af5fbdde0690c7da68e841d7fc2632345d570768ea7406a9434446d7b33b0ee1", "b64efdbdf3bbb1377562c179f167f3bf301251411eb5ac77dec6b7d32bcda463", "bac5f444c118aeb456fac1b0b5d14c6a71ea2a42069b09c176f75e9bd4c186f6", "bda9068aafb73859491e13b99b682bd299c1b5fd50644d697533775828a28ee0", "d659517ca116e6750101a1326107d3479028c5191f0ecee3c7203c50f5b915b0", "eddd3fb1f3e0f82e5915a899285a39ee34ce18fd25d89582bc89fc9fb16cd2c6"]
 visitor = []

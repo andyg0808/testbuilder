@@ -1,8 +1,7 @@
-import os
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import DEVNULL, PIPE, CompletedProcess, run
+from subprocess import PIPE, CompletedProcess, run
 from tempfile import TemporaryDirectory
 from typing import Generator, Generic, List, TypeVar
 

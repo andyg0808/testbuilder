@@ -9,11 +9,11 @@ license = "MIT"
 Python = "^3.7"
 visitor = {path = "../visitor"}
 docopt = {version = "^0.6.2",optional = true}
+compiler = {path = "../compiled"}
+astor = "^0.7.1"
 
 [tool.poetry.dev-dependencies]
-astor = "^0.7.1"
 pytest = "^4.3"
-hunter = "^2.2"
 mypy = "^0.670.0"
 
 [tool.poetry.extras]
