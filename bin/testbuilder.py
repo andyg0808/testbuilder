@@ -109,8 +109,7 @@ def main(opts: Mapping[str, Any], filename: str) -> None:
         return
     with open(filename, "x") as tests:
         tests.write("from importlib import import_module\n")
-        tests.write("from testbuilder.pair import Pair\n")
-        tests.write("from testbuilder import renderer\n")
+        tests.write("from testbuilder import Pair, convert_result\n")
         tests.write("from fractions import Fraction\n")
         tests.write("import pytest\n")
         tests.write("\n\n".join(test_cases))

@@ -2,12 +2,12 @@ import copy
 import re
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, cast
+from typing import Any, Callable, Mapping, cast
 
 from logbook import Logger
 
+from ._extern_utils import convert_result
 from .dataclass_utils import make_extended_instance
-from .pair import Pair
 from .requester import Requester
 from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
 
@@ -72,24 +72,6 @@ def run_for_test(
     return make_extended_instance(test, ExpectedTestData, expected_result=writeout)
 
 
-PairExpr = re.compile(r"pair", re.IGNORECASE)
-ListExpr = re.compile(r"List")
-
-
-def convert_result(val: Any) -> Any:
-    """
-    If possible, convert a value to a known type from whatever type it was.
-    """
-    name = type(val).__name__
-    if PairExpr.search(name) or ListExpr.search(name):
-        pair = Pair.from_pair(val)
-        if pair is not None:
-            return pair
-    elif isinstance(val, tuple):
-        return tuple(convert_result(v) for v in val)
-    return val
-
-
 def render_test(test: ExpectedTestData) -> str:
     keys = [x.id for x in test.free_variables]
     arg_strings = [f"{key} = {repr(test.args[key])}" for key in keys]
@@ -122,5 +104,5 @@ def test_{test.name}{number_str}():
     {args_string}
     actual = {call_string}
     expected = {expected}
-    assert renderer.convert_result(actual) == expected
+    assert convert_result(actual) == expected
     """
