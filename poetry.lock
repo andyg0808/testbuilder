@@ -280,7 +280,6 @@ docopt = "*"
 reference = "c9317bc532231f1edd0decdca1a86b9f2eb2e51b"
 type = "git"
 url = "https://gitlab.com/andyg0808/rainbowparens.git"
-
 [[package]]
 category = "dev"
 description = "Python 2 and 3 compatibility utilities"
@@ -317,7 +316,6 @@ version = "0.0.4"
 reference = "12ae2d5b8975efd71f0a864727991d12d6034e06"
 type = "git"
 url = "https://gitlab.com/andyg0808/typeassert.git"
-
 [[package]]
 category = "dev"
 description = "a fork of Python 2 and 3 ast modules with type comment support"
@@ -332,18 +330,17 @@ description = ""
 name = "visitor"
 optional = false
 python-versions = "^3.7"
-version = "0.1.0"
+version = "0.2.0"
 
 [package.dependencies]
 Logbook = "^1.4"
 
 [package.source]
-reference = ""
-type = "directory"
-url = "visitor"
-
+reference = "5c3f3993084ed8e3b917738609bb449aa963a294"
+type = "git"
+url = "https://gitlab.com/andyg0808/visitor.git"
 [metadata]
-content-hash = "e5f1e6ded1727e7bf830327a997ccf0e56c044d4904c027f273dd15776e8cff5"
+content-hash = "c602b6f29353a7e61e7fde4a8b109990803d5fb9825d6309c4ea347afaab3c24"
 python-versions = "^3.7"
 
 [metadata.hashes]
