@@ -4,6 +4,7 @@ version = "0.3.0"
 description = "Generate tests for Python code"
 authors = ["Andrew Gilbert <andrewg800@gmail.com>"]
 license = "GPL-3.0+"
+include = ["z3_source/build/python", "z3_source/*.so*", "z3_source/LICENSE.txt", "_z3config.py", "logconfig.py"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
