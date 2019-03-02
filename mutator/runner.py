@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, CompletedProcess, run
 from tempfile import TemporaryDirectory
-from typing import Generic, List, TypeVar
+from typing import Generator, Generic, List, TypeVar
 
 A = TypeVar("A")
 
@@ -26,7 +26,7 @@ class Runner(Generic[A], ABC):
             return self.run(tmp)
 
     @contextmanager
-    def target_dir(self, variant: A) -> Path:
+    def target_dir(self, variant: A) -> Generator[Path, None, None]:
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             self.setup_base(tmp_path)
@@ -42,10 +42,7 @@ class Runner(Generic[A], ABC):
 
     def run(self, target: Path) -> CompletedProcess:
         result = run(
-            self.testrunner,
-            timeout=self.timeout,
-            cwd=target
-            # , stdout=PIPE, stderr=PIPE
+            self.testrunner, timeout=self.timeout, cwd=target, stdout=PIPE, stderr=PIPE
         )
         print(".", end="", flush=True)
         return result
