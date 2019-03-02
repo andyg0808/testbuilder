@@ -1,28 +1,14 @@
 #!/usr/bin/env python3
 import ast
-import cProfile
-import marshal
-import os
-import struct
 import sys
-import time
 from compiler import compiler
-from contextlib import contextmanager
 from difflib import unified_diff
-from importlib.machinery import ModuleSpec
-from importlib.util import module_from_spec
 from multiprocessing import Pool
-from multiprocessing.pool import ThreadPool
 from pathlib import Path
-from queue import Queue
-from subprocess import CompletedProcess, TimeoutExpired
-from tempfile import TemporaryDirectory
+from subprocess import TimeoutExpired
 from textwrap import indent
-from types import ModuleType
-from typing import Any
 
 import astor
-import pytest
 from docopt import docopt
 from logbook import Logger, StderrHandler
 
@@ -37,12 +23,6 @@ DOC = """
 Usage:
     mutator <target> <file.py>
 """
-pr = cProfile.Profile()
-
-
-def save_profile():
-    pr.dump_stats("endprofile")
-    return
 
 
 @dataclass
@@ -79,7 +59,6 @@ class MutationRunner:
         self.tree = tree
         self.source = source
         cl = ["pytest", "-x", test_source]
-        print("running", cl)
         self.runner = MutantRunner(test_source, module_name + ".py", cl)
 
     def run_mutation(self, mutant):
@@ -143,12 +122,10 @@ def run_mutator(target, source):
     print("Killed mutants", killed)
     print("Total missed mutants:", missed)
     print("Total mutants", len(results))
-    save_profile()
     if missed > 0:
         sys.exit(2)
 
 
 if __name__ == "__main__":
-    pr.enable()
     opts = docopt(DOC)
     run_mutator(opts["<target>"], opts["<file.py>"])
