@@ -32,7 +32,7 @@ PYTEST_FAST = ./pytest_empty $(PYTEST_FAST_FLAGS) $(TESTFILE)
 
 .PHONY: build
 build:
-	pipenv run $(MAKE) $(RUN)
+	poetry run $(MAKE) $(RUN)
 
 .PHONY: watch
 watch:
