@@ -2,7 +2,7 @@
 """
 generate_test_cases: Generates test cases for the return values of all functions in <source.py>
 
-Usage: run.py [--autogen|--golden=<file>] [options] <source.py>
+Usage: testbuilder [--autogen|--golden=<file>] [options] <source.py>
 
 Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
@@ -31,12 +31,12 @@ import signal
 from pathlib import Path
 from typing import Any, Mapping
 
-import typeassert
 from docopt import docopt
-from logbook import NullHandler
 
 import _z3config  # noqa: F401
 import logconfig
+import typeassert
+from logbook import NullHandler
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
