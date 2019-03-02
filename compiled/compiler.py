@@ -20,11 +20,11 @@ def compiler(module: ast.Module):
     dump = marshal.dumps(code)
     binstring = repr(dump)
     return f"""
-def __load__():
+def __load():
     from marshal import loads
     globs = globals()
-    globs.clear()
+    del globs["__load"]
     module = loads({binstring})
     exec(module, globs)
-__load__()
+__load()
 """
