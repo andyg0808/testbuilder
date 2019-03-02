@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from logbook import Logger
-from pympler import tracker  # type: ignore
 from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
@@ -165,6 +164,7 @@ def generate_tests(
     def monitored_test_generation(name: str) -> Callable[[Tuple[int, int]], str]:
         def _monitored_test_generation(target_info: Tuple[int, int]) -> str:
             if active("memory"):
+                from pympler import tracker  # type: ignore
                 tr = tracker.SummaryTracker()
             if active("profile"):
                 pr = cProfile.Profile()
