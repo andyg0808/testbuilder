@@ -1,6 +1,6 @@
 source "./testing.tcl"
 file delete complex_test.py
-spawn python3 ./run.py --no-color --unroll-depth=10 --lines=2,8,12 complex.py
+spawn poetry run testbuilder --no-color --unroll-depth=10 --lines=2,8,12 complex.py
 
 expect -re {\{.*: ([-\d]+), .*: ([-\d]+)\}.*expected}
 set value [expr $expect_out(1,string) * $expect_out(2,string)]

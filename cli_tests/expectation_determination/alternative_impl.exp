@@ -1,7 +1,7 @@
 source "./testing.tcl"
 file delete bad_impl_test.py
 set timeout 5
-spawn python3 ./run.py --no-color --golden=good_impl.py bad_impl.py
+spawn poetry run testbuilder --no-color --golden=good_impl.py bad_impl.py
 expect "Generating test 0 for append"
 expect eof
 set status [catch {

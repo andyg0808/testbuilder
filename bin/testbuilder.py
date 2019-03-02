@@ -29,6 +29,7 @@ Options:
 import json
 import signal
 from pathlib import Path
+from typing import Any, Mapping
 
 import typeassert
 from docopt import docopt
@@ -50,7 +51,7 @@ signal.signal(signal.SIGUSR1, signal_handler)
 typeassert.log.setLevel("ERROR")
 
 
-def main(filename: str) -> None:
+def main(opts: Mapping[str, Any], filename: str) -> None:
     filepath = Path(filename)
     with filepath.open() as io:
         text = io.read()
@@ -115,7 +116,7 @@ def main(filename: str) -> None:
         tests.write("\n\n".join(test_cases))
 
 
-if __name__ == "__main__":
+def launch():
     opts = docopt(__doc__)
 
     NullHandler().push_application()
@@ -132,4 +133,4 @@ if __name__ == "__main__":
     verbosity = opts["--verbose"]
     logconfig.configure_fancylog(verbosity)
 
-    main(opts["<source.py>"])
+    main(opts, opts["<source.py>"])
