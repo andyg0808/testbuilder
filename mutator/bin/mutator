@@ -6,8 +6,8 @@ import os
 import struct
 import sys
 import time
+from compiler import compiler
 from contextlib import contextmanager
-from dataclasses import dataclass
 from difflib import unified_diff
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
@@ -21,11 +21,12 @@ from textwrap import indent
 from types import ModuleType
 from typing import Any
 
+import astor
 import pytest
 from docopt import docopt
 from logbook import Logger, StderrHandler
 
-import astor
+from dataclasses import dataclass
 from mutator import KilledMutation, Mutator
 from runner import Runner
 
@@ -53,25 +54,7 @@ class MutantInfo:
     stderr: str
 
 
-# class CompiledMutantRunner(Runner[ast.Module]):
-#     def get_variant(self, variant: ast.Module, dest: Path) -> None:
-#         """Writes bytecode into a faked pyc file
-
-#         See
-#         https://nedbatchelder.com/blog/200804/the_structure_of_pyc_files.html
-#         for details on the pyc format.
-
-#         """
-#         # source_code = astor.to_source(variant)
-#         with dest.with_suffix(".py").open("w") as fi:
-#             code = compile(variant, "<mutation>", "exec")
-#             spec = ModuleSpec("<mutation>", None)
-#             module = module_from_spec(spec)
-#             exec(code, module.__dict__)
-#             fi.write(
-
-
-class PycMutantRunner(Runner[ast.Module]):
+class CompiledMutantRunner(Runner[ast.Module]):
     def get_variant(self, variant: ast.Module, dest: Path) -> None:
         """Writes bytecode into a faked pyc file
 
@@ -80,55 +63,15 @@ class PycMutantRunner(Runner[ast.Module]):
         for details on the pyc format.
 
         """
-        # source_code = astor.to_source(variant)
-        with dest.with_suffix(".pyc").open("wb") as fi:
-            # Claim the file is from source created 10 seconds into
-            # the future. This is intended to avoid the source ever
-            # being recompled over it.
-            mod_date = int(time.time()) + 10
-            # See https://stackoverflow.com/a/47967834/2243495
-            fi.write(struct.pack("<4sLL", importlib.util.MAGIC_NUMBER, mod_date, 0))
-            marshal.dump(compile(variant, "<mutation>", "exec"), fi)
+        with dest.open("w") as fi:
+            fi.write(compiler(variant))
 
 
 class MutantRunner(Runner[ast.Module]):
-    # def __init__(self, *args: Any, **kwargs: Any) -> None:
-    #     super().__init__(*args, **kwargs)
-    #     self.dirs = Queue()
-    #     for i in range(4):
-    #         tmp = TemporaryDirectory()
-    #         self.setup_base(Path(tmp.name))
-    #         self.dirs.put(tmp)
-
     def get_variant(self, variant: ast.Module, dest: Path) -> None:
-        # start = time.time()
         source_code = astor.to_source(variant)
         with dest.open("w") as fi:
             fi.write(source_code)
-        # print("Dump time", time.time() - start)
-
-    # def run(self, target: Path) -> CompletedProcess:
-    #     curr = os.getcwd()
-    #     print("expecting", target)
-    #     os.chdir(target)
-    #     # tests = self.testrunner[1]
-    #     # os.system("ls -la")
-    #     # os.system("pwd")
-    #     try:
-    #         # result = pytest.main([tests])
-    #         result = os.system(" ".join(self.testrunner))
-    #     finally:
-    #         os.chdir(curr)
-    #     return CompletedProcess(args="", returncode=result, stdout="", stderr="")
-
-    # @contextmanager
-    # def target_dir(self, variant: ast.Module) -> Path:
-    #     tmp = self.dirs.get()
-    #     try:
-    #         print("reusing dir", tmp.name)
-    #         yield Path(tmp.name)
-    #     finally:
-    #         self.dirs.put(tmp)
 
 
 class MutationRunner:
@@ -137,7 +80,7 @@ class MutationRunner:
         self.source = source
         cl = ["pytest", "-x", test_source]
         print("running", cl)
-        self.runner = PycMutantRunner(test_source, module_name + ".py", cl)
+        self.runner = MutantRunner(test_source, module_name + ".py", cl)
 
     def run_mutation(self, mutant):
         if isinstance(mutant, KilledMutation):
