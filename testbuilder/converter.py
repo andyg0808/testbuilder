@@ -10,10 +10,9 @@ import re
 from functools import reduce
 from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
+import z3
 from logbook import Logger
 from toolz import groupby, mapcat
-
-import z3
 from visitor import SimpleVisitor
 
 from . import nodetree as n
@@ -215,15 +214,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 n.Attribute(e=target.e, value=target.e, attr=target.attr)
             )
             dest = self.visit(target.e)
-            # print("updating type manager from", self.type_manager)
-            # self.type_manager.put(
-            #     cast(VariableTypeUnion, self.visit(target.e.find_name())).name,
-            #     {Reference},
-            # )
-            # self.type_manager.put(
-            #     str(this_value.unwrap(choice=Reference)), {value.sorts}
-            # )
-            # print("updated type manager to", self.type_manager)
             if isinstance(dest, ExpandableTypeUnion):
                 dest = dest.expand()
             pair = getattr(self.registrar.reftype, "Pair")

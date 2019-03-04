@@ -118,7 +118,7 @@ def generate_tests(
                 if autogen is True:
                     func = get_test_func(solved_testdata)
                 else:
-                    func = get_golden_func(solved_testdata.name, cast(Path,autogen))
+                    func = get_golden_func(solved_testdata.name, cast(Path, autogen))
                 return run_for_test(requester, func, solved_testdata)
             else:
                 return prompt_for_test(
@@ -165,6 +165,7 @@ def generate_tests(
         def _monitored_test_generation(target_info: Tuple[int, int]) -> str:
             if active("memory"):
                 from pympler import tracker  # type: ignore
+
                 tr = tracker.SummaryTracker()
             if active("profile"):
                 pr = cProfile.Profile()
