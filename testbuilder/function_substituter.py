@@ -2,7 +2,6 @@ import dataclasses
 from typing import Any, Generator, List, Optional, TypeVar
 
 from logbook import Logger
-
 from visitor import CoroutineVisitor, UpdateVisitor
 
 from . import nodetree as n, ssa_basic_blocks as sbb

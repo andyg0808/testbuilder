@@ -1,6 +1,6 @@
-from functools import partial, singledispatch
+from functools import singledispatch
 from pathlib import Path
-from typing import Generator, List, Optional, Set, TypeVar, cast
+from typing import List, Optional, Set, TypeVar
 
 import z3
 from astor import to_source  # type: ignore
@@ -102,8 +102,6 @@ class SSAVisitor(SimpleVisitor[BoolList]):
             branches.append(self.visit(node.false_branch, node.parent))
             types.append(self.type_manager.pop())
         self.type_manager.merge_and_update(types)
-
-        # print("branches", branches)
 
         filled_branches = filter(lambda x: x, branches)
         return code + [pipe(filled_branches, liftIter(bool_all), bool_any)]

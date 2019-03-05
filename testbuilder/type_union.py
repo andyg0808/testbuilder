@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Callable, List, Optional, cast
 
 import z3
-from dataclasses import dataclass
 
 from .constrained_expression import ConstrainedExpression as CExpr
 from .z3_types import BOOL_TRUE, Expression, SortSet, bool_or
@@ -58,7 +58,6 @@ class TypeUnion:
         choice: Optional[z3.SortRef] = None,
         constraint: Optional[Expression] = None,
     ) -> Expression:
-        print("Choice", choice)
         if choice is None:
             assert (
                 len(self.sorts) <= 1
