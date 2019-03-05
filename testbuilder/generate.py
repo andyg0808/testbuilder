@@ -34,6 +34,7 @@ from .ssa_repair import repair
 from .ssa_to_expression import ssa_to_expression
 from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
+from .z3_types import GenerationError
 
 log = Logger("generator")
 
@@ -89,7 +90,7 @@ def generate_tests(
             testdata = ssa_to_expression(source, registrar, cleaned_expr)
         except TupleError:
             return ""
-        except RuntimeError as e:
+        except GenerationError as e:
             log.error(
                 "Caught error while generating test for line {}. Error:\n\t{}",
                 target_line,

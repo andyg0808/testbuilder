@@ -28,6 +28,7 @@ from .variable_type_union import VariableTypeUnion
 from .z3_types import (
     BOOL_TRUE,
     Expression,
+    GenerationError,
     Reference,
     ReferenceT,
     SortMarker,
@@ -135,12 +136,19 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         value = self.visit(node.value)
         attr = node.attr
         if attr not in ["left", "right"]:
-            raise RuntimeError(
+            raise GenerationError(
                 f"Attribute {attr} not `left` or `right`; try rewriting it?"
             )
         assert (
             self.registrar.reftype is not None
         ), "Need reference types enabled to use attributes"
+
+        if value.sorts == {self.registrar.anytype}:
+            raise GenerationError(
+                "Attempted to dereference None value. "
+                "This may be caused by a function substitution "
+                "which could never take a particular path"
+            )
 
         accessor = getattr(self.registrar.reftype, "Pair_" + attr)
 
@@ -205,7 +213,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             elif target.attr == "right":
                 other_attr = "left"
             else:
-                raise RuntimeError(f"Unexpected attribute {target.attr}")
+                raise GenerationError(f"Unexpected attribute {target.attr}")
 
             other_value: TypeUnion = self.visit(
                 n.Attribute(e=target.e, value=target.e, attr=other_attr)
@@ -254,7 +262,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         if isinstance(node.func, n.Name):
             function = node.func.id
             if function == "input":
-                raise RuntimeError("`input` not supported in tested code")
+                raise GenerationError("`input` not supported in tested code")
             args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
@@ -272,7 +280,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             return self.registrar.AllTypes("funcdefault_" + node.func.id)
 
         # Treat functions as true which we couldn't substitute
-        raise RuntimeError(
+        raise GenerationError(
             f"Function call {node} is not a name; cannot call function expressions"
         )
 

@@ -192,3 +192,7 @@ def print_diff(diff: List[Tuple[Expression, Expression]]) -> None:
         left_color = colorize(repr(left))
         right_color = colorize(repr(right))
         print(f"Difference in\n\n{left_color}\n{right_color}\n")
+
+
+class GenerationError(RuntimeError):
+    pass
