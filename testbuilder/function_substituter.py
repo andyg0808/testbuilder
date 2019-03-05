@@ -43,6 +43,8 @@ class FunctionSubstitute(UpdateVisitor):
     def split_code(
         self, node: sbb.Code, num: int, call: n.Call, **kwargs: Any
     ) -> sbb.BasicBlock:
+        assert isinstance(node, sbb.Code)
+
         def build_block(
             lines: List[n.stmt], first_line: int, parent: sbb.BasicBlock
         ) -> sbb.Code:
@@ -67,7 +69,10 @@ class FunctionSubstitute(UpdateVisitor):
 
         if first_lines:
             parent = build_block(first_lines, node.first_line, parent)
+        assert isinstance(parent, sbb.BasicBlock)
+
         parent = self.visit(parent, **kwargs)
+        assert isinstance(parent, sbb.BasicBlock)
 
         parent = self.fetch_function(call_info, call, func, parent)
 
