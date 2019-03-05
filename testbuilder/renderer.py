@@ -1,5 +1,7 @@
 import copy
 import re
+import sys
+from importlib import import_module
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from typing import Any, Callable, Mapping, cast
@@ -34,8 +36,9 @@ def prompt_for_test(
 
 
 def get_golden_func(name: str, golden: Path) -> Callable[..., Any]:
-    loader = SourceFileLoader("mod" + golden.stem, str(golden))
-    mod = loader.load_module()  # type: ignore
+    sys.path.append(golden.parent.as_posix())
+    mod = import_module(golden.stem)
+    sys.path.pop()
     return cast(Callable[..., Any], getattr(mod, name))
 
 
