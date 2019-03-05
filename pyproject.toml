@@ -24,6 +24,7 @@ hypothesis = "^4.7"
 black = "==18.9b0"
 pytest-xdist = "^1.26"
 pytest-cov = "^2.6"
+pdbpp = "^0.9.7"
 
 [tool.poetry.scripts]
 testbuilder = "bin.testbuilder:launch"
