@@ -190,6 +190,21 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         value = self.visit(node.e)
         return self.assign(node.target, value)
 
+    # Below is a potential solution to the problem of type
+    # contradictions in substituted code. However, it makes the
+    # simpler case much more messy, as the resulting expression will
+    # need to handle every possible argument type, even those which
+    # can statically be determined to be impossible. The best solution
+    # would probably be to stop substituting functions and pass them
+    # to Z3 as functions.
+
+    # def visit_ArgumentBind(self, node: n.ArgumentBind) -> TypeUnion:
+    #     log.debug("Visit argument binding {}", node)
+    #     # if node.target.func == "insert":
+    #     #     breakpoint()
+    #     value = self.visit(node.e)
+    #     return self.assign(node.target, value, typed=False)
+
     def visit_Assert(self, node: n.Assert) -> TypeUnion:
         expr = self.visit(node.test)
         return expr
@@ -198,12 +213,15 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.warn("Skipping test case due to use of tuple")
         raise TupleError()
 
-    def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
+    def assign(
+        self, target: n.LValue, value: TypeUnion, typed: bool = True
+    ) -> TypeUnion:
         if isinstance(target, n.Name):
             log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
             var_expr = self.visit(target)
             var_name = cast(VariableTypeUnion, var_expr).name
-            self.type_manager.put(var_name, value.sorts)
+            if typed:
+                self.type_manager.put(var_name, value.sorts)
             var = self.registrar.make_any(var_name)
             return self.registrar.assign(var, value)
         elif isinstance(target, n.Attribute):
