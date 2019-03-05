@@ -83,6 +83,9 @@ class SSAVisitor(SimpleVisitor[str]):
     def visit_And(self, node: n.And) -> str:
         return "and"
 
+    def visit_Or(self, node: n.Or) -> str:
+        return "or"
+
     def visit_Set(self, node: n.Set) -> str:
         target = self.visit(node.target)
         expr = self.visit(node.e)
