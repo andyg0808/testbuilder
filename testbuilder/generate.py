@@ -55,6 +55,7 @@ def generate_tests(
     lines: Optional[Set[int]] = None,
     ignores: Set[int] = set(),  # noqa: B006
     autogen: Union[bool, Path] = False,
+    skipfail: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -121,7 +122,7 @@ def generate_tests(
                     func = get_test_func(solved_testdata)
                 else:
                     func = get_golden_func(solved_testdata.name, cast(Path, autogen))
-                return run_for_test(requester, func, solved_testdata)
+                return run_for_test(requester, func, solved_testdata, skipfail)
             else:
                 return prompt_for_test(
                     requester=requester, prompt=prompt, test=solved_testdata
@@ -133,6 +134,13 @@ def generate_tests(
             )
         except MissingGolden:
             log.error(f"Missing golden version of {testdata.name}; ignoring")
+            return ""
+        except GenerationError as e:
+            log.error(
+                f"Could not generate test for {testdata.name}; "
+                "probably because of skipfail.\n"
+                f"Error: {e}"
+            )
             return ""
 
         return test

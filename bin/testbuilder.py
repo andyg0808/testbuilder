@@ -24,6 +24,8 @@ Options:
                      run instead of the function under test and its
                      result will be used as the expected output of the
                      function under test.
+    --skipfail  When auto-generating tests, do not generate test if
+                the function run fails with an error
 """
 
 import json
@@ -86,6 +88,7 @@ def main(opts: Mapping[str, Any], filename: str) -> None:
         autogen = filepath
     elif golden:
         autogen = Path(golden)
+    skipfail = opts["--skipfail"]
 
     test_cases = generate_tests(
         filepath,
@@ -95,6 +98,7 @@ def main(opts: Mapping[str, Any], filename: str) -> None:
         lines=lines,
         changes=changes,
         autogen=autogen,
+        skipfail=skipfail,
     )
     if opts["--basename"]:
         filename = opts["--basename"].format(

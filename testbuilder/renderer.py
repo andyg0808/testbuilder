@@ -11,6 +11,7 @@ from ._extern_utils import convert_result
 from .dataclass_utils import make_extended_instance
 from .requester import Requester
 from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
+from .z3_types import GenerationError
 
 ThrowParser = re.compile(r"fail::(\w+)$")
 
@@ -56,7 +57,7 @@ def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
 
 
 def run_for_test(
-    requester: Requester, func: Callable[..., Any], test: SolvedTestData
+    requester: Requester, func: Callable[..., Any], test: SolvedTestData, skipfail: bool
 ) -> ExpectedTestData:
     requester.output(
         f"Generating test {test.test_number} for {test.name} at line {test.target_line}"
@@ -66,6 +67,9 @@ def run_for_test(
         result = func(**args)
         writeout = repr(convert_result(result))
     except Exception as e:
+        if skipfail:
+            log.warn(f"Skipping test due to code run failure: {e}[0m")
+            raise GenerationError() from e
         log.warn(f"Asserting failure due to code run failure: {e}")
         result = f"fail::{type(e).__name__}"
         writeout = result
