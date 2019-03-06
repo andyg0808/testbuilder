@@ -22,6 +22,7 @@ from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
 from .renderer import (
+    MissingGolden,
     get_golden_func,
     get_test_func,
     prompt_for_test,
@@ -130,11 +131,9 @@ def generate_tests(
             test: str = pipe(
                 solution, _filter_inputs, get_expected_test_result, render_test
             )
-        except AttributeError as e:
-            if "module 'mod" in str(e):
-                log.error(f"Missing golden version of {testdata.name}; ignoring")
-                return ""
-            raise e
+        except MissingGolden:
+            log.error(f"Missing golden version of {testdata.name}; ignoring")
+            return ""
 
         return test
 

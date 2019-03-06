@@ -2,7 +2,6 @@ import copy
 import re
 import sys
 from importlib import import_module
-from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from typing import Any, Callable, Mapping, cast
 
@@ -16,6 +15,10 @@ from .ssa_basic_blocks import ExpectedTestData, SolvedTestData
 ThrowParser = re.compile(r"fail::(\w+)$")
 
 log = Logger("renderer")
+
+
+class MissingGolden(AttributeError):
+    pass
 
 
 def prompt_for_test(
@@ -39,7 +42,10 @@ def get_golden_func(name: str, golden: Path) -> Callable[..., Any]:
     sys.path.append(golden.parent.as_posix())
     mod = import_module(golden.stem)
     sys.path.pop()
-    return cast(Callable[..., Any], getattr(mod, name))
+    golden = getattr(mod, name, None)
+    if golden is None:
+        raise MissingGolden()
+    return cast(Callable[..., Any], golden)
 
 
 def get_test_func(test: SolvedTestData) -> Callable[..., Any]:
