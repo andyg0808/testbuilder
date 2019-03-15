@@ -13,3 +13,4 @@ pyexecnetcache
 /.coverage
 /.ipynb_checkpoints
 .vscode
+*.egg-info/
