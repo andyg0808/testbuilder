@@ -14,3 +14,4 @@ pyexecnetcache
 /.ipynb_checkpoints
 .vscode
 *.egg-info/
+junk
