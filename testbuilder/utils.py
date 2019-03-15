@@ -5,10 +5,7 @@ import sys
 from pprint import pprint
 from typing import Any, NoReturn, Set, TypeVar, cast
 
-from termcolor import cprint
-
 import rainbow  # type: ignore
-
 from .test_utils import write_dot
 
 ObjString = re.compile(r"<\S+ object at \S+>")
@@ -17,7 +14,7 @@ ObjString = re.compile(r"<\S+ object at \S+>")
 def print_locations(node: ast.AST) -> None:
     for i in ast.walk(node):
         if not hasattr(i, "lineno") or not hasattr(i, "col_offset"):
-            cprint(str(i), "red")
+            print("[31m" + str(i) + "[0m")
         else:
             print(
                 "{} line={} col={}".format(
@@ -54,7 +51,6 @@ def pipe_print(value: Any, message: str = "") -> Any:
 
 def code_format(value: Any, message: str = "") -> str:
     import black  # type: ignore
-    from .requester import format
     import shutil
 
     width = shutil.get_terminal_size().columns

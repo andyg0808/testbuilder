@@ -138,7 +138,6 @@ class Pair:
             return bool(l_eq and r_eq)
 
         res = _eq(self, other, {})
-        print("equality", res)
         return res
 
     def __str__(self) -> str:

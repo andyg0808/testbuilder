@@ -1,12 +1,11 @@
 from functools import singledispatch
 from pathlib import Path
-from typing import List, Optional, Set, cast
+from typing import List, Optional, Set, TypeVar
 
+import z3
 from astor import to_source  # type: ignore
 from logbook import Logger
 from toolz import mapcat, pipe
-
-import z3
 from visitor import SetGatherVisitor, SimpleVisitor
 
 from . import converter, nodetree as n, ssa_basic_blocks as sbb
@@ -27,6 +26,8 @@ log = Logger("ssa_to_expression")
 Expression = z3.ExprRef
 StopBlock = Optional[sbb.BasicBlock]
 BoolList = List[z3.BoolRef]
+
+T = TypeVar("T")
 
 
 class SSAVisitor(SimpleVisitor[BoolList]):
@@ -102,9 +103,8 @@ class SSAVisitor(SimpleVisitor[BoolList]):
             types.append(self.type_manager.pop())
         self.type_manager.merge_and_update(types)
 
-        # print("branches", branches)
-
-        return code + [pipe(branches, liftIter(bool_all), bool_any)]
+        filled_branches = filter(lambda x: x, branches)
+        return code + [pipe(filled_branches, liftIter(bool_all), bool_any)]
 
     def visit_Loop(self, node: sbb.Loop, stop: StopBlock) -> BoolList:
         if stop and node.number == stop.number:

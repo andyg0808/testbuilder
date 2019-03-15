@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from logbook import Logger
-from pympler import tracker  # type: ignore
 from toolz import concat, pipe
 
 from . import ssa_basic_blocks as sbb
@@ -23,6 +22,7 @@ from .linefilterer import filter_lines
 from .phifilter import PhiFilterer
 from .preprocessor import AutoPreprocessor, ChangeList, Preprocessor
 from .renderer import (
+    MissingGolden,
     get_golden_func,
     get_test_func,
     prompt_for_test,
@@ -35,6 +35,7 @@ from .ssa_repair import repair
 from .ssa_to_expression import ssa_to_expression
 from .type_builder import TypeBuilder
 from .type_registrar import TypeRegistrar
+from .z3_types import GenerationError
 
 log = Logger("generator")
 
@@ -54,6 +55,7 @@ def generate_tests(
     lines: Optional[Set[int]] = None,
     ignores: Set[int] = set(),  # noqa: B006
     autogen: Union[bool, Path] = False,
+    skipfail: bool = False,
 ) -> List[str]:
     def generate_test(
         registrar: TypeRegistrar, module: sbb.Module, target_info: Tuple[int, int]
@@ -90,7 +92,7 @@ def generate_tests(
             testdata = ssa_to_expression(source, registrar, cleaned_expr)
         except TupleError:
             return ""
-        except RuntimeError as e:
+        except GenerationError as e:
             log.error(
                 "Caught error while generating test for line {}. Error:\n\t{}",
                 target_line,
@@ -119,8 +121,8 @@ def generate_tests(
                 if autogen is True:
                     func = get_test_func(solved_testdata)
                 else:
-                    func = get_golden_func(solved_testdata.name, cast(Path,autogen))
-                return run_for_test(requester, func, solved_testdata)
+                    func = get_golden_func(solved_testdata.name, cast(Path, autogen))
+                return run_for_test(requester, func, solved_testdata, skipfail)
             else:
                 return prompt_for_test(
                     requester=requester, prompt=prompt, test=solved_testdata
@@ -130,11 +132,16 @@ def generate_tests(
             test: str = pipe(
                 solution, _filter_inputs, get_expected_test_result, render_test
             )
-        except AttributeError as e:
-            if "module 'mod" in str(e):
-                log.error(f"Missing golden version of {testdata.name}; ignoring")
-                return ""
-            raise e
+        except MissingGolden:
+            log.error(f"Missing golden version of {testdata.name}; ignoring")
+            return ""
+        except GenerationError as e:
+            log.error(
+                f"Could not generate test for {testdata.name}; "
+                "probably because of skipfail.\n"
+                f"Error: {e}"
+            )
+            return ""
 
         return test
 
@@ -165,6 +172,8 @@ def generate_tests(
     def monitored_test_generation(name: str) -> Callable[[Tuple[int, int]], str]:
         def _monitored_test_generation(target_info: Tuple[int, int]) -> str:
             if active("memory"):
+                from pympler import tracker  # type: ignore
+
                 tr = tracker.SummaryTracker()
             if active("profile"):
                 pr = cProfile.Profile()

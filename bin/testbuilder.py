@@ -2,7 +2,7 @@
 """
 generate_test_cases: Generates test cases for the return values of all functions in <source.py>
 
-Usage: run.py [--autogen|--golden=<file>] [options] <source.py>
+Usage: testbuilder [--autogen|--golden=<file>] [options] <source.py>
 
 Options:
     --unroll-depth=<depth>  The depth to which to unroll loops
@@ -24,18 +24,21 @@ Options:
                      run instead of the function under test and its
                      result will be used as the expected output of the
                      function under test.
+    --skipfail  When auto-generating tests, do not generate test if
+                the function run fails with an error
 """
 
 import json
 import signal
 from pathlib import Path
+from typing import Any, Mapping
 
-import typeassert
 from docopt import docopt
-from logbook import NullHandler
 
 import _z3config  # noqa: F401
 import logconfig
+import typeassert
+from logbook import NullHandler
 from testbuilder.generate import generate_tests
 from testbuilder.requester import PlainRequester, Requester
 
@@ -50,7 +53,7 @@ signal.signal(signal.SIGUSR1, signal_handler)
 typeassert.log.setLevel("ERROR")
 
 
-def main(filename: str) -> None:
+def main(opts: Mapping[str, Any], filename: str) -> None:
     filepath = Path(filename)
     with filepath.open() as io:
         text = io.read()
@@ -85,6 +88,7 @@ def main(filename: str) -> None:
         autogen = filepath
     elif golden:
         autogen = Path(golden)
+    skipfail = opts["--skipfail"]
 
     test_cases = generate_tests(
         filepath,
@@ -94,6 +98,7 @@ def main(filename: str) -> None:
         lines=lines,
         changes=changes,
         autogen=autogen,
+        skipfail=skipfail,
     )
     if opts["--basename"]:
         filename = opts["--basename"].format(
@@ -108,14 +113,13 @@ def main(filename: str) -> None:
         return
     with open(filename, "x") as tests:
         tests.write("from importlib import import_module\n")
-        tests.write("from testbuilder.pair import Pair\n")
-        tests.write("from testbuilder import renderer\n")
+        tests.write("from testbuilder import Pair, convert_result\n")
         tests.write("from fractions import Fraction\n")
         tests.write("import pytest\n")
         tests.write("\n\n".join(test_cases))
 
 
-if __name__ == "__main__":
+def launch():
     opts = docopt(__doc__)
 
     NullHandler().push_application()
@@ -132,4 +136,4 @@ if __name__ == "__main__":
     verbosity = opts["--verbose"]
     logconfig.configure_fancylog(verbosity)
 
-    main(opts["<source.py>"])
+    main(opts, opts["<source.py>"])

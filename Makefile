@@ -27,12 +27,15 @@ PYTEST_COMPLETE_FLAGS += -d --tx=socket=$(remote):888{0..9} --rsyncdir $(TESTFIL
 else
 PYTEST_COMPLETE_FLAGS += -n=$(shell nproc)
 endif
+ifdef coverage
+PYTEST_COMPLETE_FLAGS += --cov --cov-report html:coverage
+endif
 PYTEST_COMPLETE = pytest $(PYTEST_COMPLETE_FLAGS) $(TESTFILE)
 PYTEST_FAST = ./pytest_empty $(PYTEST_FAST_FLAGS) $(TESTFILE)
 
 .PHONY: build
 build:
-	pipenv run $(MAKE) $(RUN)
+	poetry run $(MAKE) $(RUN)
 
 .PHONY: watch
 watch:

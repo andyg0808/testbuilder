@@ -71,11 +71,20 @@ class SSAVisitor(SimpleVisitor[str]):
     def visit_NotEq(self, node: n.NotEq) -> str:
         return "!="
 
+    def visit_Is(self, node: n.Is) -> str:
+        return "is"
+
+    def visit_IsNot(self, node: n.IsNot) -> str:
+        return "is not"
+
     def visit_Not(self, node: n.Not) -> str:
         return "not"
 
     def visit_And(self, node: n.And) -> str:
         return "and"
+
+    def visit_Or(self, node: n.Or) -> str:
+        return "or"
 
     def visit_Set(self, node: n.Set) -> str:
         target = self.visit(node.target)

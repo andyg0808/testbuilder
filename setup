@@ -1,3 +1,4 @@
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(readlink -e ./z3_source/build/)"
+export Z3_LIBRARY_PATH="$(readlink -e ./z3_source/build/)"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$Z3_LIBRARY_PATH"
 export MYPYPATH=./stubs
-pipenv shell
+. "$(poetry env info -p)/bin/activate"

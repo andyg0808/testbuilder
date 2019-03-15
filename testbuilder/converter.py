@@ -10,10 +10,9 @@ import re
 from functools import reduce
 from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
+import z3
 from logbook import Logger
 from toolz import groupby, mapcat
-
-import z3
 from visitor import SimpleVisitor
 
 from . import nodetree as n
@@ -29,6 +28,7 @@ from .variable_type_union import VariableTypeUnion
 from .z3_types import (
     BOOL_TRUE,
     Expression,
+    GenerationError,
     Reference,
     ReferenceT,
     SortMarker,
@@ -136,12 +136,19 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         value = self.visit(node.value)
         attr = node.attr
         if attr not in ["left", "right"]:
-            raise RuntimeError(
+            raise GenerationError(
                 f"Attribute {attr} not `left` or `right`; try rewriting it?"
             )
         assert (
             self.registrar.reftype is not None
         ), "Need reference types enabled to use attributes"
+
+        if value.sorts == {self.registrar.anytype}:
+            raise GenerationError(
+                "Attempted to dereference None value. "
+                "This may be caused by a function substitution "
+                "which could never take a particular path"
+            )
 
         accessor = getattr(self.registrar.reftype, "Pair_" + attr)
 
@@ -183,6 +190,21 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         value = self.visit(node.e)
         return self.assign(node.target, value)
 
+    # Below is a potential solution to the problem of type
+    # contradictions in substituted code. However, it makes the
+    # simpler case much more messy, as the resulting expression will
+    # need to handle every possible argument type, even those which
+    # can statically be determined to be impossible. The best solution
+    # would probably be to stop substituting functions and pass them
+    # to Z3 as functions.
+
+    # def visit_ArgumentBind(self, node: n.ArgumentBind) -> TypeUnion:
+    #     log.debug("Visit argument binding {}", node)
+    #     # if node.target.func == "insert":
+    #     #     breakpoint()
+    #     value = self.visit(node.e)
+    #     return self.assign(node.target, value, typed=False)
+
     def visit_Assert(self, node: n.Assert) -> TypeUnion:
         expr = self.visit(node.test)
         return expr
@@ -191,12 +213,15 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         log.warn("Skipping test case due to use of tuple")
         raise TupleError()
 
-    def assign(self, target: n.LValue, value: TypeUnion) -> TypeUnion:
+    def assign(
+        self, target: n.LValue, value: TypeUnion, typed: bool = True
+    ) -> TypeUnion:
         if isinstance(target, n.Name):
             log.debug(f"Assigning {value} to {target.id}_{target.set_count}")
             var_expr = self.visit(target)
             var_name = cast(VariableTypeUnion, var_expr).name
-            self.type_manager.put(var_name, value.sorts)
+            if typed:
+                self.type_manager.put(var_name, value.sorts)
             var = self.registrar.make_any(var_name)
             return self.registrar.assign(var, value)
         elif isinstance(target, n.Attribute):
@@ -206,7 +231,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             elif target.attr == "right":
                 other_attr = "left"
             else:
-                raise RuntimeError(f"Unexpected attribute {target.attr}")
+                raise GenerationError(f"Unexpected attribute {target.attr}")
 
             other_value: TypeUnion = self.visit(
                 n.Attribute(e=target.e, value=target.e, attr=other_attr)
@@ -215,15 +240,6 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 n.Attribute(e=target.e, value=target.e, attr=target.attr)
             )
             dest = self.visit(target.e)
-            # print("updating type manager from", self.type_manager)
-            # self.type_manager.put(
-            #     cast(VariableTypeUnion, self.visit(target.e.find_name())).name,
-            #     {Reference},
-            # )
-            # self.type_manager.put(
-            #     str(this_value.unwrap(choice=Reference)), {value.sorts}
-            # )
-            # print("updated type manager to", self.type_manager)
             if isinstance(dest, ExpandableTypeUnion):
                 dest = dest.expand()
             pair = getattr(self.registrar.reftype, "Pair")
@@ -264,7 +280,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         if isinstance(node.func, n.Name):
             function = node.func.id
             if function == "input":
-                raise RuntimeError("`input` not supported in tested code")
+                raise GenerationError("`input` not supported in tested code")
             args = [self.visit(v) for v in node.args]
             for constructor in self.registrar.ref_constructors():
                 log.debug(f"Trying {constructor.name()} on {function}")
@@ -282,7 +298,7 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
             return self.registrar.AllTypes("funcdefault_" + node.func.id)
 
         # Treat functions as true which we couldn't substitute
-        raise RuntimeError(
+        raise GenerationError(
             f"Function call {node} is not a name; cannot call function expressions"
         )
 
@@ -290,11 +306,9 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
         self, constructor: Callable[..., Expression], args: Sequence[TypeUnion]
     ) -> TypeUnion:
 
-        # print("Constructing call", constructor, args)
         exprs = []
         sorts: SortSet = set()
         for arg_tuple in Magic.cartesian_product(args):
-            # print("running for", arg_tuple)
             target = constructor(*(self.registrar.wrap(e.expr) for e in arg_tuple))
             expr = self.store.add(cast(z3.DatatypeRef, target))
             constraints = set(mapcat(lambda x: x.constraints, arg_tuple))
@@ -455,7 +469,6 @@ class IsMagic(Magic):
             return True
         if not isinstance(right, ExpandableTypeUnion):
             return True
-        # print("not expanding")
         return False
 
     @magic(z3.SortRef, z3.SortRef)

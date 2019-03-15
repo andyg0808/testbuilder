@@ -15,8 +15,7 @@ def Requester():
 
 BOILERPLATE = """
 from importlib import import_module
-from testbuilder.pair import Pair
-from testbuilder import renderer
+from testbuilder import Pair, convert_result
 from fractions import Fraction
 import pytest
 """
@@ -34,7 +33,7 @@ def test_id():
     x = 0
     actual = id(x)
     expected = 0
-    assert renderer.convert_result(actual) == expected
+    assert convert_result(actual) == expected
     """
     }
 

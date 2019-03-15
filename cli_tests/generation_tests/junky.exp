@@ -1,6 +1,6 @@
 source "./testing.tcl"
 file delete junky_test.py
-spawn python3 ./run.py --no-color junky.py
+spawn poetry run testbuilder --no-color junky.py
 expect expected
 send "22\n"
 expect expected

@@ -35,7 +35,7 @@ def test_{op.__name__}():
     b = {b}
     actual = {op.__name__}(a, b)
     expected = {op(a, b)}
-    assert renderer.convert_result(actual) == expected
+    assert convert_result(actual) == expected
     """
     assert function == expected
 
