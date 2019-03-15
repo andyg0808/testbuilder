@@ -1,4 +1,5 @@
 import copy
+import inspect
 import re
 import sys
 from importlib import import_module
@@ -62,7 +63,11 @@ def run_for_test(
     requester.output(
         f"Generating test {test.test_number} for {test.name} at line {test.target_line}"
     )
-    args = copy.deepcopy(test.args)
+    # args = copy.deepcopy(test.args)
+    sig = inspect.signature(func)
+    args = {}
+    for param in sig.parameters:
+        args[param] = test.args[param]
     try:
         result = func(**args)
         writeout = repr(convert_result(result))
