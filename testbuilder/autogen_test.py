@@ -49,7 +49,10 @@ def test_autosolve_real_module():
     code = """
 from math import sin
 def example(val):
-    return sin(val)
+    if val < 10:
+        return val
+    else:
+        return sin(val)
     """
     requester = Requester()
     with TemporaryDirectory() as d:
@@ -79,7 +82,10 @@ def example(val):
     bad_code = """
 from math import cos
 def example(val):
-    return cos(val)
+    if val < 10:
+        return val+10
+    else:
+        return cos(val)
 """
     requester = Requester()
     with TemporaryDirectory() as d:

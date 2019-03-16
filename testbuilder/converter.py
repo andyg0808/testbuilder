@@ -10,10 +10,11 @@ import re
 from functools import reduce
 from typing import Any, Callable, List, Mapping, Optional, Sequence, cast
 
-import z3
 from logbook import Logger
 from toolz import groupby, mapcat
 from visitor import SimpleVisitor
+
+import z3
 
 from . import nodetree as n
 from .constrained_expression import ConstrainedExpression as CExpr, ConstraintSet
@@ -26,6 +27,7 @@ from .type_registrar import TypeRegistrar
 from .type_union import TypeUnion
 from .variable_type_union import VariableTypeUnion
 from .z3_types import (
+    BOOL_FALSE,
     BOOL_TRUE,
     Expression,
     GenerationError,
@@ -295,7 +297,8 @@ class ExpressionConverter(SimpleVisitor[TypeUnion]):
                 union = builtin(*args)
                 log.debug(f"Builtin result is {union}")
                 return union
-            return self.registrar.AllTypes("funcdefault_" + node.func.id)
+            ignore = CExpr(BOOL_TRUE, {("ignore", z3.BoolSort(), BOOL_FALSE)})
+            return TypeUnion([ignore], {z3.BoolSort()})
 
         # Treat functions as true which we couldn't substitute
         raise GenerationError(

@@ -8,7 +8,7 @@ check_expression = ExpressionChecker(lambda b: b.wrappers())
 def test_basic_call():
     # TODO: Handle calls correctly
     # What about recursion?
-    check_expression("abs(i)", "true")
+    check_expression("abs(i)", "false")
 
 
 def test_negative_slice():

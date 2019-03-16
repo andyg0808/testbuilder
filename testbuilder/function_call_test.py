@@ -32,24 +32,12 @@ def func(a, b):
 """,
         """
 And(
-    Or(
-        And(
-            Not(0 == Any.i(pyname_b)*1),
-            Any.is_Int(pyname_b),
-            function_func_1_pyname_a == Ref.Pair_right(store[Any.r(pyname_a)]),
-            function_func_1_pyname_b == pyname_b,
-            0 == Any.i(function_func_1_pyname_b) * 1,
-            function_func_1_return == Ref.Pair_left(store[Any.r(function_func_1_pyname_a)]),
-        ),
-        And(
-            Not(0 == Any.i(pyname_b)*1),
-            Any.is_Int(pyname_b),
-            function_func_1_pyname_a == Ref.Pair_right(store[Any.r(pyname_a)]),
-            function_func_1_pyname_b == pyname_b,
-            Not(0 == Any.i(function_func_1_pyname_b)*1),
-            function_func_1_return == funcdefault_func
-        )
-    ),
+    Not(0 == Any.i(pyname_b)*1),
+    Any.is_Int(pyname_b),
+    function_func_1_pyname_a == Ref.Pair_right(store[Any.r(pyname_a)]),
+    function_func_1_pyname_b == pyname_b,
+    0 == Any.i(function_func_1_pyname_b) * 1,
+    function_func_1_return == Ref.Pair_left(store[Any.r(function_func_1_pyname_a)]),
     ret == function_func_1_return
 )
 """,
@@ -67,22 +55,11 @@ def func(a):
         """,
         """
 And(
-    Or(
-        And(
-            Not(1 < Any.i(pyname_a)),
-            Any.is_Int(pyname_a),
-            function_func_1_pyname_a == pyname_a,
-            1 < Any.i(function_func_1_pyname_a),
-            function_func_1_return == function_func_1_pyname_a
-        ),
-        And(
-            Not(1 < Any.i(pyname_a)),
-            Any.is_Int(pyname_a),
-            function_func_1_pyname_a == pyname_a,
-            Not(1 < Any.i(function_func_1_pyname_a)),
-            function_func_1_return == funcdefault_func
-        )
-    ),
+    Not(1 < Any.i(pyname_a)),
+    Any.is_Int(pyname_a),
+    function_func_1_pyname_a == pyname_a,
+    1 < Any.i(function_func_1_pyname_a),
+    function_func_1_return == function_func_1_pyname_a,
     ret == function_func_1_return
 )
 """,
